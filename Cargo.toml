@@ -9,3 +9,4 @@ repository = "https://github.com/xemwebe/finql"
 readme = "README.md"
 
 [dependencies]
+chrono = "0.4.9"
