@@ -10,3 +10,4 @@ readme = "README.md"
 
 [dependencies]
 chrono = "0.4.9"
+text_io = "0.1.7"
