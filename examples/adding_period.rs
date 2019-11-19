@@ -12,7 +12,7 @@ fn main() {
 
     println!("Try it yourself, enter an arbitrary time period:");
     let input: String = read!("{}\n");
-    let period = finql::time_periods::from_str(&input).unwrap();
+    let period = finql::time_period::from_str(&input).unwrap();
     let future_date = period.add_to(today);
     println!("The today plus a time period of {} is {}.", period, future_date);
 }
