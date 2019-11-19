@@ -1,3 +1,7 @@
+//! The module `time_periods` supports time periods of different lengths 
+//! in terms of day, months or years that can be added to a given date.
+//! Time periods may als be negative.
+
 use std::fmt;
 use chrono::{NaiveDate,Datelike,Duration};
 
@@ -5,7 +9,7 @@ pub trait TimePeriod {
     // Add time period to a given date. 
     // The function call will panic is the resulting year is out
     // of the valid range.
-    fn add_to_date(&self, date: NaiveDate) -> NaiveDate;
+    fn add_to(&self, date: NaiveDate) -> NaiveDate;
 }
 
 // Some common time periods
@@ -13,7 +17,6 @@ pub static QUARTERLY: &'static MonthlyPeriod = &MonthlyPeriod{years:0, months:3}
 pub static SEMI_ANNUAL: &'static MonthlyPeriod = &MonthlyPeriod{years:0, months:6};
 pub static ANNUAL: &'static YearlyPeriod = &YearlyPeriod{years:1};
 pub static WEEKLY: &'static DailyPeriod = &DailyPeriod{days: 7};
-
 
 pub struct DailyPeriod {
     days: i32
@@ -26,7 +29,7 @@ impl DailyPeriod {
 }
 
 impl TimePeriod for DailyPeriod {
-    fn add_to_date(&self, date: NaiveDate) -> NaiveDate {
+    fn add_to(&self, date: NaiveDate) -> NaiveDate {
         date.checked_add_signed(Duration::days(self.days as i64)).unwrap()
     }
 }
@@ -52,7 +55,7 @@ impl YearlyPeriod {
 }
 
 impl TimePeriod for YearlyPeriod {
-    fn add_to_date(&self, date: NaiveDate) -> NaiveDate {
+    fn add_to(&self, date: NaiveDate) -> NaiveDate {
         NaiveDate::from_ymd(date.year()+self.years, date.month(), date.day())
     }
 }
@@ -63,6 +66,10 @@ impl fmt::Display for YearlyPeriod {
     }
 }
 
+// If the original day of the data is larger than the length
+// of the target month, the day is moved to the last day of the target month.
+// Therefore, `MonthlyPeriod` is not in all cases reversible by adding
+// the equivalent negative monthly period. 
 pub struct MonthlyPeriod {
     years: i32,
     months: i32
@@ -75,7 +82,7 @@ impl MonthlyPeriod {
 }
 
 impl TimePeriod for MonthlyPeriod {
-    fn add_to_date(&self, date: NaiveDate) -> NaiveDate {
+    fn add_to(&self, date: NaiveDate) -> NaiveDate {
         let mut day = date.day();
         let mut month = date.month() as i32;
         let mut year = date.year();
@@ -124,7 +131,7 @@ mod tests {
     use super::*;
 
     fn apply_time_period(date: NaiveDate, tp: &dyn TimePeriod) -> NaiveDate {
-        tp.add_to_date(date)
+        tp.add_to(date)
     }
 
     #[test]
