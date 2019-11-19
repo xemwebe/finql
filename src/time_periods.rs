@@ -3,13 +3,51 @@
 //! Time periods may als be negative.
 
 use std::fmt;
+use std::error;
 use chrono::{NaiveDate,Datelike,Duration};
 
-pub trait TimePeriod {
+// Error type related to the TimePeriod trait
+#[derive(Debug, Clone)]
+pub struct TimePeriodError {
+    msg: &'static str
+}
+
+impl fmt::Display for TimePeriodError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "TimePeriod error:  {}", self.msg)
+    }
+}
+
+// This is important for other errors to wrap this one.
+impl error::Error for TimePeriodError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        None
+    }
+}
+
+pub trait TimePeriod: fmt::Display {
     // Add time period to a given date. 
     // The function call will panic is the resulting year is out
     // of the valid range.
     fn add_to(&self, date: NaiveDate) -> NaiveDate;
+}
+
+// Transform a string into a TimePeriod
+pub fn from_str(tp: &str) -> Result<Box<dyn TimePeriod>,TimePeriodError> {
+    let len = tp.len();
+    if len<2 {
+        Err(TimePeriodError{ msg: "Couldn't parse time period, string is too short." })
+    } else {
+        let tpid = tp.chars().last().unwrap();
+        let num = tp[..len-1].parse::<i32>();
+        match (num, tpid) {
+            (Ok(val), 'D') => Ok(Box::new(DailyPeriod::new(val))),
+            (Ok(val), 'W') => Ok(Box::new(DailyPeriod::new(7*val))),
+            (Ok(val), 'M') => Ok(Box::new(MonthlyPeriod::new(val))),
+            (Ok(val), 'Y') => Ok(Box::new(YearlyPeriod::new(val))),
+            (_, _) => Err(TimePeriodError{ msg: "Invalid format, use <signed num><unit> where <unit> is one of 'D', 'W', 'M', or 'Y'."})
+        }
+    }
 }
 
 // Some common time periods
@@ -18,6 +56,7 @@ pub static SEMI_ANNUAL: &'static MonthlyPeriod = &MonthlyPeriod{years:0, months:
 pub static ANNUAL: &'static YearlyPeriod = &YearlyPeriod{years:1};
 pub static WEEKLY: &'static DailyPeriod = &DailyPeriod{days: 7};
 
+#[derive(Debug, Clone)]
 pub struct DailyPeriod {
     days: i32
 }
@@ -44,6 +83,7 @@ impl fmt::Display for DailyPeriod {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct YearlyPeriod {
     years: i32
 }
@@ -70,6 +110,7 @@ impl fmt::Display for YearlyPeriod {
 // of the target month, the day is moved to the last day of the target month.
 // Therefore, `MonthlyPeriod` is not in all cases reversible by adding
 // the equivalent negative monthly period. 
+#[derive(Debug, Clone)]
 pub struct MonthlyPeriod {
     years: i32,
     months: i32
@@ -181,5 +222,19 @@ mod tests {
         assert_eq!(format!("{}",neg_annual), "-1Y");
         assert_eq!(format!("{}",neg_weekly), "-1W");
         assert_eq!(format!("{}",neg_daily), "-1D");
+    }
+
+    #[test]
+    fn parse_periods() {
+        assert_eq!("3M", &format!("{}",from_str("3M").unwrap()));
+        assert_eq!("-3M", &format!("{}",from_str("-3M").unwrap()));
+        assert_eq!("18M", &format!("{}",from_str("18M").unwrap()));
+        assert_eq!("-18M", &format!("{}",from_str("-18M").unwrap()));
+        assert_eq!("1D", &format!("{}",from_str("1D").unwrap()));
+        assert_eq!("-1D", &format!("{}",from_str("-1D").unwrap()));
+        assert_eq!("2W", &format!("{}",from_str("2W").unwrap()));
+        assert_eq!("-3W", &format!("{}",from_str("-3W").unwrap()));
+        assert_eq!("5Y", &format!("{}",from_str("5Y").unwrap()));
+        assert_eq!("-10Y", &format!("{}",from_str("-10Y").unwrap()));
     }
 }
