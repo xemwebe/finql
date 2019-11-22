@@ -4,7 +4,9 @@
 
 use std::fmt;
 use std::error;
+
 use chrono::{NaiveDate,Datelike,Duration};
+use crate::calendar::{Calendar,SimpleCalendar};
 
 // Error type related to the TimePeriod trait
 #[derive(Debug, Clone)]
@@ -82,6 +84,43 @@ impl fmt::Display for DailyPeriod {
         }
     }
 }
+
+#[derive(Debug)]
+pub struct BusinessDailyPeriod {
+    days: i32,
+    cal: SimpleCalendar
+}
+
+impl BusinessDailyPeriod {
+    pub fn new(periods: i32) -> DailyPeriod {
+        DailyPeriod{ days: periods }
+    }
+}
+
+impl TimePeriod for BusinessDailyPeriod {
+    fn add_to(&self, mut date: NaiveDate) -> NaiveDate {
+        let inc = if self.days<0 {
+            Duration::days(-1)
+        } else {
+            Duration::days(1)
+        };
+        let n = self.days.abs();
+        for _ in 0..n {
+            date = date.checked_add_signed(inc).unwrap();
+            while self.cal.is_holiday(date) {
+                date = date.checked_add_signed(inc).unwrap();
+            }
+        }
+        date
+    }
+}
+
+impl fmt::Display for BusinessDailyPeriod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}B", self.days)
+    }
+}
+
 
 #[derive(Debug, Clone)]
 pub struct YearlyPeriod {
@@ -170,6 +209,7 @@ fn get_days_from_month(year: i32, month: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::calendar::SimpleCalendar;
 
     fn apply_time_period(date: NaiveDate, tp: &dyn TimePeriod) -> NaiveDate {
         tp.add_to(date)
@@ -236,5 +276,28 @@ mod tests {
         assert_eq!("-3W", &format!("{}",from_str("-3W").unwrap()));
         assert_eq!("5Y", &format!("{}",from_str("5Y").unwrap()));
         assert_eq!("-10Y", &format!("{}",from_str("-10Y").unwrap()));
+    }
+
+
+    #[test]
+    fn parse_business_daily() {
+        let cal = SimpleCalendar::new(vec![NaiveDate::from_ymd(2019,11,21)]);
+        let bdaily1 =  BusinessDailyPeriod{ days: 1, cal: cal };
+        //let bdaily2 = BusinessDailyPeriod{ days:2, cal: cal };
+        //let bdaily_1 = BusinessDailyPeriod{ days:-1, cal: cal };
+      
+        assert_eq!("1B", &format!("{}",bdaily1));
+        //assert_eq!("2B", &format!("{}",bdaily1));
+        //assert_eq!("-1B", &format!("{}",bdaily1));
+        
+        let date = NaiveDate::from_ymd(2019,11,20);
+        assert_eq!(apply_time_period(date, &bdaily1), NaiveDate::from_ymd(2019,11,22));
+        //assert_eq!(apply_time_period(date, &bdaily2), NaiveDate::from_ymd(2019,11,25));
+        //assert_eq!(apply_time_period(date, &bdaily_1), NaiveDate::from_ymd(2020,11,19));
+        
+        let date = NaiveDate::from_ymd(2019,11,25);
+        assert_eq!(apply_time_period(date, &bdaily1), NaiveDate::from_ymd(2019,11,26));
+        //assert_eq!(apply_time_period(date, &bdaily2), NaiveDate::from_ymd(2019,11,27));
+        //assert_eq!(apply_time_period(date, &bdaily_1), NaiveDate::from_ymd(2020,11,22));
     }
 }

@@ -30,6 +30,7 @@ pub trait Calendar {
 }
 
 // Simple calendar implementation as a set of given dates
+#[derive(Debug, Clone)]
 pub struct SimpleCalendar {
     holidays: BTreeSet<NaiveDate>
 }
