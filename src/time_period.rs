@@ -98,7 +98,7 @@ impl TimePeriod {
     /// Add time period to a given date.
     /// The function call will panic is the resulting year is out
     /// of the valid range.
-    pub fn add_to(&self, mut date: NaiveDate, cal: Option<&dyn Calendar>) -> NaiveDate {
+    pub fn add_to(&self, mut date: NaiveDate, cal: Option<&Calendar>) -> NaiveDate {
         match self.unit {
             TimePeriodUnit::Daily => date
                 .checked_add_signed(Duration::days(self.num as i64))
@@ -170,7 +170,8 @@ fn get_days_from_month(year: i32, month: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::calendar::SimpleCalendar;
+    use crate::calendar::{Holiday,Calendar};
+    use chrono::Weekday;
 
     #[test]
     fn standard_periods() {
@@ -260,7 +261,12 @@ mod tests {
 
     #[test]
     fn parse_business_daily() {
-        let cal = SimpleCalendar::new(vec![NaiveDate::from_ymd(2019, 11, 21)]);
+        let holiday_rules = vec![
+            Holiday::SingularDay(NaiveDate::from_ymd(2019, 11, 21)),
+            Holiday::WeekDay(Weekday::Sat),
+            Holiday::WeekDay(Weekday::Sun)];
+
+        let cal = Calendar::calc_calendar(&holiday_rules, 2019, 2020);
         let bdaily1 = TimePeriod::from_str("1B").unwrap();
         let bdaily2 = TimePeriod::from_str("2B").unwrap();
         let bdaily_1 = TimePeriod::from_str("-1B").unwrap();

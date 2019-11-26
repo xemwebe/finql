@@ -6,63 +6,116 @@
 
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
 use std::collections::BTreeSet;
+extern crate computus;
 
-// Trait specifying (bank) holidays
-pub trait Calendar {
-    // Returns true if given day is a bank holiday
-    fn is_holiday(&self, date: NaiveDate) -> bool;
-    // Calculate the next business day
-    fn next_bday(&self, mut date: NaiveDate) -> NaiveDate {
-        while self.is_holiday(date) {
-            date = date + Duration::days(1);
-        }
-        date
-    }
-    // Calculate the next business day
-    fn prev_bday(&self, mut date: NaiveDate) -> NaiveDate {
-        while self.is_holiday(date) {
-            date = date + Duration::days(1);
-        }
-        date
-    }
-    // Pre-compute holidays for a given range of years
-    fn compute_holidays(&self, start_year: i32, end_year: i32);
+pub enum Holiday {
+    /// A week day that is a bank holiday, in most countries, this will be Sat and Sun
+    WeekDay(Weekday),
+    /// `start` and `end` are the first and last year this day is a holiday
+    YearlyDay{month: u32, day: u32, first: Option<i32>, last: Option<i32>},
+    /// Occurs every year, but is moved to next non-weekend day if it falls on a weekday
+    /// `start` and `end` are the first and last year this day is a holiday
+    MovableYearlyDay{month: u32, day: u32, first: Option<i32>, last: Option<i32>},
+    /// A single holiday valid only once in time
+    SingularDay(NaiveDate),
+    /// A holiday that is define relative to Easter Monday
+    EasterOffset(i32),
 }
 
-// Simple calendar implementation as a set of given dates
+// Calendar for arbitrary complex holiday rules
 #[derive(Debug, Clone)]
-pub struct SimpleCalendar {
+pub struct Calendar {
     holidays: BTreeSet<NaiveDate>,
+    weekdays: Vec<Weekday>,
 }
 
-impl SimpleCalendar {
-    // Construct new calendar and automatically sort dates given
-    // as a vector
-    pub fn new(days: Vec<NaiveDate>) -> SimpleCalendar {
+impl Calendar {
+    // Pre-compute holidays for a given range of years based on a set of holiday rules
+    pub fn calc_calendar(holiday_rules: &Vec<Holiday>, start: i32, end: i32) -> Calendar {
         let mut holidays = BTreeSet::new();
-        for d in days {
-            holidays.insert(d);
+        let mut weekdays = Vec::new();
+       
+        for rule in holiday_rules {
+            match rule {
+                Holiday::SingularDay(date) => {
+                    let year = date.year();
+                    if year >= start && year <= end {
+                        holidays.insert(date.clone());
+                    }
+                },
+                Holiday::WeekDay(weekday) => {
+                    weekdays.push(weekday.clone());
+                },
+                Holiday::YearlyDay{month, day, first, last} => {
+                    let (first,last) = Self::calc_first_and_last(start, end, first, last);
+                    for year in first..last+1 {
+                        holidays.insert(NaiveDate::from_ymd(year, *month, *day));
+                    }
+                },
+                Holiday::MovableYearlyDay{month, day, first, last} => {
+                    let (first,last) = Self::calc_first_and_last(start, end, first, last);
+                    for year in first..last+1 {
+                        let date = NaiveDate::from_ymd(year, *month, *day);
+                        let date = match date.weekday() {
+                            Weekday::Sat => date.checked_add_signed(Duration::days(2)).unwrap(),
+                            Weekday::Sun => date.checked_add_signed(Duration::days(1)).unwrap(),
+                            _ => date
+                        };
+                        holidays.insert(date);
+                    }
+                },
+                Holiday::EasterOffset(offset) => {
+                    for year in start..end+1 {
+                        let easter = computus::gregorian(year).unwrap();
+                        let easter = NaiveDate::from_ymd(easter.year, easter.month, easter.day);
+                        let date = easter.checked_add_signed(Duration::days(*offset as i64)).unwrap();
+                        holidays.insert(date);
+                    }
+                },
+            }
         }
-        SimpleCalendar { holidays: holidays }
+        Calendar{holidays: holidays, weekdays: weekdays}
     }
-    // Nothing to do here for `SimpleCalendar`
-    pub fn compute_holidays(&self, _: i32, _: i32) {}
 
-    fn is_weekend(day: &NaiveDate) -> bool {
-        if day.weekday() == Weekday::Sat || day.weekday() == Weekday::Sun {
-            true
-        } else {
-            false
+        /// Calculate the next business day
+        pub fn next_bday(&self, mut date: NaiveDate) -> NaiveDate {
+            while self.is_holiday(date) {
+                date = date + Duration::days(1);
+            }
+            date
         }
-    }
-}
 
-impl Calendar for SimpleCalendar {
-    // Nothing to do here for `SimpleCalendar`
-    fn compute_holidays(&self, _: i32, _: i32) {}
-    // Just check if the date is in our set of holidays
-    fn is_holiday(&self, date: NaiveDate) -> bool {
-        if Self::is_weekend(&date) {
+        /// Calculate the next business day
+        pub fn prev_bday(&self, mut date: NaiveDate) -> NaiveDate {
+            while self.is_holiday(date) {
+                date = date + Duration::days(1);
+            }
+            date
+        }
+    
+    fn calc_first_and_last(start: i32, end: i32, first: &Option<i32>, last: &Option<i32>) -> (i32,i32) {
+        let first = match first {
+            Some(year) => std::cmp::max(start, *year),
+            _ => start
+        };
+        let last = match last {
+            Some(year) => std::cmp::min(end, *year),
+            _ => end
+        };
+        (first, last)
+    }
+
+    fn is_weekend(&self, day: &NaiveDate) -> bool {
+        let weekday = day.weekday();
+        for w_day in &self.weekdays {
+            if weekday == *w_day { return true; }
+        }
+        false
+    }
+
+    /// Check for weekends and if date is in precomputed set of holidays
+    pub fn is_holiday(&self, date: NaiveDate) -> bool {
+        if self.is_weekend(&date) {
             true
         } else {
             match self.holidays.get(&date) {
@@ -73,18 +126,23 @@ impl Calendar for SimpleCalendar {
     }
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn simple_calendar() {
-        let days = vec![
-            NaiveDate::from_ymd(2019, 11, 20),
-            NaiveDate::from_ymd(2019, 11, 24),
-            NaiveDate::from_ymd(2019, 11, 25),
+    fn fixed_dates_calendar() {
+        let holidays = vec![
+            Holiday::SingularDay(NaiveDate::from_ymd(2019, 11, 20)),
+            Holiday::SingularDay(NaiveDate::from_ymd(2019, 11, 24)),
+            Holiday::SingularDay(NaiveDate::from_ymd(2019, 11, 25)),
+            Holiday::WeekDay(Weekday::Sat),
+            Holiday::WeekDay(Weekday::Sun),           
         ];
-        let cal = SimpleCalendar::new(days);
+        let cal = Calendar::calc_calendar(&holidays, 2019, 2019);
+
         assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 20)));
         assert_eq!(false, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 21)));
         assert_eq!(false, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 22)));
