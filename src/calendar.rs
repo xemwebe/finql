@@ -4,7 +4,7 @@
 //! Bank holidays have also an impact on how to rollout cash flows from fixed income
 //! products, which has an impact on their fair value.
 
-use chrono::{NaiveDate,Duration,Weekday,Datelike};
+use chrono::{Datelike, Duration, NaiveDate, Weekday};
 use std::collections::BTreeSet;
 
 // Trait specifying (bank) holidays
@@ -32,7 +32,7 @@ pub trait Calendar {
 // Simple calendar implementation as a set of given dates
 #[derive(Debug, Clone)]
 pub struct SimpleCalendar {
-    holidays: BTreeSet<NaiveDate>
+    holidays: BTreeSet<NaiveDate>,
 }
 
 impl SimpleCalendar {
@@ -43,14 +43,14 @@ impl SimpleCalendar {
         for d in days {
             holidays.insert(d);
         }
-        SimpleCalendar{ holidays: holidays }
+        SimpleCalendar { holidays: holidays }
     }
-    // Nothing to do here for `SimpleCalendar` 
+    // Nothing to do here for `SimpleCalendar`
     pub fn compute_holidays(&self, _: i32, _: i32) {}
 
     fn is_weekend(day: &NaiveDate) -> bool {
         if day.weekday() == Weekday::Sat || day.weekday() == Weekday::Sun {
-            true 
+            true
         } else {
             false
         }
@@ -58,7 +58,7 @@ impl SimpleCalendar {
 }
 
 impl Calendar for SimpleCalendar {
-    // Nothing to do here for `SimpleCalendar` 
+    // Nothing to do here for `SimpleCalendar`
     fn compute_holidays(&self, _: i32, _: i32) {}
     // Just check if the date is in our set of holidays
     fn is_holiday(&self, date: NaiveDate) -> bool {
@@ -67,7 +67,7 @@ impl Calendar for SimpleCalendar {
         } else {
             match self.holidays.get(&date) {
                 Some(_) => true,
-                None => false
+                None => false,
             }
         }
     }
@@ -80,20 +80,19 @@ mod tests {
     #[test]
     fn simple_calendar() {
         let days = vec![
-            NaiveDate::from_ymd(2019,11,20),
-            NaiveDate::from_ymd(2019,11,24),
-            NaiveDate::from_ymd(2019,11,25),
-            ];
-        let cal = SimpleCalendar::new( days);
-        assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2019,11,20)));
-        assert_eq!(false, cal.is_holiday(NaiveDate::from_ymd(2019,11,21)));
-        assert_eq!(false, cal.is_holiday(NaiveDate::from_ymd(2019,11,22)));
+            NaiveDate::from_ymd(2019, 11, 20),
+            NaiveDate::from_ymd(2019, 11, 24),
+            NaiveDate::from_ymd(2019, 11, 25),
+        ];
+        let cal = SimpleCalendar::new(days);
+        assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 20)));
+        assert_eq!(false, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 21)));
+        assert_eq!(false, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 22)));
         // weekend
-        assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2019,11,23)));
+        assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 23)));
         // weekend and holiday
-        assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2019,11,24)));
-        assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2019,11,25)));
-        assert_eq!(false, cal.is_holiday(NaiveDate::from_ymd(2019,11,26)));
+        assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 24)));
+        assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 25)));
+        assert_eq!(false, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 26)));
     }
-
 }
