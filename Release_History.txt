@@ -1,0 +1,5 @@
+Version 0.1.3
+* Implementation of TimerPeriod is no longer a trait, but a struct. The calendar 
+  required for BusinessDaily time period is now an external parameter. This seems
+  to be a better choice, since a calendar is more a parameter than part of a method.
+  Calendars may also be subject to chance, though only rarely.
