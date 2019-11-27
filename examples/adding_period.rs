@@ -20,8 +20,5 @@ fn main() {
     let input: String = read!("{}\n");
     let period = finql::TimePeriod::from_str(&input).unwrap();
     let future_date = period.add_to(today, None);
-    println!(
-        "Today plus a time period of {} is {}.",
-        period, future_date
-    );
+    println!("Today plus a time period of {} is {}.", period, future_date);
 }

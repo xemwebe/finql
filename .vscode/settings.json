@@ -4,6 +4,7 @@
         "bdaily",
         "bday",
         "chrono",
-        "computus"
+        "computus",
+        "succ"
     ]
 }

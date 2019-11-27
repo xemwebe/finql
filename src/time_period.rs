@@ -5,7 +5,7 @@
 use std::error;
 use std::fmt;
 
-use crate::calendar::Calendar;
+use crate::calendar::{last_day_of_month, Calendar};
 use chrono::{Datelike, Duration, NaiveDate};
 
 /// Error type related to the TimePeriod trait
@@ -97,24 +97,16 @@ impl TimePeriod {
 
     /// Add time period to a given date.
     /// The function call will panic is the resulting year is out
-    /// of the valid range.
+    /// of the valid range or if not calendar is provided in case of BusinessDaily time periods
     pub fn add_to(&self, mut date: NaiveDate, cal: Option<&Calendar>) -> NaiveDate {
         match self.unit {
-            TimePeriodUnit::Daily => date
-                .checked_add_signed(Duration::days(self.num as i64))
-                .unwrap(),
+            TimePeriodUnit::Daily => date + Duration::days(self.num as i64),
             TimePeriodUnit::BusinessDaily => {
-                let inc = if self.num < 0 {
-                    Duration::days(-1)
-                } else {
-                    Duration::days(1)
-                };
+                let is_neg = self.num<0;
                 let n = self.num.abs();
+                let cal = cal.unwrap();
                 for _ in 0..n {
-                    date = date.checked_add_signed(inc).unwrap();
-                    while cal.unwrap().is_holiday(date) {
-                        date = date.checked_add_signed(inc).unwrap();
-                    }
+                    date = if is_neg { cal.prev_bday(date) } else { cal.next_bday(date) };
                 }
                 date
             }
@@ -139,7 +131,7 @@ impl TimePeriod {
                     month -= 12;
                 }
                 if day > 28 {
-                    let last_date_of_month = get_days_from_month(year, month as u32);
+                    let last_date_of_month = last_day_of_month(year, month as u32);
                     day = std::cmp::min(day, last_date_of_month);
                 }
                 NaiveDate::from_ymd(year, month as u32, day)
@@ -151,26 +143,10 @@ impl TimePeriod {
     }
 }
 
-fn get_days_from_month(year: i32, month: u32) -> u32 {
-    NaiveDate::from_ymd(
-        match month {
-            12 => year + 1,
-            _ => year,
-        },
-        match month {
-            12 => 1,
-            _ => month + 1,
-        },
-        1,
-    )
-    .signed_duration_since(NaiveDate::from_ymd(year, month, 1))
-    .num_days() as u32
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::calendar::{Holiday,Calendar};
+    use crate::calendar::{Calendar, Holiday};
     use chrono::Weekday;
 
     #[test]
@@ -264,7 +240,8 @@ mod tests {
         let holiday_rules = vec![
             Holiday::SingularDay(NaiveDate::from_ymd(2019, 11, 21)),
             Holiday::WeekDay(Weekday::Sat),
-            Holiday::WeekDay(Weekday::Sun)];
+            Holiday::WeekDay(Weekday::Sun),
+        ];
 
         let cal = Calendar::calc_calendar(&holiday_rules, 2019, 2020);
         let bdaily1 = TimePeriod::from_str("1B").unwrap();
