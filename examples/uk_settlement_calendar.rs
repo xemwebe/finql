@@ -2,6 +2,7 @@ use chrono::{Weekday, NaiveDate};
 use finql::{Calendar, Holiday, NthWeekday};
 
 fn main() {
+    // we choose the uk settlement calendar as an example, because of the many exceptions
     let uk_settlement_holidays = vec![
         // Saturdays
         Holiday::WeekDay(Weekday::Sat),
@@ -10,7 +11,7 @@ fn main() {
         // New Year's day
         Holiday::MovableYearlyDay{month: 1, day: 1, first: None, last: None},
         // Good Friday
-        Holiday::EasterOffset(-3),
+        Holiday::EasterOffset(-2),
         // first Monday of May, moved two times in history to 8th of May
         Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeekday::First, first: None, last: Some(1994) },
         Holiday::SingularDay(NaiveDate::from_ymd(1995,5,8)),
