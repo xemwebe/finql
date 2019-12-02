@@ -1,0 +1,27 @@
+{
+    "isin": "DE000A19MFH4",
+    "security_id": "A19MFH",
+    "prospect_url": "http://bond17.photonenergy.com/wp-content/uploads/sites/14/2017/09/Photon-Energy-N-V-Prospectus-PM-final2.pdf",
+    "issuer": {
+        "name": "Photon Energy N.V.",
+        "address": {
+            "city": "Amsterdam",
+            "country": "Kingdom of the Netherlands"
+        }
+    },
+    "bond_type": "bond",
+    "currency": "EUR",
+    "coupon" : {
+        "coupon_type": "fixed",
+        "rate": 7.75,
+        "coupon_date": "27.01",
+        "period": "3M",
+        "day_count_convention": "act/act icma"
+    },
+    "business_day_rule": "following",
+    "calendar": "TARGET",
+    "issue_date": "2017-10-27",
+    "maturity": "2022-10-27",
+    "denomination": 1000,
+    "volume": 30000000
+}

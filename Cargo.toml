@@ -7,8 +7,12 @@ description = "A quantitative finance toolbox"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/xemwebe/finql"
 readme = "README.md"
+keywords = ["finance", "calendar", "bond", "period", "pricing"]
+categories = ["date-and-time","mathematics"]
 
 [dependencies]
-chrono = "0.4.9"
+chrono = { version = "0.4.10", features = ["serde"] }
 text_io = "0.1.7"
-computus = "1.0.0"
+computus = "1.0"
+serde = { version = "1.0.*", features = ["derive"] }
+serde_json = "1.0"

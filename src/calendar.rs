@@ -58,7 +58,7 @@ pub enum Holiday {
     },
 }
 
-// Calendar for arbitrary complex holiday rules
+/// Calendar for arbitrary complex holiday rules
 #[derive(Debug, Clone)]
 pub struct Calendar {
     holidays: BTreeSet<NaiveDate>,

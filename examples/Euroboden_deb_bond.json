@@ -1,0 +1,27 @@
+{
+    "isin": "DE000A2YNXQ5",
+    "security_id": "A2YNXQ",
+    "prospect_url": "https://www.euroboden.de/assets/downloads/Wertpapierprospekt_Euroboden_Anleihe_1924.PDF",
+    "issuer": {
+        "name": "Euroboden GmbH",
+        "address": {
+            "city": "Grünwald",
+            "country": "Bundesrepublik Deutschland"
+        }
+    },
+    "bond_type": "debenture bond",
+    "currency": "EUR",
+    "coupon" : {
+        "coupon_type": "fixed",
+        "rate": 5.5,
+        "coupon_date": "01.04",
+        "period": "6M",
+        "day_count_convention": "act/act icma"
+    },
+    "business_day_rule": "following",
+    "calendar": "TARGET",
+    "issue_date": "2019-10-01",
+    "maturity": "2024-10-01",
+    "denomination": 1000,
+    "volume": 40000000
+}
