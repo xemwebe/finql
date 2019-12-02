@@ -1,5 +1,5 @@
 use chrono::{Weekday, NaiveDate};
-use finql::{Calendar, Holiday, NthWeekday};
+use finql::{Calendar, Holiday, NthWeek};
 
 fn main() {
     // we choose the uk settlement calendar as an example, because of the many exceptions
@@ -15,17 +15,17 @@ fn main() {
         // Easter Monday
         Holiday::EasterOffset(1),
         // first Monday of May, moved two times in history to 8th of May
-        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeekday::First, first: None, last: Some(1994) },
+        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeek::First, first: None, last: Some(1994) },
         Holiday::SingularDay(NaiveDate::from_ymd(1995,5,8)),
-        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeekday::First, first: Some(1996), last: Some(2019) },
+        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeek::First, first: Some(1996), last: Some(2019) },
         Holiday::SingularDay(NaiveDate::from_ymd(2020,5,8)),
-        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeekday::First, first: Some(2021), last: None },
+        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeek::First, first: Some(2021), last: None },
         // last Monday of May (Spring Bank Holiday), has been skipped two times
-        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeekday::Last, first: None, last: Some(2001) },
-        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeekday::Last, first: Some(2003), last: Some(2011)},
-        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeekday::Last, first: Some(2013), last: None },
+        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeek::Last, first: None, last: Some(2001) },
+        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeek::Last, first: Some(2003), last: Some(2011)},
+        Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeek::Last, first: Some(2013), last: None },
         // last Monday of August (Summer Bank Holiday)
-        Holiday::MonthWeekday{month: 8, weekday: Weekday::Mon, nth: NthWeekday::Last, first: None, last: None },
+        Holiday::MonthWeekday{month: 8, weekday: Weekday::Mon, nth: NthWeek::Last, first: None, last: None },
         // Christmas
         Holiday::MovableYearlyDay{month: 12, day: 25, first: None, last: None},
         // Boxing Day

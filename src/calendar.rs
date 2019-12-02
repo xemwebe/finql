@@ -12,7 +12,8 @@ use chrono::{Datelike, Duration, NaiveDate, Weekday};
 use std::collections::BTreeSet;
 extern crate computus;
 
-pub enum NthWeekday {
+/// Specifies the nth week of a month
+pub enum NthWeek {
     First,
     Second,
     Third,
@@ -52,7 +53,7 @@ pub enum Holiday {
     MonthWeekday {
         month: u32,
         weekday: Weekday,
-        nth: NthWeekday,
+        nth: NthWeek,
         first: Option<i32>,
         last: Option<i32>,
     },
@@ -136,16 +137,16 @@ impl Calendar {
                     let (first, last) = Self::calc_first_and_last(start, end, first, last);
                     for year in first..last + 1 {
                         let day = match nth {
-                            NthWeekday::First => 1,
-                            NthWeekday::Second => 8,
-                            NthWeekday::Third => 15,
-                            NthWeekday::Fourth => 22,
-                            NthWeekday::Last => last_day_of_month(year, *month),
+                            NthWeek::First => 1,
+                            NthWeek::Second => 8,
+                            NthWeek::Third => 15,
+                            NthWeek::Fourth => 22,
+                            NthWeek::Last => last_day_of_month(year, *month),
                         };
                         let mut date = NaiveDate::from_ymd(year, *month, day);
                         while date.weekday() != *weekday {
                             date = match nth {
-                                NthWeekday::Last => date.pred(),
+                                NthWeek::Last => date.pred(),
                                 _ => date.succ(),
                             }
                         }
@@ -330,14 +331,14 @@ mod tests {
     #[test]
     fn test_month_weekday() {        
         let holidays = vec![
-            Holiday::MonthWeekday{month: 11, weekday: Weekday::Mon, nth: NthWeekday::First, first: None, last: None },
-            Holiday::MonthWeekday{month: 11, weekday: Weekday::Tue, nth: NthWeekday::Second, first: None, last: None },
-            Holiday::MonthWeekday{month: 11, weekday: Weekday::Wed, nth: NthWeekday::Third, first: None, last: None },
-            Holiday::MonthWeekday{month: 11, weekday: Weekday::Thu, nth: NthWeekday::Fourth, first: None, last: None },
-            Holiday::MonthWeekday{month: 11, weekday: Weekday::Fri, nth: NthWeekday::Last, first: None, last: None },
+            Holiday::MonthWeekday{month: 11, weekday: Weekday::Mon, nth: NthWeek::First, first: None, last: None },
+            Holiday::MonthWeekday{month: 11, weekday: Weekday::Tue, nth: NthWeek::Second, first: None, last: None },
+            Holiday::MonthWeekday{month: 11, weekday: Weekday::Wed, nth: NthWeek::Third, first: None, last: None },
+            Holiday::MonthWeekday{month: 11, weekday: Weekday::Thu, nth: NthWeek::Fourth, first: None, last: None },
+            Holiday::MonthWeekday{month: 11, weekday: Weekday::Fri, nth: NthWeek::Last, first: None, last: None },
 
-            Holiday::MonthWeekday{month: 11, weekday: Weekday::Sat, nth: NthWeekday::First, first: None, last: Some(2018) },
-            Holiday::MonthWeekday{month: 11, weekday: Weekday::Sun, nth: NthWeekday::Last, first: Some(2020), last: None },
+            Holiday::MonthWeekday{month: 11, weekday: Weekday::Sat, nth: NthWeek::First, first: None, last: Some(2018) },
+            Holiday::MonthWeekday{month: 11, weekday: Weekday::Sun, nth: NthWeek::Last, first: Some(2020), last: None },
         ];
         let cal = Calendar::calc_calendar(&holidays, 2018, 2020);
         assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 4)));
