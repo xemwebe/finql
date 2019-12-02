@@ -10,7 +10,38 @@
 
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
 use std::collections::BTreeSet;
-extern crate computus;
+use serde::{Deserialize,Serialize};
+use computus;
+
+/// Specify a day count method
+#[derive(Deserialize, Serialize, Debug)]
+pub enum DayCountConv {
+    #[serde(rename = "act/act icma")]
+    #[serde(alias = "Act/Act")]
+    #[serde(alias = "Act/Act ICMA")]
+    ActActICMA,
+    #[serde(rename = "act/365")]
+    Act365,
+    #[serde(rename = "30/360")]
+    D30_360,
+    #[serde(rename = "30E/360")]
+    D30E360,
+}
+
+/// Rules to adjust dates to business days
+/// The rule "Modified Preceding" commonly referred to in text books
+/// was intentionally left out since 
+#[derive(Deserialize, Serialize, Debug)]
+pub enum DayAdjust {
+    #[serde(rename = "following")]
+    Following,
+    #[serde(rename = "preceding")]
+    Preceding,
+    /// Next business day, if it falls in the same month, otherwise preceding business day
+    #[serde(rename = "modified")]
+    #[serde(alias = "modified following")]
+    Modified,
+}
 
 /// Specifies the nth week of a month
 pub enum NthWeek {

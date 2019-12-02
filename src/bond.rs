@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use chrono::NaiveDate;
+use crate::calendar::{DayAdjust,DayCountConv};
 
 /// Container for bonds and similar fixed income assets
 #[derive(Deserialize, Serialize, Debug)]
@@ -9,13 +10,13 @@ pub struct Bond {
     /// Local or national security identifier
     security_id: Option<String>,
     /// URL to bond prospectus, if available
-    prospect_url: String,
+    prospect_url: Option<String>,
     /// Issuer of the bond
     issuer: Option<Issuer>,
     bond_type: String,
     currency: String,
     coupon : Coupon,
-    business_day_rule: String,
+    business_day_rule: DayAdjust,
     calendar: String,
     issue_date: NaiveDate,
     maturity: NaiveDate,
@@ -47,5 +48,5 @@ struct Coupon {
     rate: f64,
     coupon_date: String,
     period: String,
-    day_count_convention: String,
+    day_count_convention: DayCountConv,
 }
