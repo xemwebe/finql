@@ -1,4 +1,4 @@
-//! The module `time_periods` supports time periods of different lengths
+//! The module `time_period` supports time periods of different lengths
 //! in terms of day, months or years that can be added to a given date.
 //! Time periods may als be negative.
 
@@ -7,12 +7,15 @@ use std::fmt;
 
 use crate::calendar::{last_day_of_month, Calendar};
 use chrono::{Datelike, Duration, NaiveDate};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::{self,Visitor};
 
 /// Error type related to the TimePeriod trait
 #[derive(Debug, Clone)]
 pub struct TimePeriodError {
-    msg: &'static str,
+    msg: String,
 }
+
 
 impl fmt::Display for TimePeriodError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -27,8 +30,14 @@ impl error::Error for TimePeriodError {
     }
 }
 
+impl de::Error for TimePeriodError {
+    fn custom<T: fmt::Display>(msg: T) -> Self {
+        TimePeriodError{ msg: msg.to_string() }
+    }
+}
+
 /// Possible units of a time period
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum TimePeriodUnit {
     Daily,
     BusinessDaily,
@@ -49,7 +58,7 @@ impl fmt::Display for TimePeriodUnit {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TimePeriod {
     num: i32,
     unit: TimePeriodUnit,
@@ -61,13 +70,55 @@ impl fmt::Display for TimePeriod {
     }
 }
 
+impl Serialize for TimePeriod {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{}",&self))
+    }
+}
+
+struct TimePeriodVisitor;
+
+impl<'de> Visitor<'de> for TimePeriodVisitor {
+    type Value = TimePeriod;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a time period of the format [+|-]<int><unit>")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+       match TimePeriod::from_str(value) {
+           Ok(val) => Ok(val),
+           Err(err) => Err(E::custom(&err.msg))
+       }
+    
+    }
+}
+
+impl<'de> Deserialize<'de> for TimePeriod 
+{
+
+    fn deserialize<D>(deserializer: D) -> Result<TimePeriod, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(TimePeriodVisitor)
+    }
+}
+
+
 /// Transform a string into a TimePeriod
 impl TimePeriod {
     pub fn from_str(tp: &str) -> Result<TimePeriod, TimePeriodError> {
         let len = tp.len();
         if len < 2 {
             Err(TimePeriodError {
-                msg: "Couldn't parse time period, string is too short.",
+                msg: "Couldn't parse time period, string is too short".to_string(),
             })
         } else {
             let unit = match tp.chars().last() {
@@ -78,7 +129,7 @@ impl TimePeriod {
                 Some('Y') => TimePeriodUnit::Annual,
                 _ => {
                     return Err(TimePeriodError {
-                        msg: "Invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'.",
+                        msg: "Invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'".to_string(),
                     })
                 }
             };
@@ -86,7 +137,7 @@ impl TimePeriod {
                 Ok(val) => val,
                 _ => {
                     return Err(TimePeriodError {
-                        msg: "Invalid number of periods.",
+                        msg: "Invalid number of periods".to_string(),
                     })
                 }
             };
@@ -279,5 +330,22 @@ mod tests {
             bdaily_1.add_to(date, Some(&cal)),
             NaiveDate::from_ymd(2019, 11, 22)
         );
+    }
+
+    #[test]
+    fn deserialize_time_period() {
+        let input = r#""6M""#;
+
+        let tp: TimePeriod = serde_json::from_str(input).unwrap();
+        assert_eq!(tp.num, 6);
+        assert_eq!(tp.unit, TimePeriodUnit::Monthly);
+        let tpt = TimePeriod{num: 6, unit: TimePeriodUnit::Monthly };
+        assert_eq!(tp, tpt);
+    }
+    #[test]
+    fn serialize_time_period() {
+        let tp = TimePeriod{num: -2, unit: TimePeriodUnit::Annual };
+        let json = serde_json::to_string(&tp).unwrap();
+        assert_eq!(json, r#""-2Y""#);
     }
 }

@@ -5,6 +5,7 @@
         "bday",
         "chrono",
         "computus",
+        "deserializer",
         "isin",
         "succ"
     ]
