@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use chrono::NaiveDate;
 use crate::calendar::{DayAdjust,DayCountConv};
+use crate::time_period::TimePeriod;
 
 /// Container for bonds and similar fixed income assets
 #[derive(Deserialize, Serialize, Debug)]
@@ -47,6 +48,6 @@ struct Coupon {
     coupon_type: String,
     rate: f64,
     coupon_date: String,
-    period: String,
+    period: TimePeriod,
     day_count_convention: DayCountConv,
 }

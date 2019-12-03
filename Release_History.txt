@@ -1,3 +1,9 @@
+Version 0.2.1
+* Data structure for bonds added with example reading data from JSON
+* New types for day count conventions and business day adjustments
+* NthWeedDay has been renamed to NthWeek (of month), which seems to be more appropriate
+* Implementation of Serialization/Deserialization of TimePeriod
+
 Version 0.2.0
 * Replacement the SimpleCalendar and the Calendar trait by one Calendar struct. At
   initialization, the holiday calendar is computed for a range of year by specifying 
