@@ -4,6 +4,7 @@
 
 use std::error;
 use std::fmt;
+use std::str::FromStr;
 
 use crate::calendar::{last_day_of_month, Calendar};
 use chrono::{Datelike, Duration, NaiveDate};
@@ -15,7 +16,6 @@ use serde::de::{self,Visitor};
 pub struct TimePeriodError {
     msg: String,
 }
-
 
 impl fmt::Display for TimePeriodError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -64,88 +64,8 @@ pub struct TimePeriod {
     unit: TimePeriodUnit,
 }
 
-impl fmt::Display for TimePeriod {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}{}", self.num, self.unit)
-    }
-}
-
-impl Serialize for TimePeriod {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&format!("{}",&self))
-    }
-}
-
-struct TimePeriodVisitor;
-
-impl<'de> Visitor<'de> for TimePeriodVisitor {
-    type Value = TimePeriod;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a time period of the format [+|-]<int><unit>")
-    }
-
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-       match TimePeriod::from_str(value) {
-           Ok(val) => Ok(val),
-           Err(err) => Err(E::custom(&err.msg))
-       }
-    
-    }
-}
-
-impl<'de> Deserialize<'de> for TimePeriod 
-{
-
-    fn deserialize<D>(deserializer: D) -> Result<TimePeriod, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(TimePeriodVisitor)
-    }
-}
-
-
 /// Transform a string into a TimePeriod
 impl TimePeriod {
-    pub fn from_str(tp: &str) -> Result<TimePeriod, TimePeriodError> {
-        let len = tp.len();
-        if len < 2 {
-            Err(TimePeriodError {
-                msg: "Couldn't parse time period, string is too short".to_string(),
-            })
-        } else {
-            let unit = match tp.chars().last() {
-                Some('D') => TimePeriodUnit::Daily,
-                Some('B') => TimePeriodUnit::BusinessDaily,
-                Some('W') => TimePeriodUnit::Weekly,
-                Some('M') => TimePeriodUnit::Monthly,
-                Some('Y') => TimePeriodUnit::Annual,
-                _ => {
-                    return Err(TimePeriodError {
-                        msg: "Invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'".to_string(),
-                    })
-                }
-            };
-            let num = match tp[..len - 1].parse::<i32>() {
-                Ok(val) => val,
-                _ => {
-                    return Err(TimePeriodError {
-                        msg: "Invalid number of periods".to_string(),
-                    })
-                }
-            };
-
-            Ok(TimePeriod { num, unit })
-        }
-    }
-
     /// Add time period to a given date.
     /// The function call will panic is the resulting year is out
     /// of the valid range or if not calendar is provided in case of BusinessDaily time periods
@@ -193,6 +113,94 @@ impl TimePeriod {
         }
     }
 }
+
+
+impl fmt::Display for TimePeriod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{}", self.num, self.unit)
+    }
+}
+
+/// Transform a string into a TimePeriod
+impl FromStr for TimePeriod {
+    type Err = TimePeriodError;
+
+    fn from_str(tp: &str) -> Result<TimePeriod, TimePeriodError> {
+        let len = tp.len();
+        if len < 2 {
+            Err(TimePeriodError {
+                msg: "Couldn't parse time period, string is too short".to_string(),
+            })
+        } else {
+            let unit = match tp.chars().last() {
+                Some('D') => TimePeriodUnit::Daily,
+                Some('B') => TimePeriodUnit::BusinessDaily,
+                Some('W') => TimePeriodUnit::Weekly,
+                Some('M') => TimePeriodUnit::Monthly,
+                Some('Y') => TimePeriodUnit::Annual,
+                _ => {
+                    return Err(TimePeriodError {
+                        msg: "Invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'".to_string(),
+                    })
+                }
+            };
+            let num = match tp[..len - 1].parse::<i32>() {
+                Ok(val) => val,
+                _ => {
+                    return Err(TimePeriodError {
+                        msg: "Invalid number of periods".to_string(),
+                    })
+                }
+            };
+
+            Ok(TimePeriod { num, unit })
+        }
+    }
+}
+
+impl Serialize for TimePeriod {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{}",&self))
+    }
+}
+
+struct TimePeriodVisitor;
+
+impl<'de> Visitor<'de> for TimePeriodVisitor {
+    type Value = TimePeriod;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a time period of the format [+|-]<int><unit>")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+       match TimePeriod::from_str(value) {
+           Ok(val) => Ok(val),
+           Err(err) => Err(E::custom(&err.msg))
+       }
+    
+    }
+}
+
+impl<'de> Deserialize<'de> for TimePeriod 
+{
+
+    fn deserialize<D>(deserializer: D) -> Result<TimePeriod, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(TimePeriodVisitor)
+    }
+}
+
+
+
 
 #[cfg(test)]
 mod tests {

@@ -5,7 +5,7 @@ extern crate text_io;
 
 fn main() {
     let today = Utc::now().naive_local().date();
-    let quarterly = finql::TimePeriod::from_str("3M").unwrap();
+    let quarterly = "3M".parse::<finql::TimePeriod>().unwrap();
     let date_in_three_months = quarterly.add_to(today, None);
     println!(
         "The date a quarter year after {} is the date {}.",
@@ -18,7 +18,7 @@ fn main() {
 
     println!("Try it yourself, enter an arbitrary time period:");
     let input: String = read!("{}\n");
-    let period = finql::TimePeriod::from_str(&input).unwrap();
+    let period = input.parse::<finql::TimePeriod>().unwrap();
     let future_date = period.add_to(today, None);
     println!("Today plus a time period of {} is {}.", period, future_date);
 }
