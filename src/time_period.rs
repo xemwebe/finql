@@ -19,7 +19,7 @@ pub struct TimePeriodError {
 
 impl fmt::Display for TimePeriodError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TimePeriod error:  {}", self.msg)
+        write!(f, "time period error:  {}", self.msg)
     }
 }
 

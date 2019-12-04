@@ -41,13 +41,15 @@ struct IssuerAddress {
     country: String,
 }
 
+use super::coupon_date::CouponDate;
 
 /// Coupon specification of fixed income instruments
 #[derive(Deserialize, Serialize, Debug)]
 struct Coupon {
     coupon_type: String,
     rate: f64,
-    coupon_date: String,
+    coupon_date: CouponDate,
     period: TimePeriod,
     day_count_convention: DayCountConv,
 }
+
