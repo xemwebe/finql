@@ -44,6 +44,7 @@ pub enum DayAdjust {
 }
 
 /// Specifies the nth week of a month
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub enum NthWeek {
     First,
     Second,
@@ -52,6 +53,7 @@ pub enum NthWeek {
     Last,
 }
 
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub enum Holiday {
     /// Though weekends are no holidays, they need to be specified in the calendar. Weekends are assumed to be non-business days.
     /// In most countries, weekends include Saturday (`Sat`) and Sunday (`Sun`). Unfortunately, there are a few exceptions.
@@ -349,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    // Good Friday example
+    /// Good Friday example
     fn test_easter_offset() {        
         let holidays = vec![
             Holiday::EasterOffset(-2),
@@ -384,5 +386,60 @@ mod tests {
         assert_eq!(false, cal.is_holiday(NaiveDate::from_ymd(2018, 11, 25)));
         assert_eq!(false, cal.is_holiday(NaiveDate::from_ymd(2019, 11, 24)));
         assert_eq!(true, cal.is_holiday(NaiveDate::from_ymd(2020, 11, 29)));
+    }
+
+    #[test]
+    /// Testing serialization and deserialization of holidays definitions
+    fn serialize_cal_definition() {  
+        let holidays = vec![
+            Holiday::MonthWeekday{month: 11, weekday: Weekday::Mon, nth: NthWeek::First, first: None, last: None },
+            Holiday::MovableYearlyDay{month: 11, day: 1, first: Some(2016), last: None},
+            Holiday::YearlyDay{month: 11, day: 3, first: None, last: Some(2019)},
+            Holiday::SingularDay(NaiveDate::from_ymd(2019, 11, 25)),
+            Holiday::WeekDay(Weekday::Sat),
+            Holiday::EasterOffset(-2),
+        ];
+        let json = serde_json::to_string_pretty(&holidays).unwrap();
+        assert_eq!(json, r#"[
+  {
+    "MonthWeekday": {
+      "month": 11,
+      "weekday": "Mon",
+      "nth": "First",
+      "first": null,
+      "last": null
+    }
+  },
+  {
+    "MovableYearlyDay": {
+      "month": 11,
+      "day": 1,
+      "first": 2016,
+      "last": null
+    }
+  },
+  {
+    "YearlyDay": {
+      "month": 11,
+      "day": 3,
+      "first": null,
+      "last": 2019
+    }
+  },
+  {
+    "SingularDay": "2019-11-25"
+  },
+  {
+    "WeekDay": "Sat"
+  },
+  {
+    "EasterOffset": -2
+  }
+]"#);
+        let holidays2 : Vec<Holiday> = serde_json::from_str(&json).unwrap();
+        assert_eq!(holidays.len(), holidays2.len());
+        for i in 0..holidays.len() {
+            assert_eq!(holidays[i], holidays2[i]);
+        }
     }
 }
