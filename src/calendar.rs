@@ -33,6 +33,8 @@ pub enum DayCountConv {
 /// was intentionally left out since 
 #[derive(Deserialize, Serialize, Debug)]
 pub enum DayAdjust {
+    #[serde(rename = "none")]
+    None,
     #[serde(rename = "following")]
     Following,
     #[serde(rename = "preceding")]
