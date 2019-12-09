@@ -13,13 +13,19 @@ use serde::de::{self,Visitor};
 
 /// Error type related to the TimePeriod struct
 #[derive(Debug, Clone)]
-pub struct TimePeriodError {
-    msg: String,
+pub enum TimePeriodError {
+    ParseError,
+    InvalidUnit,
+    InvalidPeriod,
 }
 
 impl fmt::Display for TimePeriodError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "time period error:  {}", self.msg)
+        match self {
+            TimePeriodError::ParseError => write!(f, "Couldn't parse time period, string is too short"),
+            TimePeriodError::InvalidUnit => write!(f, "Invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'"),
+            TimePeriodError::InvalidPeriod => write!(f, "Invalid number of periods"),
+        }
     }
 }
 
@@ -31,8 +37,8 @@ impl error::Error for TimePeriodError {
 }
 
 impl de::Error for TimePeriodError {
-    fn custom<T: fmt::Display>(msg: T) -> Self {
-        TimePeriodError{ msg: msg.to_string() }
+    fn custom<T: fmt::Display>(_: T) -> Self {
+        TimePeriodError::ParseError
     }
 }
 
@@ -128,9 +134,7 @@ impl FromStr for TimePeriod {
     fn from_str(tp: &str) -> Result<TimePeriod, TimePeriodError> {
         let len = tp.len();
         if len < 2 {
-            Err(TimePeriodError {
-                msg: "Couldn't parse time period, string is too short".to_string(),
-            })
+            Err(TimePeriodError::ParseError)
         } else {
             let unit = match tp.chars().last() {
                 Some('D') => TimePeriodUnit::Daily,
@@ -139,17 +143,13 @@ impl FromStr for TimePeriod {
                 Some('M') => TimePeriodUnit::Monthly,
                 Some('Y') => TimePeriodUnit::Annual,
                 _ => {
-                    return Err(TimePeriodError {
-                        msg: "Invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'".to_string(),
-                    })
+                    return Err(TimePeriodError::InvalidUnit)
                 }
             };
             let num = match tp[..len - 1].parse::<i32>() {
                 Ok(val) => val,
                 _ => {
-                    return Err(TimePeriodError {
-                        msg: "Invalid number of periods".to_string(),
-                    })
+                    return Err(TimePeriodError::InvalidPeriod)
                 }
             };
 
@@ -182,7 +182,7 @@ impl<'de> Visitor<'de> for TimePeriodVisitor {
     {
        match TimePeriod::from_str(value) {
            Ok(val) => Ok(val),
-           Err(err) => Err(E::custom(&err.msg))
+           Err(err) => Err(E::custom(err.to_string()))
        }
     
     }
