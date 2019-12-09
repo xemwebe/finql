@@ -1,3 +1,8 @@
+Version 0.2.2
+* Cash flow type added
+* Currency type added
+* TimePeriodError and CouponDate Error are now enums rather than structs
+
 Version 0.2.1
 * Data structure for bonds added with example reading data from JSON
 * New types for day count conventions and business day adjustments

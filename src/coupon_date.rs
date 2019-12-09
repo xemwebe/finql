@@ -15,13 +15,21 @@ pub struct CouponDate {
 
 /// Special error for parsing type CouponDate
 #[derive(Debug, Clone)]
-pub struct CouponDateError {
-    msg: String
+pub enum CouponDateError {
+    ParseError,
+    DayOutOfRange,
+    InvalidDay,
+    DayToBig,
 }
 
 impl fmt::Display for CouponDateError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "coupon date error:  {}", self.msg)
+        match self {
+            CouponDateError::ParseError => write!(f, "parsing of coupon date failed"),
+            CouponDateError::DayOutOfRange => write!(f, "day or month is out of range"),
+            CouponDateError::InvalidDay => write!(f, "parsing date or month failed"),
+            CouponDateError::DayToBig => write!(f, "day must not be larger than last day of month or 29th of February"),
+        }
     }
 }
 
@@ -33,15 +41,15 @@ impl error::Error for CouponDateError {
 }
 
 impl de::Error for CouponDateError {
-    fn custom<T: fmt::Display>(msg: T) -> Self {
-        CouponDateError{ msg: msg.to_string() }
+    fn custom<T: fmt::Display>(_: T) -> Self {
+        CouponDateError::ParseError
     }
 }
 
 use std::num::ParseIntError;
 impl std::convert::From<ParseIntError> for CouponDateError {
-    fn from(err: ParseIntError) -> CouponDateError {
-        CouponDateError{msg: format!("parsing date or month failed: {}", err)}
+    fn from(_: ParseIntError) -> CouponDateError {
+        CouponDateError::ParseError
     }
 }
 
@@ -49,7 +57,7 @@ impl std::convert::From<ParseIntError> for CouponDateError {
 impl CouponDate {
     pub fn new(day: u32, month: u32) -> Result<CouponDate,CouponDateError> {
         if day==0 || month==0 || month>12 {
-            return Err(CouponDateError{msg: "day or month is out of range".to_string()});
+            return Err(CouponDateError::DayOutOfRange);
         } 
         // Any year that is not a leap year will do.
         // We exclude explicitly February 29th, which is not a proper chosen coupon date
@@ -57,7 +65,7 @@ impl CouponDate {
         if day>0 && month>0 && month <=12 && day<=last {
             Ok(CouponDate{day:day, month:month})
         } else {
-            Err(CouponDateError{msg: "day must not be larger than last day of month or 29th of February".to_string()})
+            Err(CouponDateError::DayToBig)
         }
     }
 }
@@ -105,7 +113,7 @@ impl<'de> Visitor<'de> for CouponDateVisitor {
     {
         match CouponDate::from_str(value) {
             Ok(val) => Ok(val),
-            Err(err) => Err(E::custom(&err.msg))
+            Err(err) => Err(E::custom(format!("{}",err)))
         }
     
     }
