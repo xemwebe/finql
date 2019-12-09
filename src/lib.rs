@@ -21,3 +21,5 @@ pub use calendar::*;
 pub mod bond;
 pub use bond::*;
 pub mod coupon_date;
+pub mod currency;
+pub use currency::Currency;

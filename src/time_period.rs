@@ -11,7 +11,7 @@ use chrono::{Datelike, Duration, NaiveDate};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{self,Visitor};
 
-/// Error type related to the TimePeriod trait
+/// Error type related to the TimePeriod struct
 #[derive(Debug, Clone)]
 pub struct TimePeriodError {
     msg: String,

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use chrono::NaiveDate;
 use crate::calendar::{DayAdjust,DayCountConv};
 use crate::time_period::TimePeriod;
+use crate::currency::Currency;
 
 /// Container for bonds and similar fixed income assets
 #[derive(Deserialize, Serialize, Debug)]
@@ -15,7 +16,7 @@ pub struct Bond {
     /// Issuer of the bond
     issuer: Option<Issuer>,
     bond_type: String,
-    currency: String,
+    currency: Currency,
     coupon : Coupon,
     business_day_rule: DayAdjust,
     calendar: String,
@@ -53,3 +54,10 @@ struct Coupon {
     day_count_convention: DayCountConv,
 }
 
+/// Container for a single cash flow
+#[derive(Deserialize, Serialize, Debug)]
+struct CashFlow {
+    amount: f64,
+    date: NaiveDate,
+    currency: Currency,
+}
