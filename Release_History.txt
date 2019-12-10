@@ -1,3 +1,15 @@
+Version 0.2.3
+* Implementation of Act/Act ICMA added. This had some wider consequence. 
+  Application of Act/Act ICMA requires additional parameters for calculating
+  year fractions (time period and rolling date), which have been added as optional
+  parameters to the year fraction method. Since Act/Act ICMA is only applicable 
+  under certain conditions, the year fraction method can fail. Therefore, a 
+  Result is returned instead of float. In turn, cash flow rollout may also 
+  fail.
+* Since the year fraction method returns now a Result it is also flagged 
+  as an error, if some 30/x method is applied to the period of 30th to 31st
+  of the same month, in which case the method is also not applicable. 
+
 Version 0.2.2
 * Cash flow type added
 * Currency type added
