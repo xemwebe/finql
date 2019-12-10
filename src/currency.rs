@@ -38,7 +38,7 @@ impl de::Error for CurrencyError {
 
 
 /// Special type for currencies
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Currency {
     iso_code: [char;3],
 }

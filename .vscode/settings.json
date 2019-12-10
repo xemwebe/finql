@@ -1,12 +1,17 @@
 {
     "cSpell.words": [
         "Datelike",
+        "ICMA",
         "bdaily",
         "bday",
         "chrono",
         "computus",
+        "curr",
         "deserializer",
+        "icma",
         "isin",
+        "nums",
+        "structs",
         "succ"
     ]
 }

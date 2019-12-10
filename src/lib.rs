@@ -12,14 +12,21 @@
 //! rules, calculation of year fraction with respect to typical day count convention methods, roll-out of
 //! cash flows and setup of interest rate curves for calculating the discounted cash flow value.
 
+pub mod utility;
+
 pub mod time_period;
 pub use time_period::*;
 
 pub mod calendar;
 pub use calendar::*;
 
+pub mod day_count_conv;
+pub use day_count_conv::DayCountConv;
+
 pub mod bond;
 pub use bond::*;
+
 pub mod coupon_date;
+
 pub mod currency;
 pub use currency::Currency;

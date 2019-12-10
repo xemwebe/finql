@@ -68,6 +68,8 @@ impl CouponDate {
             Err(CouponDateError::DayToBig)
         }
     }
+    pub fn day(&self) -> u32 { self.day }
+    pub fn month(&self) -> u32 { self.month }
 }
 
 /// Write CouponDate as in the form dd.mm

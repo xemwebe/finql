@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run Test Debugger",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/target/debug/finql-a686941d1f2ec49f",
+            "args": ["calc_year_fractions_30_360"],
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": "cargo test build"
+        }
+    ]
+}

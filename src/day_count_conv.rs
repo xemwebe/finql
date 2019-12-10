@@ -68,7 +68,7 @@ impl DayCountConv {
 
     /// Implementation of 30/360 day count method
     fn calc_30_360(start: NaiveDate, end: NaiveDate) ->f64 {
-        let mut yf = (end.year() - start.year()) as f64 + (end.month()-start.month()) as f64/12.;
+        let yf = (end.year() - start.year()) as f64 + (end.month()-start.month()) as f64/12.;
         let start_day = std::cmp::min(start.day(),30) as i32;
         let end_day = if start_day==30 && end.day()==31 { 30 } else { end.day() } as i32;
         yf + (end_day-start_day) as f64 /360.
