@@ -2,6 +2,8 @@
 
 use chrono::{NaiveDate,Datelike};
 use serde::{Deserialize,Serialize};
+use std::fmt::{self,Display,Formatter};
+use crate::time_period::TimePeriod;
 
 /// Specify a day count method
 #[derive(Deserialize, Serialize, Debug)]
@@ -28,15 +30,30 @@ pub enum DayCountConv {
 /// e.g. missing parameters in calculation of year fraction
 #[derive(Debug)]
 pub enum DayCountConvError {
-    IcmaError,
     Impossible360,
+    IcmaMissingTimePeriod,
+    IcmaMissingRollDate,
+    IcmaNoFrequency,
+}
+
+impl Display for DayCountConvError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            DayCountConvError::Impossible360 => write!(f, "day count convention in 30/x style are not applicable periods from 30th to 31st"),
+            DayCountConvError::IcmaMissingTimePeriod => write!(f, "missing time period required for Act/Act ICMA"),
+            DayCountConvError::IcmaMissingRollDate => write!(f, "missing roll date required for Act/Act ICMA"),
+            DayCountConvError::IcmaNoFrequency => write!(f, "time period can't be converted to frequency as required by Act/Act ICMA"),
+        }
+    }
 }
 
 impl DayCountConv {
     /// The implementation of this function is in line with the 
     /// definitions in "Derivatives and Internal Models", 5th edition,
     /// H.-P. Deutsch and M. W. Beinker, Palgrave-Macmillan 2019
-    pub fn year_fraction(&self, start: NaiveDate, end: NaiveDate) -> Result<f64, DayCountConvError> {
+    pub fn year_fraction(&self, start: NaiveDate, end: NaiveDate,
+        roll_date: Option<NaiveDate>, time_period: Option<TimePeriod> ) -> Result<f64, DayCountConvError> {
+
         let since = NaiveDate::signed_duration_since;
         match self {
             DayCountConv::Act365 => Ok(since(end, start).num_days() as f64 / 365.),
@@ -55,7 +72,17 @@ impl DayCountConv {
                 if yf == 0. && start!=end { Err(DayCountConvError::Impossible360) }
                     else { Ok(yf) }
             },
-            DayCountConv::ActActICMA => Err(DayCountConvError::IcmaError),
+            DayCountConv::ActActICMA => {
+                match roll_date {
+                    None => Err(DayCountConvError::IcmaMissingRollDate),
+                    Some(roll_date) => match time_period {
+                        None => Err(DayCountConvError::IcmaMissingTimePeriod),
+                        Some(time_period) => {
+                            DayCountConv::calc_act_act_icma(start, end, roll_date, time_period)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -79,6 +106,56 @@ impl DayCountConv {
         (end.year() - start.year()) as f64 + (end.month()-start.month()) as f64/12.
          + ( std::cmp::min(end.day(), 30) as i32 - std::cmp::min(start.day(), 30 ) as i32 ) as f64 / 360.
     }
+
+    fn calc_act_act_icma(start: NaiveDate, end: NaiveDate, 
+        roll_date: NaiveDate, time_period: TimePeriod) -> Result<f64, DayCountConvError> {
+            let frequency = time_period.frequency();
+            match frequency {
+                Err(_) => Err(DayCountConvError::IcmaNoFrequency),
+                Ok(frequency) => {
+                    let freq: f64 = frequency as f64;
+                    let days = end.signed_duration_since(start).num_days() as f64;
+                    let mut base = roll_date;
+                    while base < start {
+                        base = time_period.add_to(base, None);
+                    }
+                    while base > end {
+                        base = time_period.sub_from(base, None);
+                    }
+                    if base<start { 
+                        // Period between start and end is shorter than natural period
+                        let period_days = base.signed_duration_since(time_period.add_to(base, None)).num_days() as f64;
+                        return Ok(days / (period_days * freq));
+                    }
+                    let mut periods = 0;
+                    let mut b = base;
+                    let mut yf = 0.;
+                    while b>start {
+                        b = time_period.sub_from(b, None);
+                        if b>=start { periods += 1; }
+                    }
+                    if b<start {
+                        // first period is broken, add fraction
+                        let be = time_period.add_to(b, None);
+                        let days = be.signed_duration_since(start).num_days() as f64;
+                        let period_days = be.signed_duration_since(b).num_days() as f64;
+                        yf = days/period_days;
+                    };
+                    while base<end {
+                        base = time_period.add_to(base, None);
+                        if base<=end { periods += 1; }
+                    }
+                    if base>start {
+                        // last period is broken, add fraction
+                        let bs = time_period.sub_from(base, None);
+                        let days = end.signed_duration_since(bs).num_days() as f64;
+                        let period_days = base.signed_duration_since(bs).num_days() as f64;
+                        yf = days/period_days;
+                    };
+                    Ok( (yf + periods as f64) / freq )
+                }
+            }
+        }
 
     /// Calculate the number of day in a given year.
     fn days_in_year(year: i32) -> u32 {
@@ -123,15 +200,15 @@ mod tests {
 
         let start = NaiveDate::from_ymd(2019,10,1);
         let end = NaiveDate::from_ymd(2020,10,1);
-        assert!(fuzzy_eq_absolute(dcc365.year_fraction(start, end).unwrap(), 366./365., tol));
-        assert!(fuzzy_eq_absolute(dcc365l.year_fraction(start, end).unwrap(), 92./365. + 274./366., tol));
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 366./360., tol));
+        assert!(fuzzy_eq_absolute(dcc365.year_fraction(start, end, None, None).unwrap(), 366./365., tol));
+        assert!(fuzzy_eq_absolute(dcc365l.year_fraction(start, end, None, None).unwrap(), 92./365. + 274./366., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 366./360., tol));
 
         let start = NaiveDate::from_ymd(2019,10,1);
         let end = NaiveDate::from_ymd(2019,11,1);
-        assert!(fuzzy_eq_absolute(dcc365.year_fraction(start, end).unwrap(), 31./365., tol));
-        assert!(fuzzy_eq_absolute(dcc365l.year_fraction(start, end).unwrap(), 31./365., tol));
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc365.year_fraction(start, end, None, None).unwrap(), 31./365., tol));
+        assert!(fuzzy_eq_absolute(dcc365l.year_fraction(start, end, None, None).unwrap(), 31./365., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
     }
 
     #[test]
@@ -141,192 +218,192 @@ mod tests {
         let dcc360e = DayCountConv::D30E360;
         let start = NaiveDate::from_ymd(2019,7,29);
         let end = NaiveDate::from_ymd(2019,8,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,8,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
         let end = NaiveDate::from_ymd(2019,8,31);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 32./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
         let end = NaiveDate::from_ymd(2019,9,1);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 32./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
 
         let start = NaiveDate::from_ymd(2019,7,30);
         let end = NaiveDate::from_ymd(2019,8,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 29./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
         let end = NaiveDate::from_ymd(2019,8,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,8,31);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,9,1);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
 
         let start = NaiveDate::from_ymd(2019,7,31);
         let end = NaiveDate::from_ymd(2019,8,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 29./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
         let end = NaiveDate::from_ymd(2019,8,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,8,31);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,9,1);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
 
         let start = NaiveDate::from_ymd(2019,6,29);
         let end = NaiveDate::from_ymd(2019,7,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,7,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
         let end = NaiveDate::from_ymd(2019,7,31);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 32./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
         let end = NaiveDate::from_ymd(2019,8,1);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 32./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
 
         let start = NaiveDate::from_ymd(2019,6,30);
         let end = NaiveDate::from_ymd(2019,7,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 29./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
         let end = NaiveDate::from_ymd(2019,7,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,7,31);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,8,1);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
 
         let start = NaiveDate::from_ymd(2019,8,29);
         let end = NaiveDate::from_ymd(2019,9,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,9,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
         let end = NaiveDate::from_ymd(2019,10,1);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 32./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
 
         let start = NaiveDate::from_ymd(2019,8,30);
         let end = NaiveDate::from_ymd(2019,9,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 29./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
         let end = NaiveDate::from_ymd(2019,9,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,10,1);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
 
         let start = NaiveDate::from_ymd(2019,8,31);
         let end = NaiveDate::from_ymd(2019,9,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 29./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
         let end = NaiveDate::from_ymd(2019,9,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2019,10,1);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));    
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));    
 
         let start = NaiveDate::from_ymd(2020,1,29);
         let end = NaiveDate::from_ymd(2020,2,28);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 29./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
         let end = NaiveDate::from_ymd(2020,2,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
 
         let start = NaiveDate::from_ymd(2020,1,30);
         let end = NaiveDate::from_ymd(2020,2,28);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 28./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 28./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 28./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 28./360., tol));
         let end = NaiveDate::from_ymd(2020,2,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 29./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
         
         let start = NaiveDate::from_ymd(2020,1,31);
         let end = NaiveDate::from_ymd(2020,2,28);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 28./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 28./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 28./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 28./360., tol));
         let end = NaiveDate::from_ymd(2020,2,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 29./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
 
         let start = NaiveDate::from_ymd(2020,2,28);
         let end = NaiveDate::from_ymd(2020,3,28);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2020,3,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
         let end = NaiveDate::from_ymd(2020,3,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 32./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
         let end = NaiveDate::from_ymd(2020,3,31);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 33./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 33./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
 
         let start = NaiveDate::from_ymd(2020,2,29);
         let end = NaiveDate::from_ymd(2020,3,28);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 29./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
         let end = NaiveDate::from_ymd(2020,3,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2020,3,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
         let end = NaiveDate::from_ymd(2020,3,31);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 32./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
 
 
         let start = NaiveDate::from_ymd(2019,1,28);
         let end = NaiveDate::from_ymd(2019,2,28);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
 
         let start = NaiveDate::from_ymd(2020,1,29);
         let end = NaiveDate::from_ymd(2020,2,28);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 29./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 29./360., tol));
 
         let start = NaiveDate::from_ymd(2020,1,30);
         let end = NaiveDate::from_ymd(2020,2,28);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 28./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 28./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 28./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 28./360., tol));
 
         let start = NaiveDate::from_ymd(2020,1,31);
         let end = NaiveDate::from_ymd(2020,2,28);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 28./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 28./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 28./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 28./360., tol));
 
         let start = NaiveDate::from_ymd(2020,2,28);
         let end = NaiveDate::from_ymd(2020,3,28);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 30./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 30./360., tol));
         let end = NaiveDate::from_ymd(2020,3,29);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 31./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 31./360., tol));
         let end = NaiveDate::from_ymd(2020,3,30);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 32./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
         let end = NaiveDate::from_ymd(2020,3,31);
-        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end).unwrap(), 33./360., tol));
-        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end).unwrap(), 32./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 33./360., tol));
+        assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
     }
 }

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use chrono::{NaiveDate,Datelike};
 use crate::calendar::{DayAdjust};
-use crate::day_count_conv::DayCountConv;
+use crate::day_count_conv::{DayCountConv, DayCountConvError};
 use crate::time_period::TimePeriod;
 use crate::currency::Currency;
 
@@ -60,8 +60,9 @@ struct Coupon {
 impl Coupon {
     fn coupon_day(&self) -> u32 { self.coupon_date.day() }
     fn coupon_month(&self) -> u32 { self.coupon_date.month() }
-    fn year_fraction(&self, start: NaiveDate, end: NaiveDate) -> f64 { 
-        self.day_count_convention.year_fraction(start, end).unwrap()
+    fn year_fraction(&self, start: NaiveDate, end: NaiveDate, 
+        roll_date: NaiveDate) -> Result<f64, DayCountConvError> { 
+        self.day_count_convention.year_fraction(start, end, Some(roll_date), Some(self.period))
     }
 }
 
@@ -108,7 +109,7 @@ impl Display for CashFlow {
 }
 
 /// Convert bond in stream of cash flows
-pub fn rollout_cash_flows(bond: Bond, position: f64) -> Vec<CashFlow> {
+pub fn rollout_cash_flows(bond: Bond, position: f64) -> Result<Vec<CashFlow>, DayCountConvError> {
     let mut cfs = Vec::new();
     let start_date = bond.issue_date;
     let mut end_date = if bond.coupon.coupon_month()<=start_date.month() {
@@ -120,7 +121,7 @@ pub fn rollout_cash_flows(bond: Bond, position: f64) -> Vec<CashFlow> {
         bond.coupon.coupon_month(),
         bond.coupon.coupon_day())
     };
-    let year_fraction = bond.coupon.year_fraction(start_date, end_date);
+    let year_fraction = bond.coupon.year_fraction(start_date, end_date, end_date)?;
     let amount = position * (bond.denomination as f64) * bond.coupon.rate/100. * year_fraction;
     let cf = CashFlow{ amount:amount, currency: bond.currency.clone(), date: end_date.clone() };
     cfs.push(cf);
@@ -128,12 +129,12 @@ pub fn rollout_cash_flows(bond: Bond, position: f64) -> Vec<CashFlow> {
     while end_date < maturity {
         let start_date = end_date;
         end_date = bond.coupon.period.add_to(start_date, None);
-        let year_fraction = bond.coupon.year_fraction(start_date, end_date);
+        let year_fraction = bond.coupon.year_fraction(start_date, end_date, start_date)?;
         let amount = position * (bond.denomination as f64) * bond.coupon.rate/100. * year_fraction;
         let cf = CashFlow{ amount:amount, currency: bond.currency.clone(), date: end_date.clone() };
         cfs.push(cf);
     }
-    cfs
+    Ok(cfs)
 }
 
 
@@ -161,7 +162,7 @@ mod tests {
             "denomination": 1000
         }"#;
         let bond: Bond = serde_json::from_str(&data).unwrap(); 
-        let cash_flows = rollout_cash_flows(bond, 1.);
+        let cash_flows = rollout_cash_flows(bond, 1.).unwrap();
         assert_eq!(cash_flows.len(), 4);
         let curr = Currency::from_str("EUR").unwrap();
         let reference_cash_flows = vec![

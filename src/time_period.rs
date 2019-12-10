@@ -66,7 +66,7 @@ impl fmt::Display for TimePeriodUnit {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TimePeriod {
     num: i32,
     unit: TimePeriodUnit,
@@ -123,8 +123,12 @@ impl TimePeriod {
 
     /// Substract time period from a given date.
     pub fn sub_from(&self, date: NaiveDate, cal: Option<&Calendar>) -> NaiveDate {
-        let inverse_period = TimePeriod{ num: -self.num, unit: self.unit };
-        inverse_period.add_to(date, cal)
+        self.inverse().add_to(date, cal)
+    }
+
+    /// Substract time period from a given date.
+    pub fn inverse(&self) -> TimePeriod {
+        TimePeriod{ num: -self.num, unit: self.unit }
     }
 
     /// Returns the frequency per year, if this is possible,
