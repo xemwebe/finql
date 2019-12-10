@@ -17,14 +17,16 @@ pub enum TimePeriodError {
     ParseError,
     InvalidUnit,
     InvalidPeriod,
+    NoFrequency,
 }
 
 impl fmt::Display for TimePeriodError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TimePeriodError::ParseError => write!(f, "Couldn't parse time period, string is too short"),
-            TimePeriodError::InvalidUnit => write!(f, "Invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'"),
-            TimePeriodError::InvalidPeriod => write!(f, "Invalid number of periods"),
+            TimePeriodError::ParseError => write!(f, "couldn't parse time period, string is too short"),
+            TimePeriodError::InvalidUnit => write!(f, "invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'"),
+            TimePeriodError::InvalidPeriod => write!(f, "parsing number of periods for time period failed"),
+            TimePeriodError::NoFrequency => write!(f, "the time period can't be converted to frequency"),
         }
     }
 }
@@ -43,7 +45,7 @@ impl de::Error for TimePeriodError {
 }
 
 /// Possible units of a time period
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum TimePeriodUnit {
     Daily,
     BusinessDaily,
@@ -118,6 +120,31 @@ impl TimePeriod {
             }
         }
     }
+
+    /// Substract time period from a given date.
+    pub fn sub_from(&self, date: NaiveDate, cal: Option<&Calendar>) -> NaiveDate {
+        let inverse_period = TimePeriod{ num: -self.num, unit: self.unit };
+        inverse_period.add_to(date, cal)
+    }
+
+    /// Returns the frequency per year, if this is possible,
+    /// otherwise return error
+    pub fn frequency(&self) -> Result<u16, TimePeriodError> {
+        match self.unit {
+            TimePeriodUnit::Daily 
+            | TimePeriodUnit::BusinessDaily 
+            | TimePeriodUnit::Weekly          => Err(TimePeriodError::NoFrequency),
+            TimePeriodUnit::Monthly =>  match self.num.abs() {
+                1 => Ok(12),
+                3 => Ok(4),
+                6 => Ok(2),
+                12 => Ok(1),
+                _ => Err(TimePeriodError::NoFrequency)
+            },
+            TimePeriodUnit::Annual => if self.num.abs()==1 { Ok(1) } else { Err(TimePeriodError::NoFrequency) }
+        }
+    }
+
 }
 
 
