@@ -7,7 +7,7 @@ description = "A quantitative finance toolbox"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/xemwebe/finql"
 readme = "README.md"
-keywords = ["finance", "calendar", "bond", "period", "pricing"]
+keywords = ["finance", "calendar", "bond", "time period", "pricing"]
 categories = ["date-and-time","mathematics"]
 
 [dependencies]

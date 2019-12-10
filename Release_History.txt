@@ -2,6 +2,10 @@ Version 0.2.2
 * Cash flow type added
 * Currency type added
 * TimePeriodError and CouponDate Error are now enums rather than structs
+* DayCountConv moved to a separate module
+* Implementation of day count methods (except for act/act ICMA) with many test cases
+* New utility module
+* First simple version of cash flow rollout (without adjustments)
 
 Version 0.2.1
 * Data structure for bonds added with example reading data from JSON
