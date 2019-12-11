@@ -30,3 +30,6 @@ pub mod coupon_date;
 
 pub mod currency;
 pub use currency::Currency;
+
+pub mod market;
+pub use market::Market;
