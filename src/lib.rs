@@ -23,6 +23,9 @@ pub use calendar::*;
 pub mod day_count_conv;
 pub use day_count_conv::DayCountConv;
 
+pub mod day_adjust;
+pub use day_adjust::DayAdjust;
+
 pub mod bond;
 pub use bond::*;
 

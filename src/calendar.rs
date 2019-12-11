@@ -13,23 +13,6 @@ use std::collections::BTreeSet;
 use serde::{Deserialize,Serialize};
 use computus;
 
-/// Rules to adjust dates to business days
-/// The rule "Modified Preceding" commonly referred to in text books
-/// was intentionally left out since 
-#[derive(Deserialize, Serialize, Debug)]
-pub enum DayAdjust {
-    #[serde(rename = "none")]
-    None,
-    #[serde(rename = "following")]
-    Following,
-    #[serde(rename = "preceding")]
-    Preceding,
-    /// Next business day, if it falls in the same month, otherwise preceding business day
-    #[serde(rename = "modified")]
-    #[serde(alias = "modified following")]
-    Modified,
-}
-
 /// Specifies the nth week of a month
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub enum NthWeek {
