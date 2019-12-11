@@ -11,9 +11,9 @@ fn main() {
         // New Year's day
         Holiday::MovableYearlyDay{month: 1, day: 1, first: None, last: None},
         // Good Friday
-        Holiday::EasterOffset(-2),
+        Holiday::EasterOffset{offset: -2, first: None, last: None},
         // Easter Monday
-        Holiday::EasterOffset(1),
+        Holiday::EasterOffset{offset: 1, first: None, last: None},
         // first Monday of May, moved two times in history to 8th of May
         Holiday::MonthWeekday{month: 5, weekday: Weekday::Mon, nth: NthWeek::First, first: None, last: Some(1994) },
         Holiday::SingularDay(NaiveDate::from_ymd(1995,5,8)),

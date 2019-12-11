@@ -67,7 +67,11 @@ pub enum Holiday {
     /// A single holiday which is valid only once in time.
     SingularDay(NaiveDate),
     /// A holiday that is defined in relative days (e.g. -2 for Good Friday) to Easter (Sunday).
-    EasterOffset(i32),
+    EasterOffset{
+        offset: i32, 
+        first: Option<i32>, 
+        last: Option<i32>
+    },
     /// A holiday that falls on the nth (or last) weekday of a specific month, e.g. the first Monday in May.
     /// `first` and `last` are the first and last year this day is a holiday (inclusively).
     MonthWeekday {
@@ -137,8 +141,13 @@ impl Calendar {
                         holidays.insert(date);
                     }
                 }
-                Holiday::EasterOffset(offset) => {
-                    for year in start..end + 1 {
+                Holiday::EasterOffset{
+                    offset,
+                    first,
+                    last
+                } => {
+                    let (first, last) = Self::calc_first_and_last(start, end, first, last);
+                    for year in first..last + 1 {
                         let easter = computus::gregorian(year).unwrap();
                         let easter = NaiveDate::from_ymd(easter.year, easter.month, easter.day);
                         let date = easter
@@ -341,7 +350,7 @@ mod tests {
     /// Good Friday example
     fn test_easter_offset() {        
         let holidays = vec![
-            Holiday::EasterOffset(-2),
+            Holiday::EasterOffset{offset: -2, first: None, last:None},
         ];
         let cal = Calendar::calc_calendar(&holidays, 2019, 2020);
         assert_eq!(false, cal.is_business_day(NaiveDate::from_ymd(2019, 4, 19)));
@@ -384,7 +393,7 @@ mod tests {
             Holiday::YearlyDay{month: 11, day: 3, first: None, last: Some(2019)},
             Holiday::SingularDay(NaiveDate::from_ymd(2019, 11, 25)),
             Holiday::WeekDay(Weekday::Sat),
-            Holiday::EasterOffset(-2),
+            Holiday::EasterOffset{offset: -2, first: None, last: None},
         ];
         let json = serde_json::to_string_pretty(&holidays).unwrap();
         assert_eq!(json, r#"[
@@ -420,7 +429,11 @@ mod tests {
     "WeekDay": "Sat"
   },
   {
-    "EasterOffset": -2
+    "EasterOffset": {
+      "offset": -2,
+      "first": null,
+      "last": null
+    }
   }
 ]"#);
         let holidays2 : Vec<Holiday> = serde_json::from_str(&json).unwrap();
