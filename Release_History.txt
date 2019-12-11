@@ -1,3 +1,13 @@
+Version 0.3.0
+* Calculation of cash flow rollout is now completed, including payment day
+  adjustments. The example and unit tests have also been updated.
+* Business day adjustment rules have been moved to separate module and 
+  adjustment rules have been implemented
+* New struct Market, which will serve as provider for market data, either as
+  in-memory container or adapter to some external storage facility. The current
+  implementation is only a stub.
+* EasterHoliday accepts now also first and last year (required for TARGET calendar)
+
 Version 0.2.3
 * Implementation of Act/Act ICMA added. This had some wider consequence. 
   Application of Act/Act ICMA requires additional parameters for calculating
