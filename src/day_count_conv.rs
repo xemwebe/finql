@@ -4,11 +4,13 @@ use chrono::{NaiveDate,Datelike};
 use serde::{Deserialize,Serialize};
 use std::fmt::{self,Display,Formatter};
 use crate::time_period::TimePeriod;
+use std::error::Error;
 
 /// Specify a day count method
 #[derive(Deserialize, Serialize, Debug)]
 pub enum DayCountConv {
-    #[serde(rename = "act/act icma")]
+    #[serde(rename = "icma")]
+    #[serde(alias = "act/act icma")]
     #[serde(alias = "Act/Act")]
     #[serde(alias = "Act/Act ICMA")]
     ActActICMA,
@@ -44,6 +46,12 @@ impl Display for DayCountConvError {
             DayCountConvError::IcmaMissingRollDate => write!(f, "missing roll date required for Act/Act ICMA"),
             DayCountConvError::IcmaNoFrequency => write!(f, "time period can't be converted to frequency as required by Act/Act ICMA"),
         }
+    }
+}
+
+impl Error for DayCountConvError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
     }
 }
 

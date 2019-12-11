@@ -8,6 +8,26 @@
 use crate::calendar::{Calendar, Holiday, NthWeek};
 use chrono::{Weekday, NaiveDate};
 use std::collections::HashMap;
+use std::fmt;
+use std::error::Error;
+
+/// Error related to market data object
+#[derive(Debug)]
+pub enum MarketError {
+    CalendarNotFound
+}
+
+impl fmt::Display for MarketError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "unknown calendar")
+    }
+}
+
+impl Error for MarketError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
 
 /// Container or adapter to market data
 pub struct Market{
@@ -21,8 +41,12 @@ impl Market {
     }
 
     /// Get calendar from market
-    pub fn get_cal(&self, name: String) -> &Calendar {
-        &self.calendars[&name]
+    pub fn get_calendar(&self, name: &str) -> Result<&Calendar,MarketError> {
+        if self.calendars.contains_key(name) {
+            Ok(&self.calendars[name])
+        } else {
+            Err(MarketError::CalendarNotFound)
+        }
     }
 }
 
