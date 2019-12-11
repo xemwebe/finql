@@ -109,53 +109,54 @@ impl DayCountConv {
 
     fn calc_act_act_icma(start: NaiveDate, end: NaiveDate, 
         roll_date: NaiveDate, time_period: TimePeriod) -> Result<f64, DayCountConvError> {
-            let frequency = time_period.frequency();
-            match frequency {
-                Err(_) => Err(DayCountConvError::IcmaNoFrequency),
-                Ok(frequency) => {
-                    let freq: f64 = frequency as f64;
-                    let days = end.signed_duration_since(start).num_days() as f64;
-                    let mut base = roll_date;
-                    while base < start {
-                        base = time_period.add_to(base, None);
-                    }
-                    while base > end {
-                        base = time_period.sub_from(base, None);
-                    }
-                    if base<start { 
-                        // Period between start and end is shorter than natural period
-                        let period_days = base.signed_duration_since(time_period.add_to(base, None)).num_days() as f64;
-                        return Ok(days / (period_days * freq));
-                    }
-                    let mut periods = 0;
-                    let mut b = base;
-                    let mut yf = 0.;
-                    while b>start {
-                        b = time_period.sub_from(b, None);
-                        if b>=start { periods += 1; }
-                    }
-                    if b<start {
-                        // first period is broken, add fraction
-                        let be = time_period.add_to(b, None);
-                        let days = be.signed_duration_since(start).num_days() as f64;
-                        let period_days = be.signed_duration_since(b).num_days() as f64;
-                        yf = days/period_days;
-                    };
-                    while base<end {
-                        base = time_period.add_to(base, None);
-                        if base<=end { periods += 1; }
-                    }
-                    if base>start {
-                        // last period is broken, add fraction
-                        let bs = time_period.sub_from(base, None);
-                        let days = end.signed_duration_since(bs).num_days() as f64;
-                        let period_days = base.signed_duration_since(bs).num_days() as f64;
-                        yf = days/period_days;
-                    };
-                    Ok( (yf + periods as f64) / freq )
+
+        let frequency = time_period.frequency();
+        match frequency {
+            Err(_) => Err(DayCountConvError::IcmaNoFrequency),
+            Ok(frequency) => {
+                let freq: f64 = frequency as f64;
+                let mut base = roll_date;
+                while base < start {
+                    base = time_period.add_to(base, None);
                 }
+                while base > end {
+                    base = time_period.sub_from(base, None);
+                }
+                if base<start { 
+                    // Period between start and end is shorter than natural period
+                    let days = end.signed_duration_since(start).num_days() as f64;
+                    let period_days = time_period.add_to(base, None).signed_duration_since(base).num_days() as f64;
+                    return Ok(days / (period_days * freq));
+                }
+                let mut periods = 0;
+                let mut b = base;
+                let mut yf = 0.;
+                while b>start {
+                    b = time_period.sub_from(b, None);
+                    if b>=start { periods += 1; }
+                }
+                if b<start {
+                    // first period is broken, add fraction
+                    let be = time_period.add_to(b, None);
+                    let days = be.signed_duration_since(start).num_days() as f64;
+                    let period_days = be.signed_duration_since(b).num_days() as f64;
+                    yf += days/period_days;
+                };
+                while base<end {
+                    base = time_period.add_to(base, None);
+                    if base<=end { periods += 1; }
+                }
+                if base>end {
+                    // last period is broken, add fraction
+                    let bs = time_period.sub_from(base, None);
+                    let days = end.signed_duration_since(bs).num_days() as f64;
+                    let period_days = base.signed_duration_since(bs).num_days() as f64;
+                    yf += days/period_days;
+                };
+                Ok( (yf + periods as f64) / freq )
             }
         }
+    }
 
     /// Calculate the number of day in a given year.
     fn days_in_year(year: i32) -> u32 {
@@ -172,7 +173,6 @@ impl DayCountConv {
 mod tests {
     use super::*;
     use crate::utility::fuzzy_eq_absolute;
-
 
     #[test]
     fn days_this_year() {
@@ -405,5 +405,83 @@ mod tests {
         let end = NaiveDate::from_ymd(2020,3,31);
         assert!(fuzzy_eq_absolute(dcc360.year_fraction(start, end, None, None).unwrap(), 33./360., tol));
         assert!(fuzzy_eq_absolute(dcc360e.year_fraction(start, end, None, None).unwrap(), 32./360., tol));
+    }
+    #[test]
+    fn calc_year_fractions_icma() {
+        let tol = 1e-11;
+        let start = NaiveDate::from_ymd(2019,10,1);
+        let end = NaiveDate::from_ymd(2019,11,1);
+        let dcc = DayCountConv::ActActICMA;
+        let tp = Some("1M".parse::<TimePeriod>().unwrap());
+
+
+        // Natural period
+        let roll_date = Some(NaiveDate::from_ymd(2019,10,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), 1./12., tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,11,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), 1./12., tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,9,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), 1./12., tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,12,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), 1./12., tol));
+
+        // Shifted natural period
+        let roll_date = Some(NaiveDate::from_ymd(2019,9,15));
+        let yf = (14./30.+17./31.)/12.;
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,10,15));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,11,15));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+
+        // Short period
+        let start = NaiveDate::from_ymd(2019,10,5);
+        let end = NaiveDate::from_ymd(2019,10,15);
+        let roll_date = Some(NaiveDate::from_ymd(2019,10,1));
+        let yf = 10./31./12.;
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,11,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,10,5));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,10,15));
+        let yf = 10./30./12.;
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,10,10));
+        let yf = (5./31. + 5./30.)/12.;
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+
+        // Long period
+        let start = NaiveDate::from_ymd(2019,10,1);
+        let end = NaiveDate::from_ymd(2020,1,1);
+        let roll_date = Some(NaiveDate::from_ymd(2019,9,1));
+        let yf = 3./12.;
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,10,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,12,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2020,1,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+
+        let roll_date = Some(NaiveDate::from_ymd(2019,9,15));
+        let yf = (14./30. + 2. + 17./31.)/12.;
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,10,15));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2020,2,15));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+
+        let start = NaiveDate::from_ymd(2019,10,5);
+        let end = NaiveDate::from_ymd(2019,12,20);
+        let roll_date = Some(NaiveDate::from_ymd(2019,9,1));
+        let yf = (27./31. + 1. + 19./31.)/12.;
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,10,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2019,12,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
+        let roll_date = Some(NaiveDate::from_ymd(2020,1,1));
+        assert!(fuzzy_eq_absolute(dcc.year_fraction(start, end, roll_date, tp).unwrap(), yf, tol));
     }
 }
