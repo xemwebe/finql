@@ -26,16 +26,22 @@ fn main() {
     let cfs2 = get_cash_flows_after(&cfs2, today);
 
     let max_len = std::cmp::max(cfs1.len(),cfs2.len());
-    println!("\n\n    Future cash flows bond1      |    Future cash flows bond2");
+    println!("\n\nComparison of key figures\n");
+    println!("                       bond1     |     bond2");
+    println!("                  =================================");
+    println!("Accr. interest: {:17.4}|{:17.4}", 
+        bond1.accrued_interest(today).unwrap(),
+        bond2.accrued_interest(today).unwrap());
+    println!("\n    Future cash flows bond1      |    Future cash flows bond2");
     println!("===================================================================");
     for i in 0..max_len {
-        if i < cfs1.len() && cfs1[i].date > today {
+        if i < cfs1.len() {
             print!("{}", cfs1[i]);
         } else {
             print!("                               ");
         }
         print!("  |  ");
-        if i < cfs2.len() && cfs2[i].date > today {
+        if i < cfs2.len() {
             print!("{}", cfs2[i]);
         }
         println!("");

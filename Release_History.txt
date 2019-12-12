@@ -1,3 +1,8 @@
+Version 0.3.1
+* CashFlow moved to new module fixed_income
+* New trait FixedIncome which provides cash flow rollout method
+* Re-exports of selected traits, types and functions removed from lib.rs
+
 Version 0.3.0
 * Calculation of cash flow rollout is now completed, including payment day
   adjustments. The example and unit tests have also been updated.

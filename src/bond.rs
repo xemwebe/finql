@@ -111,14 +111,10 @@ impl Coupon {
     }
 }
 
-impl FixedIncome for Bond {
-    type Error = BondError;
-
-    /// Convert bond in stream of cash flows
-    fn rollout_cash_flows(&self, position: f64, market: &Market) -> Result<Vec<CashFlow>, BondError> {
-        let mut cfs = Vec::new();
-        let start_date = self.issue_date;
-        let mut end_date = if self.coupon.coupon_month()<=start_date.month() {
+impl Bond {
+    /// Calculate first coupon period end date
+    fn first_coupon_end(&self, start_date: NaiveDate) -> NaiveDate {
+        if self.coupon.coupon_month()<=start_date.month() {
             NaiveDate::from_ymd(start_date.year()+1,
                 self.coupon.coupon_month(),
                 self.coupon.coupon_day())
@@ -126,7 +122,18 @@ impl FixedIncome for Bond {
             NaiveDate::from_ymd(start_date.year(),
             self.coupon.coupon_month(),
             self.coupon.coupon_day())
-        };
+        }
+    }
+}
+
+impl FixedIncome for Bond {
+    type Error = BondError;
+
+    /// Convert bond in stream of cash flows
+    fn rollout_cash_flows(&self, position: f64, market: &Market) -> Result<Vec<CashFlow>, BondError> {
+        let mut cfs = Vec::new();
+        let start_date = self.issue_date;
+        let mut end_date = self.first_coupon_end(start_date);
         let year_fraction = self.coupon.year_fraction(start_date, end_date, end_date)?;
         let amount = position * (self.denomination as f64) * self.coupon.rate/100. * year_fraction;
         let cal = market.get_calendar(&self.calendar)?;
@@ -152,6 +159,23 @@ impl FixedIncome for Bond {
         cfs.push(cf);
 
         Ok(cfs)
+    }
+
+    fn accrued_interest(&self, today: NaiveDate) -> Result<f64,BondError> {
+        let mut start_date = self.issue_date;
+        if today<start_date { return Ok(0.); }
+        let mut end_date = self.first_coupon_end(start_date);
+        while today>end_date && end_date < self.maturity {
+            start_date = end_date;
+            end_date = self.coupon.period.add_to(start_date, None);
+        }
+        if end_date >= self.maturity { return Ok(0.); }
+        let year_fraction = self.coupon.year_fraction(start_date, end_date, start_date)?;
+        let amount = (self.denomination as f64) * self.coupon.rate/100. * year_fraction;
+        let fraction = today.signed_duration_since(start_date).num_days() as f64 /
+            end_date.signed_duration_since(start_date).num_days() as f64 ;
+            
+        Ok(amount * fraction)
     }
 }
 

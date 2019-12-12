@@ -60,5 +60,8 @@ pub trait FixedIncome {
 
     /// Transform product into series of cash flows
     fn rollout_cash_flows(&self, position: f64, market: &Market) -> Result<Vec<CashFlow>, Self::Error>;
+
+    /// Calculate accrued interest for current coupon period
+    fn accrued_interest(&self, today: NaiveDate) -> Result<f64, Self::Error>;
 }
 
