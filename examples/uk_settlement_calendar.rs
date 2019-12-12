@@ -1,5 +1,5 @@
 use chrono::{Weekday, NaiveDate};
-use finql::{Calendar, Holiday, NthWeek};
+use finql::calendar::{Calendar, Holiday, NthWeek};
 
 fn main() {
     // we choose the uk settlement calendar as an example, because of the many exceptions

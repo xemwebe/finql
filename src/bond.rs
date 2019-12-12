@@ -3,13 +3,15 @@
 /// valuation figures
 
 use serde::{Deserialize, Serialize};
-use chrono::{NaiveDate,Datelike};
+use chrono::{NaiveDate, Datelike};
 use crate::day_adjust::{DayAdjust};
 use crate::day_count_conv::{DayCountConv, DayCountConvError};
 use crate::time_period::TimePeriod;
 use crate::currency::Currency;
 use crate::market::{Market, MarketError};
+use crate::fixed_income::{CashFlow,FixedIncome};
 use std::error::Error;
+use std::fmt;
 
 /// Error related to bonds
 #[derive(Debug)]
@@ -109,97 +111,48 @@ impl Coupon {
     }
 }
 
-use std::f64;
-use std::fmt;
-use std::fmt::{Display,Formatter};
+impl FixedIncome for Bond {
+    type Error = BondError;
 
-/// Container for a single cash flow
-#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
-pub struct CashFlow {
-    pub amount: f64,
-    pub date: NaiveDate,
-    pub currency: Currency,
-}
-
-impl CashFlow {
-    /// Check, whether cash flows could be aggregated
-    pub fn aggregatable(&self, cf: &CashFlow) -> bool {
-        if self.currency != cf.currency {
-            false
-        } else if self.date != cf.date {
-            false
+    /// Convert bond in stream of cash flows
+    fn rollout_cash_flows(&self, position: f64, market: &Market) -> Result<Vec<CashFlow>, BondError> {
+        let mut cfs = Vec::new();
+        let start_date = self.issue_date;
+        let mut end_date = if self.coupon.coupon_month()<=start_date.month() {
+            NaiveDate::from_ymd(start_date.year()+1,
+                self.coupon.coupon_month(),
+                self.coupon.coupon_day())
         } else {
-            true
-        }
-    }
-
-    /// Compare to cash flows for equality within a given absolute tolerance
-    pub fn fuzzy_cash_flows_cmp_eq(&self, cf: &CashFlow, tol: f64) -> bool {
-        if !self.aggregatable(cf) {
-            false
-        } else if self.amount.is_nan() || cf.amount.is_nan() || (self.amount-cf.amount).abs() > tol {
-            false
-        } else {
-            true
-        }
-    }
-}
-
-impl Display for CashFlow {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {:16.4} {}", self.date, self.amount, self.currency)
-    }
-}
-
-/// Convert bond in stream of cash flows
-pub fn rollout_cash_flows(bond: Bond, position: f64, market: &Market) -> Result<Vec<CashFlow>, BondError> {
-    let mut cfs = Vec::new();
-    let start_date = bond.issue_date;
-    let mut end_date = if bond.coupon.coupon_month()<=start_date.month() {
-        NaiveDate::from_ymd(start_date.year()+1,
-            bond.coupon.coupon_month(),
-            bond.coupon.coupon_day())
-    } else {
-        NaiveDate::from_ymd(start_date.year(),
-        bond.coupon.coupon_month(),
-        bond.coupon.coupon_day())
-    };
-    let year_fraction = bond.coupon.year_fraction(start_date, end_date, end_date)?;
-    let amount = position * (bond.denomination as f64) * bond.coupon.rate/100. * year_fraction;
-    let cal = market.get_calendar(&bond.calendar)?;
-    let pay_date = bond.business_day_rule.adjust_date(end_date, cal);
-    let cf = CashFlow{ amount:amount, currency: bond.currency.clone(), date: pay_date };
-    cfs.push(cf);
-    let maturity = bond.maturity;
-    while end_date < maturity {
-        let start_date = end_date;
-        end_date = bond.coupon.period.add_to(start_date, None);
-        let year_fraction = bond.coupon.year_fraction(start_date, end_date, start_date)?;
-        let amount = position * (bond.denomination as f64) * bond.coupon.rate/100. * year_fraction;
-        let pay_date = bond.business_day_rule.adjust_date(end_date, cal);
-        let cf = CashFlow{ amount:amount, currency: bond.currency.clone(), date: pay_date };
+            NaiveDate::from_ymd(start_date.year(),
+            self.coupon.coupon_month(),
+            self.coupon.coupon_day())
+        };
+        let year_fraction = self.coupon.year_fraction(start_date, end_date, end_date)?;
+        let amount = position * (self.denomination as f64) * self.coupon.rate/100. * year_fraction;
+        let cal = market.get_calendar(&self.calendar)?;
+        let pay_date = self.business_day_rule.adjust_date(end_date, cal);
+        let cf = CashFlow{ amount:amount, currency: self.currency.clone(), date: pay_date };
         cfs.push(cf);
-    }
-    // final nominal payment
-    let cf = CashFlow{ 
-        amount: position*(bond.denomination as f64),
-        currency: bond.currency.clone(),
-        date: bond.business_day_rule.adjust_date(maturity, cal)
-    };
-    cfs.push(cf);
-
-    Ok(cfs)
-}
-
-/// Get all future cash flows with respect to a given date
-pub fn get_cash_flows_after(cash_flows: &Vec<CashFlow>, date: NaiveDate) -> Vec<CashFlow> {
-    let mut new_cash_flows = Vec::new();
-    for cf in cash_flows {
-        if cf.date>date {
-            new_cash_flows.push(cf.clone());
+        let maturity = self.maturity;
+        while end_date < maturity {
+            let start_date = end_date;
+            end_date = self.coupon.period.add_to(start_date, None);
+            let year_fraction = self.coupon.year_fraction(start_date, end_date, start_date)?;
+            let amount = position * (self.denomination as f64) * self.coupon.rate/100. * year_fraction;
+            let pay_date = self.business_day_rule.adjust_date(end_date, cal);
+            let cf = CashFlow{ amount:amount, currency: self.currency.clone(), date: pay_date };
+            cfs.push(cf);
         }
+        // final nominal payment
+        let cf = CashFlow{ 
+            amount: position*(self.denomination as f64),
+            currency: self.currency.clone(),
+            date: self.business_day_rule.adjust_date(maturity, cal)
+        };
+        cfs.push(cf);
+
+        Ok(cfs)
     }
-    new_cash_flows
 }
 
 #[cfg(test)]
@@ -227,7 +180,7 @@ mod tests {
         }"#;
         let bond: Bond = serde_json::from_str(&data).unwrap(); 
         let market = Market::new();
-        let cash_flows = rollout_cash_flows(bond, 1., &market).unwrap();
+        let cash_flows = bond.rollout_cash_flows(1., &market).unwrap();
         assert_eq!(cash_flows.len(), 5);
         let curr = Currency::from_str("EUR").unwrap();
         let reference_cash_flows = vec![
@@ -265,7 +218,7 @@ mod tests {
         }"#;
         let bond: Bond = serde_json::from_str(&data).unwrap(); 
         let market = Market::new();
-        let cash_flows = rollout_cash_flows(bond, 1., &market).unwrap();
+        let cash_flows = bond.rollout_cash_flows(1., &market).unwrap();
         assert_eq!(cash_flows.len(), 5);
         let curr = Currency::from_str("EUR").unwrap();
         let reference_cash_flows = vec![
