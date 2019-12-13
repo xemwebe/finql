@@ -24,3 +24,4 @@ pub mod coupon_date;
 pub mod currency;
 pub mod market;
 pub mod fixed_income;
+pub mod rates;
