@@ -10,6 +10,7 @@ use crate::calendar::{last_day_of_month, Calendar};
 use chrono::{Datelike, Duration, NaiveDate};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{self,Visitor};
+use std::ops::{Add,Sub,Neg,AddAssign,SubAssign};
 
 /// Error type related to the TimePeriod struct
 #[derive(Debug, Clone)]
@@ -230,8 +231,69 @@ impl<'de> Deserialize<'de> for TimePeriod
     }
 }
 
+impl Add<TimePeriod> for NaiveDate {
+    type Output = NaiveDate;
 
+    fn add(self, period: TimePeriod) -> NaiveDate {
+        period.add_to(self,None)
+    }
+}
 
+impl Add<&TimePeriod> for NaiveDate {
+    type Output = NaiveDate;
+
+    fn add(self, period: &TimePeriod) -> NaiveDate {
+        period.add_to(self,None)
+    }
+}
+
+impl AddAssign<TimePeriod> for NaiveDate {
+    fn add_assign(&mut self, period: TimePeriod) {
+        *self = period.add_to(*self,None)
+    }
+}
+
+impl AddAssign<&TimePeriod> for NaiveDate {
+    fn add_assign(&mut self, period: &TimePeriod) {
+        *self = period.add_to(*self,None)
+    }
+}
+
+impl Sub<TimePeriod> for NaiveDate {
+    type Output = NaiveDate;
+
+    fn sub(self, period: TimePeriod) -> NaiveDate {
+        period.sub_from(self,None)
+    }
+}
+
+impl Sub<&TimePeriod> for NaiveDate {
+    type Output = NaiveDate;
+
+    fn sub(self, period: &TimePeriod) -> NaiveDate {
+        period.sub_from(self,None)
+    }
+}
+
+impl SubAssign<TimePeriod> for NaiveDate {
+    fn sub_assign(&mut self, period: TimePeriod) {
+        *self = period.sub_from(*self,None)
+    }
+}
+
+impl SubAssign<&TimePeriod> for NaiveDate {
+    fn sub_assign(&mut self, period: &TimePeriod) {
+        *self = period.sub_from(*self,None)
+    }
+}
+
+impl Neg for TimePeriod {
+    type Output = TimePeriod;
+
+    fn neg(self) -> TimePeriod {
+        self.inverse()
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -381,10 +443,29 @@ mod tests {
         let tpt = TimePeriod{num: 6, unit: TimePeriodUnit::Monthly };
         assert_eq!(tp, tpt);
     }
+
     #[test]
     fn serialize_time_period() {
         let tp = TimePeriod{num: -2, unit: TimePeriodUnit::Annual };
         let json = serde_json::to_string(&tp).unwrap();
         assert_eq!(json, r#""-2Y""#);
+    }
+
+    #[test]
+    fn operator_add_period() {
+        let period_6m = TimePeriod::from_str("6M").unwrap();
+        let start = NaiveDate::from_ymd(2019,12,16);
+        let end = NaiveDate::from_ymd(2020,6,16);
+        assert_eq!(start + period_6m, end);
+        assert_eq!(end - period_6m, start);
+        let minus_period_6m = -period_6m;
+        assert_eq!(end + minus_period_6m, start);
+        assert_eq!(start - minus_period_6m, end);
+        let mut new_start = NaiveDate::from_ymd(2019,12,16);
+        new_start += period_6m;
+        assert_eq!(new_start, end);
+        let mut new_end = NaiveDate::from_ymd(2020,6,16);
+        new_end -= period_6m;
+        assert_eq!(start, new_end);
     }
 }
