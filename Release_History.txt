@@ -1,3 +1,8 @@
+Version 0.3.2
+* CompoundingMethod added
+* New trait Discounter for discounting future cash flows
+* Operator overloads for TimePeriod add
+
 Version 0.3.1
 * CashFlow moved to new module fixed_income
 * New trait FixedIncome which provides cash flow rollout method
