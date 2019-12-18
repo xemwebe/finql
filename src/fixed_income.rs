@@ -1,10 +1,10 @@
-use std::f64;
-use std::fmt;
-use std::fmt::{Display,Formatter};
-use serde::{Deserialize, Serialize};
 use crate::currency::Currency;
 use crate::market::Market;
 use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
+use std::f64;
+use std::fmt;
+use std::fmt::{Display, Formatter};
 
 /// Container for a single cash flow
 #[derive(Deserialize, Serialize, Debug, Clone, Copy)]
@@ -30,7 +30,10 @@ impl CashFlow {
     pub fn fuzzy_cash_flows_cmp_eq(&self, cf: &CashFlow, tol: f64) -> bool {
         if !self.aggregatable(cf) {
             false
-        } else if self.amount.is_nan() || cf.amount.is_nan() || (self.amount-cf.amount).abs() > tol {
+        } else if self.amount.is_nan()
+            || cf.amount.is_nan()
+            || (self.amount - cf.amount).abs() > tol
+        {
             false
         } else {
             true
@@ -48,7 +51,7 @@ impl Display for CashFlow {
 pub fn get_cash_flows_after(cash_flows: &Vec<CashFlow>, date: NaiveDate) -> Vec<CashFlow> {
     let mut new_cash_flows = Vec::new();
     for cf in cash_flows {
-        if cf.date>date {
+        if cf.date > date {
             new_cash_flows.push(cf.clone());
         }
     }
@@ -59,9 +62,12 @@ pub trait FixedIncome {
     type Error;
 
     /// Transform product into series of cash flows
-    fn rollout_cash_flows(&self, position: f64, market: &Market) -> Result<Vec<CashFlow>, Self::Error>;
+    fn rollout_cash_flows(
+        &self,
+        position: f64,
+        market: &Market,
+    ) -> Result<Vec<CashFlow>, Self::Error>;
 
     /// Calculate accrued interest for current coupon period
     fn accrued_interest(&self, today: NaiveDate) -> Result<f64, Self::Error>;
 }
-

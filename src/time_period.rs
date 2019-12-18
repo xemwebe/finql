@@ -8,9 +8,9 @@ use std::str::FromStr;
 
 use crate::calendar::{last_day_of_month, Calendar};
 use chrono::{Datelike, Duration, NaiveDate};
+use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde::de::{self,Visitor};
-use std::ops::{Add,Sub,Neg,AddAssign,SubAssign};
+use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 
 /// Error type related to the TimePeriod struct
 #[derive(Debug, Clone)]
@@ -24,10 +24,19 @@ pub enum TimePeriodError {
 impl fmt::Display for TimePeriodError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TimePeriodError::ParseError => write!(f, "couldn't parse time period, string is too short"),
-            TimePeriodError::InvalidUnit => write!(f, "invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'"),
-            TimePeriodError::InvalidPeriod => write!(f, "parsing number of periods for time period failed"),
-            TimePeriodError::NoFrequency => write!(f, "the time period can't be converted to frequency"),
+            TimePeriodError::ParseError => {
+                write!(f, "couldn't parse time period, string is too short")
+            }
+            TimePeriodError::InvalidUnit => write!(
+                f,
+                "invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'"
+            ),
+            TimePeriodError::InvalidPeriod => {
+                write!(f, "parsing number of periods for time period failed")
+            }
+            TimePeriodError::NoFrequency => {
+                write!(f, "the time period can't be converted to frequency")
+            }
         }
     }
 }
@@ -82,11 +91,15 @@ impl TimePeriod {
         match self.unit {
             TimePeriodUnit::Daily => date + Duration::days(self.num as i64),
             TimePeriodUnit::BusinessDaily => {
-                let is_neg = self.num<0;
+                let is_neg = self.num < 0;
                 let n = self.num.abs();
                 let cal = cal.unwrap();
                 for _ in 0..n {
-                    date = if is_neg { cal.prev_bday(date) } else { cal.next_bday(date) };
+                    date = if is_neg {
+                        cal.prev_bday(date)
+                    } else {
+                        cal.next_bday(date)
+                    };
                 }
                 date
             }
@@ -129,29 +142,36 @@ impl TimePeriod {
 
     /// Substract time period from a given date.
     pub fn inverse(&self) -> TimePeriod {
-        TimePeriod{ num: -self.num, unit: self.unit }
+        TimePeriod {
+            num: -self.num,
+            unit: self.unit,
+        }
     }
 
     /// Returns the frequency per year, if this is possible,
     /// otherwise return error
     pub fn frequency(&self) -> Result<u16, TimePeriodError> {
         match self.unit {
-            TimePeriodUnit::Daily 
-            | TimePeriodUnit::BusinessDaily 
-            | TimePeriodUnit::Weekly          => Err(TimePeriodError::NoFrequency),
-            TimePeriodUnit::Monthly =>  match self.num.abs() {
+            TimePeriodUnit::Daily | TimePeriodUnit::BusinessDaily | TimePeriodUnit::Weekly => {
+                Err(TimePeriodError::NoFrequency)
+            }
+            TimePeriodUnit::Monthly => match self.num.abs() {
                 1 => Ok(12),
                 3 => Ok(4),
                 6 => Ok(2),
                 12 => Ok(1),
-                _ => Err(TimePeriodError::NoFrequency)
+                _ => Err(TimePeriodError::NoFrequency),
             },
-            TimePeriodUnit::Annual => if self.num.abs()==1 { Ok(1) } else { Err(TimePeriodError::NoFrequency) }
+            TimePeriodUnit::Annual => {
+                if self.num.abs() == 1 {
+                    Ok(1)
+                } else {
+                    Err(TimePeriodError::NoFrequency)
+                }
+            }
         }
     }
-
 }
-
 
 impl fmt::Display for TimePeriod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -174,15 +194,11 @@ impl FromStr for TimePeriod {
                 Some('W') => TimePeriodUnit::Weekly,
                 Some('M') => TimePeriodUnit::Monthly,
                 Some('Y') => TimePeriodUnit::Annual,
-                _ => {
-                    return Err(TimePeriodError::InvalidUnit)
-                }
+                _ => return Err(TimePeriodError::InvalidUnit),
             };
             let num = match tp[..len - 1].parse::<i32>() {
                 Ok(val) => val,
-                _ => {
-                    return Err(TimePeriodError::InvalidPeriod)
-                }
+                _ => return Err(TimePeriodError::InvalidPeriod),
             };
 
             Ok(TimePeriod { num, unit })
@@ -195,7 +211,7 @@ impl Serialize for TimePeriod {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&format!("{}",&self))
+        serializer.serialize_str(&format!("{}", &self))
     }
 }
 
@@ -212,17 +228,14 @@ impl<'de> Visitor<'de> for TimePeriodVisitor {
     where
         E: de::Error,
     {
-       match TimePeriod::from_str(value) {
-           Ok(val) => Ok(val),
-           Err(err) => Err(E::custom(err.to_string()))
-       }
-    
+        match TimePeriod::from_str(value) {
+            Ok(val) => Ok(val),
+            Err(err) => Err(E::custom(err.to_string())),
+        }
     }
 }
 
-impl<'de> Deserialize<'de> for TimePeriod 
-{
-
+impl<'de> Deserialize<'de> for TimePeriod {
     fn deserialize<D>(deserializer: D) -> Result<TimePeriod, D::Error>
     where
         D: Deserializer<'de>,
@@ -235,7 +248,7 @@ impl Add<TimePeriod> for NaiveDate {
     type Output = NaiveDate;
 
     fn add(self, period: TimePeriod) -> NaiveDate {
-        period.add_to(self,None)
+        period.add_to(self, None)
     }
 }
 
@@ -243,19 +256,19 @@ impl Add<&TimePeriod> for NaiveDate {
     type Output = NaiveDate;
 
     fn add(self, period: &TimePeriod) -> NaiveDate {
-        period.add_to(self,None)
+        period.add_to(self, None)
     }
 }
 
 impl AddAssign<TimePeriod> for NaiveDate {
     fn add_assign(&mut self, period: TimePeriod) {
-        *self = period.add_to(*self,None)
+        *self = period.add_to(*self, None)
     }
 }
 
 impl AddAssign<&TimePeriod> for NaiveDate {
     fn add_assign(&mut self, period: &TimePeriod) {
-        *self = period.add_to(*self,None)
+        *self = period.add_to(*self, None)
     }
 }
 
@@ -263,7 +276,7 @@ impl Sub<TimePeriod> for NaiveDate {
     type Output = NaiveDate;
 
     fn sub(self, period: TimePeriod) -> NaiveDate {
-        period.sub_from(self,None)
+        period.sub_from(self, None)
     }
 }
 
@@ -271,19 +284,19 @@ impl Sub<&TimePeriod> for NaiveDate {
     type Output = NaiveDate;
 
     fn sub(self, period: &TimePeriod) -> NaiveDate {
-        period.sub_from(self,None)
+        period.sub_from(self, None)
     }
 }
 
 impl SubAssign<TimePeriod> for NaiveDate {
     fn sub_assign(&mut self, period: TimePeriod) {
-        *self = period.sub_from(*self,None)
+        *self = period.sub_from(*self, None)
     }
 }
 
 impl SubAssign<&TimePeriod> for NaiveDate {
     fn sub_assign(&mut self, period: &TimePeriod) {
-        *self = period.sub_from(*self,None)
+        *self = period.sub_from(*self, None)
     }
 }
 
@@ -440,13 +453,19 @@ mod tests {
         let tp: TimePeriod = serde_json::from_str(input).unwrap();
         assert_eq!(tp.num, 6);
         assert_eq!(tp.unit, TimePeriodUnit::Monthly);
-        let tpt = TimePeriod{num: 6, unit: TimePeriodUnit::Monthly };
+        let tpt = TimePeriod {
+            num: 6,
+            unit: TimePeriodUnit::Monthly,
+        };
         assert_eq!(tp, tpt);
     }
 
     #[test]
     fn serialize_time_period() {
-        let tp = TimePeriod{num: -2, unit: TimePeriodUnit::Annual };
+        let tp = TimePeriod {
+            num: -2,
+            unit: TimePeriodUnit::Annual,
+        };
         let json = serde_json::to_string(&tp).unwrap();
         assert_eq!(json, r#""-2Y""#);
     }
@@ -454,17 +473,17 @@ mod tests {
     #[test]
     fn operator_add_period() {
         let period_6m = TimePeriod::from_str("6M").unwrap();
-        let start = NaiveDate::from_ymd(2019,12,16);
-        let end = NaiveDate::from_ymd(2020,6,16);
+        let start = NaiveDate::from_ymd(2019, 12, 16);
+        let end = NaiveDate::from_ymd(2020, 6, 16);
         assert_eq!(start + period_6m, end);
         assert_eq!(end - period_6m, start);
         let minus_period_6m = -period_6m;
         assert_eq!(end + minus_period_6m, start);
         assert_eq!(start - minus_period_6m, end);
-        let mut new_start = NaiveDate::from_ymd(2019,12,16);
+        let mut new_start = NaiveDate::from_ymd(2019, 12, 16);
         new_start += period_6m;
         assert_eq!(new_start, end);
-        let mut new_end = NaiveDate::from_ymd(2020,6,16);
+        let mut new_end = NaiveDate::from_ymd(2020, 6, 16);
         new_end -= period_6m;
         assert_eq!(start, new_end);
     }

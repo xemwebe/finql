@@ -1,9 +1,9 @@
-use std::fmt::{Display,Formatter};
-use std::fmt;
-use std::error;
-use std::str::FromStr;
+use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde::de::{self,Visitor};
+use std::error;
+use std::fmt;
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 /// Month and day that serves as a reference for rolling out the cash flows
 /// This should equal the (unadjusted) first coupon's end date
@@ -28,7 +28,10 @@ impl fmt::Display for CouponDateError {
             CouponDateError::ParseError => write!(f, "parsing of coupon date failed"),
             CouponDateError::DayOutOfRange => write!(f, "day or month is out of range"),
             CouponDateError::InvalidDay => write!(f, "parsing date or month failed"),
-            CouponDateError::DayToBig => write!(f, "day must not be larger than last day of month or 29th of February"),
+            CouponDateError::DayToBig => write!(
+                f,
+                "day must not be larger than last day of month or 29th of February"
+            ),
         }
     }
 }
@@ -55,21 +58,28 @@ impl std::convert::From<ParseIntError> for CouponDateError {
 
 /// Constructor for CouponDate to check for valid parameters
 impl CouponDate {
-    pub fn new(day: u32, month: u32) -> Result<CouponDate,CouponDateError> {
-        if day==0 || month==0 || month>12 {
+    pub fn new(day: u32, month: u32) -> Result<CouponDate, CouponDateError> {
+        if day == 0 || month == 0 || month > 12 {
             return Err(CouponDateError::DayOutOfRange);
-        } 
+        }
         // Any year that is not a leap year will do.
         // We exclude explicitly February 29th, which is not a proper chosen coupon date
         let last = crate::calendar::last_day_of_month(2019, month);
-        if day>0 && month>0 && month <=12 && day<=last {
-            Ok(CouponDate{day:day, month:month})
+        if day > 0 && month > 0 && month <= 12 && day <= last {
+            Ok(CouponDate {
+                day: day,
+                month: month,
+            })
         } else {
             Err(CouponDateError::DayToBig)
         }
     }
-    pub fn day(&self) -> u32 { self.day }
-    pub fn month(&self) -> u32 { self.month }
+    pub fn day(&self) -> u32 {
+        self.day
+    }
+    pub fn month(&self) -> u32 {
+        self.month
+    }
 }
 
 /// Write CouponDate as in the form dd.mm
@@ -84,11 +94,11 @@ impl FromStr for CouponDate {
     type Err = CouponDateError;
 
     fn from_str(coupon_date: &str) -> Result<Self, Self::Err> {
-            let nums: Vec<_> = coupon_date.trim().split('.').collect();
-            let day =nums[0].parse::<u32>()?;
-            let month = nums[1].parse::<u32>()?;
-            CouponDate::new(day, month)
-        }
+        let nums: Vec<_> = coupon_date.trim().split('.').collect();
+        let day = nums[0].parse::<u32>()?;
+        let month = nums[1].parse::<u32>()?;
+        CouponDate::new(day, month)
+    }
 }
 
 impl Serialize for CouponDate {
@@ -96,7 +106,7 @@ impl Serialize for CouponDate {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&format!("{}",&self))
+        serializer.serialize_str(&format!("{}", &self))
     }
 }
 
@@ -115,15 +125,12 @@ impl<'de> Visitor<'de> for CouponDateVisitor {
     {
         match CouponDate::from_str(value) {
             Ok(val) => Ok(val),
-            Err(err) => Err(E::custom(format!("{}",err)))
+            Err(err) => Err(E::custom(format!("{}", err))),
         }
-    
     }
 }
 
-impl<'de> Deserialize<'de> for CouponDate 
-{
-
+impl<'de> Deserialize<'de> for CouponDate {
     fn deserialize<D>(deserializer: D) -> Result<CouponDate, D::Error>
     where
         D: Deserializer<'de>,
@@ -131,7 +138,6 @@ impl<'de> Deserialize<'de> for CouponDate
         deserializer.deserialize_str(CouponDateVisitor)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -160,7 +166,7 @@ mod tests {
         let cd: CouponDate = serde_json::from_str(input).unwrap();
         assert_eq!(cd.day, 10);
         assert_eq!(cd.month, 12);
-        let cdt = CouponDate{day: 10, month: 12 };
+        let cdt = CouponDate { day: 10, month: 12 };
         assert_eq!(cd, cdt);
     }
     #[test]
