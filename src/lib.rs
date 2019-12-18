@@ -12,9 +12,12 @@
 //! rules, calculation of year fraction with respect to typical day count convention methods, roll-out of
 //! cash flows and setup of interest rate curves for calculating the discounted cash flow value.
 
+// macro exports
+#[macro_use]
+pub mod macros;
+
 // module exports
 pub mod bond;
-pub mod brent;
 pub mod calendar;
 pub mod coupon_date;
 pub mod currency;
@@ -24,4 +27,3 @@ pub mod fixed_income;
 pub mod market;
 pub mod rates;
 pub mod time_period;
-pub mod utility;

@@ -45,11 +45,13 @@ impl std::error::Error for DiscountError {
 pub trait Discounter {
     /// Calculate the factor to discount a cash flow at `pay_date` to `today`.
     fn discount_factor(&self, today: NaiveDate, pay_date: NaiveDate) -> f64;
+
     /// Each discounter must belong to a currency, i.e. only cash flows in
     /// the same currency can be discounted.
     fn currency(&self) -> Currency;
+
     /// Discount given cash flow
-    fn discounted_value_of(&self, cf: CashFlow, today: NaiveDate) -> Result<Amount, DiscountError> {
+    fn discount_cash_flow(&self, cf: CashFlow, today: NaiveDate) -> Result<Amount, DiscountError> {
         if self.currency() == cf.amount.currency {
             let amount = self.discount_factor(today, cf.date) * cf.amount.amount;
             Ok(Amount {
@@ -59,6 +61,26 @@ pub trait Discounter {
         } else {
             Err(DiscountError)
         }
+    }
+
+    /// Discount given cash flow stream
+    fn discount_cash_flow_stream(
+        &self,
+        cf_stream: Vec<CashFlow>,
+        today: NaiveDate,
+    ) -> Result<Amount, DiscountError> {
+        let mut amount = Amount {
+            amount: 0.0,
+            currency: self.currency(),
+        };
+        for cf in cf_stream {
+            if self.currency() == cf.amount.currency {
+                amount.amount += self.discount_factor(today, cf.date) * cf.amount.amount;
+            } else {
+                return Err(DiscountError);
+            }
+        }
+        Ok(amount)
     }
 }
 
@@ -95,7 +117,6 @@ impl Discounter for FlatRate {
 mod tests {
     use super::*;
     use crate::time_period::TimePeriod;
-    use crate::utility::fuzzy_eq_absolute;
     use std::f64;
     use std::str::FromStr;
 
@@ -114,11 +135,11 @@ mod tests {
         let yf: f64 = DayCountConv::Act365
             .year_fraction(start_date, end_date, None, None)
             .unwrap();
-        assert!(fuzzy_eq_absolute(
+        assert_fuzzy_eq!(
             rate.discount_factor(start_date, end_date),
             f64::powf(1.0 + 0.05, -yf),
             tol
-        ));
+        );
 
         let rate = FlatRate {
             rate: 0.05,
@@ -126,11 +147,11 @@ mod tests {
             compounding: Compounding::SemiAnnual,
             currency: curr,
         };
-        assert!(fuzzy_eq_absolute(
+        assert_fuzzy_eq!(
             rate.discount_factor(start_date, end_date),
             f64::powf(1.0 + 0.025, -yf * 2.),
             tol
-        ));
+        );
 
         let rate = FlatRate {
             rate: 0.05,
@@ -138,11 +159,11 @@ mod tests {
             compounding: Compounding::Quarterly,
             currency: curr,
         };
-        assert!(fuzzy_eq_absolute(
+        assert_fuzzy_eq!(
             rate.discount_factor(start_date, end_date),
             f64::powf(1.0 + 0.0125, -yf * 4.),
             tol
-        ));
+        );
 
         let rate = FlatRate {
             rate: 0.05,
@@ -155,11 +176,11 @@ mod tests {
             rate.discount_factor(start_date, end_date),
             f64::powf(1.0 + 0.05 / 12., -yf * 12.)
         );
-        assert!(fuzzy_eq_absolute(
+        assert_fuzzy_eq!(
             rate.discount_factor(start_date, end_date),
             f64::powf(1.0 + 0.05 / 12., -yf * 12.),
             tol
-        ));
+        );
 
         let rate = FlatRate {
             rate: 0.05,
@@ -167,11 +188,11 @@ mod tests {
             compounding: Compounding::Continuous,
             currency: curr,
         };
-        assert!(fuzzy_eq_absolute(
+        assert_fuzzy_eq!(
             rate.discount_factor(start_date, end_date),
             f64::exp(-0.05 * yf),
             tol
-        ));
+        );
 
         let rate = FlatRate {
             rate: 0.05,
@@ -179,10 +200,11 @@ mod tests {
             compounding: Compounding::Simple,
             currency: curr,
         };
-        assert!(fuzzy_eq_absolute(
+        assert_fuzzy_eq!(
             rate.discount_factor(start_date, end_date),
             1. / (1. + 0.05 * yf),
             tol
-        ));
+        );
     }
+
 }

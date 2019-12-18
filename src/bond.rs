@@ -5,7 +5,7 @@
 use crate::currency::Currency;
 use crate::day_adjust::DayAdjust;
 use crate::day_count_conv::{DayCountConv, DayCountConvError};
-use crate::fixed_income::{Amount, CashFlow, FixedIncome};
+use crate::fixed_income::{CashFlow, FixedIncome};
 use crate::market::{Market, MarketError};
 use crate::time_period::TimePeriod;
 use chrono::{Datelike, NaiveDate};
