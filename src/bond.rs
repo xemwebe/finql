@@ -1,13 +1,14 @@
+//! Definition of bonds and similar fixed income products
+//! and functionality to rollout cashflows and calculate basic
+//! valuation figures
+
 use crate::currency::Currency;
 use crate::day_adjust::DayAdjust;
 use crate::day_count_conv::{DayCountConv, DayCountConvError};
-use crate::fixed_income::{CashFlow, FixedIncome};
+use crate::fixed_income::{Amount, CashFlow, FixedIncome};
 use crate::market::{Market, MarketError};
 use crate::time_period::TimePeriod;
 use chrono::{Datelike, NaiveDate};
-/// Definition of bonds and similar fixed income products
-/// and functionality to rollout cashflows and calculate basic
-/// valuation figures
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt;
@@ -157,11 +158,7 @@ impl FixedIncome for Bond {
             position * (self.denomination as f64) * self.coupon.rate / 100. * year_fraction;
         let cal = market.get_calendar(&self.calendar)?;
         let pay_date = self.business_day_rule.adjust_date(end_date, cal);
-        let cf = CashFlow {
-            amount: amount,
-            currency: self.currency.clone(),
-            date: pay_date,
-        };
+        let cf = CashFlow::new(amount, self.currency, pay_date);
         cfs.push(cf);
         let maturity = self.maturity;
         while end_date < maturity {
@@ -173,19 +170,15 @@ impl FixedIncome for Bond {
             let amount =
                 position * (self.denomination as f64) * self.coupon.rate / 100. * year_fraction;
             let pay_date = self.business_day_rule.adjust_date(end_date, cal);
-            let cf = CashFlow {
-                amount: amount,
-                currency: self.currency.clone(),
-                date: pay_date,
-            };
+            let cf = CashFlow::new(amount, self.currency, pay_date);
             cfs.push(cf);
         }
         // final nominal payment
-        let cf = CashFlow {
-            amount: position * (self.denomination as f64),
-            currency: self.currency.clone(),
-            date: self.business_day_rule.adjust_date(maturity, cal),
-        };
+        let cf = CashFlow::new(
+            position * (self.denomination as f64),
+            self.currency,
+            self.business_day_rule.adjust_date(maturity, cal),
+        );
         cfs.push(cf);
 
         Ok(cfs)
@@ -244,31 +237,27 @@ mod tests {
         assert_eq!(cash_flows.len(), 5);
         let curr = Currency::from_str("EUR").unwrap();
         let reference_cash_flows = vec![
-            CashFlow {
-                amount: 0.05 * 1000. * 183. / 365.,
-                currency: curr.clone(),
-                date: NaiveDate::from_ymd(2020, 4, 1),
-            },
-            CashFlow {
-                amount: 0.05 * 1000. * 183. / 365.,
-                currency: curr.clone(),
-                date: NaiveDate::from_ymd(2020, 10, 1),
-            },
-            CashFlow {
-                amount: 0.05 * 1000. * 182. / 365.,
-                currency: curr.clone(),
-                date: NaiveDate::from_ymd(2021, 4, 1),
-            },
-            CashFlow {
-                amount: 0.05 * 1000. * 183. / 365.,
-                currency: curr,
-                date: NaiveDate::from_ymd(2021, 10, 1),
-            },
-            CashFlow {
-                amount: 1000.,
-                currency: curr,
-                date: NaiveDate::from_ymd(2021, 10, 1),
-            },
+            CashFlow::new(
+                0.05 * 1000. * 183. / 365.,
+                curr,
+                NaiveDate::from_ymd(2020, 4, 1),
+            ),
+            CashFlow::new(
+                0.05 * 1000. * 183. / 365.,
+                curr,
+                NaiveDate::from_ymd(2020, 10, 1),
+            ),
+            CashFlow::new(
+                0.05 * 1000. * 182. / 365.,
+                curr,
+                NaiveDate::from_ymd(2021, 4, 1),
+            ),
+            CashFlow::new(
+                0.05 * 1000. * 183. / 365.,
+                curr,
+                NaiveDate::from_ymd(2021, 10, 1),
+            ),
+            CashFlow::new(1000., curr, NaiveDate::from_ymd(2021, 10, 1)),
         ];
         let tol = 1e-11;
         assert!(reference_cash_flows[0].fuzzy_cash_flows_cmp_eq(&cash_flows[0], tol));
@@ -302,31 +291,11 @@ mod tests {
         assert_eq!(cash_flows.len(), 5);
         let curr = Currency::from_str("EUR").unwrap();
         let reference_cash_flows = vec![
-            CashFlow {
-                amount: 0.05 * 1000. / 2.,
-                currency: curr.clone(),
-                date: NaiveDate::from_ymd(2021, 4, 1),
-            },
-            CashFlow {
-                amount: 0.05 * 1000. / 2.,
-                currency: curr.clone(),
-                date: NaiveDate::from_ymd(2021, 10, 1),
-            },
-            CashFlow {
-                amount: 0.05 * 1000. / 2.,
-                currency: curr.clone(),
-                date: NaiveDate::from_ymd(2022, 4, 1),
-            },
-            CashFlow {
-                amount: 0.05 * 1000. / 2.,
-                currency: curr.clone(),
-                date: NaiveDate::from_ymd(2022, 10, 3),
-            },
-            CashFlow {
-                amount: 1000.,
-                currency: curr,
-                date: NaiveDate::from_ymd(2022, 10, 3),
-            },
+            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd(2021, 4, 1)),
+            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd(2021, 10, 1)),
+            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd(2022, 4, 1)),
+            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd(2022, 10, 3)),
+            CashFlow::new(1000., curr, NaiveDate::from_ymd(2022, 10, 3)),
         ];
         let tol = 1e-11;
         assert!(reference_cash_flows[0].fuzzy_cash_flows_cmp_eq(&cash_flows[0], tol));

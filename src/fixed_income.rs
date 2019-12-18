@@ -6,18 +6,37 @@ use std::f64;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
-/// Container for a single cash flow
-#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
-pub struct CashFlow {
+/// Container for an amount of money in some currency
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq)]
+pub struct Amount {
     pub amount: f64,
-    pub date: NaiveDate,
     pub currency: Currency,
 }
 
+impl Display for Amount {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:16.4} {}", self.amount, self.currency)
+    }
+}
+
+/// Container for a single cash flow
+#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
+pub struct CashFlow {
+    pub amount: Amount,
+    pub date: NaiveDate,
+}
+
 impl CashFlow {
+    /// Construct new cash flow
+    pub fn new(amount: f64, currency: Currency, date: NaiveDate) -> CashFlow {
+        CashFlow {
+            amount: Amount { amount, currency },
+            date,
+        }
+    }
     /// Check, whether cash flows could be aggregated
     pub fn aggregatable(&self, cf: &CashFlow) -> bool {
-        if self.currency != cf.currency {
+        if self.amount.currency != cf.amount.currency {
             false
         } else if self.date != cf.date {
             false
@@ -30,9 +49,9 @@ impl CashFlow {
     pub fn fuzzy_cash_flows_cmp_eq(&self, cf: &CashFlow, tol: f64) -> bool {
         if !self.aggregatable(cf) {
             false
-        } else if self.amount.is_nan()
-            || cf.amount.is_nan()
-            || (self.amount - cf.amount).abs() > tol
+        } else if self.amount.amount.is_nan()
+            || cf.amount.amount.is_nan()
+            || (self.amount.amount - cf.amount.amount).abs() > tol
         {
             false
         } else {
@@ -43,7 +62,7 @@ impl CashFlow {
 
 impl Display for CashFlow {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {:16.4} {}", self.date, self.amount, self.currency)
+        write!(f, "{} {}", self.date, self.amount)
     }
 }
 
