@@ -207,4 +207,62 @@ mod tests {
         );
     }
 
+    #[test]
+    fn discounting() {
+        let tol = 1e-11;
+        let curr = Currency::from_str("EUR").unwrap();
+        let rate = FlatRate {
+            rate: 0.05,
+            day_count_conv: DayCountConv::Act365,
+            compounding: Compounding::Continuous,
+            currency: curr,
+        };
+        let cash_flows = vec![
+            CashFlow::new(100., curr, NaiveDate::from_ymd(2021, 4, 1)),
+            CashFlow::new(100., curr, NaiveDate::from_ymd(2021, 10, 1)),
+            CashFlow::new(100., curr, NaiveDate::from_ymd(2022, 4, 1)),
+            CashFlow::new(100., curr, NaiveDate::from_ymd(2022, 10, 3)),
+        ];
+        let today = NaiveDate::from_ymd(2019, 10, 1);
+        assert_fuzzy_eq!(
+            rate.discount_cash_flow(cash_flows[0], today)
+                .unwrap()
+                .amount,
+            100. * f64::exp(-0.05 * (366. + 182.) / 365.),
+            tol
+        );
+        assert_fuzzy_eq!(
+            rate.discount_cash_flow(cash_flows[1], today)
+                .unwrap()
+                .amount,
+            100. * f64::exp(-0.05 * (366. + 365.) / 365.),
+            tol
+        );
+        assert_fuzzy_eq!(
+            rate.discount_cash_flow(cash_flows[2], today)
+                .unwrap()
+                .amount,
+            100. * f64::exp(-0.05 * (366. + 365. + 182.) / 365.),
+            tol
+        );
+        assert_fuzzy_eq!(
+            rate.discount_cash_flow(cash_flows[3], today)
+                .unwrap()
+                .amount,
+            100. * f64::exp(-0.05 * (366. + 2. * 365. + 2.) / 365.),
+            tol
+        );
+        let sum = 100.
+            * (f64::exp(-0.05 * (366. + 182.) / 365.)
+                + f64::exp(-0.05 * (366. + 365.) / 365.)
+                + f64::exp(-0.05 * (366. + 365. + 182.) / 365.)
+                + f64::exp(-0.05 * (366. + 2. * 365. + 2.) / 365.));
+        assert_fuzzy_eq!(
+            rate.discount_cash_flow_stream(cash_flows, today)
+                .unwrap()
+                .amount,
+            sum,
+            tol
+        );
+    }
 }
