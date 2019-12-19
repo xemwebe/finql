@@ -7,7 +7,7 @@ use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 
 /// Specify a day count method
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Clone, Copy, Debug)]
 pub enum DayCountConv {
     #[serde(rename = "icma")]
     #[serde(alias = "act/act icma")]

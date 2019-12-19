@@ -5,7 +5,7 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
 /// Methods for compounding interest rates
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Clone, Copy, Debug)]
 pub enum Compounding {
     #[serde(rename = "simple")]
     Simple,
@@ -51,7 +51,7 @@ pub trait Discounter {
     fn currency(&self) -> Currency;
 
     /// Discount given cash flow
-    fn discount_cash_flow(&self, cf: CashFlow, today: NaiveDate) -> Result<Amount, DiscountError> {
+    fn discount_cash_flow(&self, cf: &CashFlow, today: NaiveDate) -> Result<Amount, DiscountError> {
         if self.currency() == cf.amount.currency {
             let amount = self.discount_factor(today, cf.date) * cf.amount.amount;
             Ok(Amount {
@@ -66,7 +66,7 @@ pub trait Discounter {
     /// Discount given cash flow stream
     fn discount_cash_flow_stream(
         &self,
-        cf_stream: Vec<CashFlow>,
+        cf_stream: &Vec<CashFlow>,
         today: NaiveDate,
     ) -> Result<Amount, DiscountError> {
         let mut amount = Amount {
@@ -84,12 +84,29 @@ pub trait Discounter {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-struct FlatRate {
-    rate: f64,
+#[derive(Deserialize, Serialize, Clone, Copy, Debug)]
+pub struct FlatRate {
+    pub rate: f64,
     day_count_conv: DayCountConv,
     compounding: Compounding,
     currency: Currency,
+}
+
+impl FlatRate {
+    /// Constructor of `FlatRate`
+    pub fn new(
+        rate: f64,
+        day_count_conv: DayCountConv,
+        compounding: Compounding,
+        currency: Currency,
+    ) -> FlatRate {
+        FlatRate {
+            rate,
+            day_count_conv,
+            compounding,
+            currency,
+        }
+    }
 }
 
 impl Discounter for FlatRate {
@@ -225,28 +242,28 @@ mod tests {
         ];
         let today = NaiveDate::from_ymd(2019, 10, 1);
         assert_fuzzy_eq!(
-            rate.discount_cash_flow(cash_flows[0], today)
+            rate.discount_cash_flow(&cash_flows[0], today)
                 .unwrap()
                 .amount,
             100. * f64::exp(-0.05 * (366. + 182.) / 365.),
             tol
         );
         assert_fuzzy_eq!(
-            rate.discount_cash_flow(cash_flows[1], today)
+            rate.discount_cash_flow(&cash_flows[1], today)
                 .unwrap()
                 .amount,
             100. * f64::exp(-0.05 * (366. + 365.) / 365.),
             tol
         );
         assert_fuzzy_eq!(
-            rate.discount_cash_flow(cash_flows[2], today)
+            rate.discount_cash_flow(&cash_flows[2], today)
                 .unwrap()
                 .amount,
             100. * f64::exp(-0.05 * (366. + 365. + 182.) / 365.),
             tol
         );
         assert_fuzzy_eq!(
-            rate.discount_cash_flow(cash_flows[3], today)
+            rate.discount_cash_flow(&cash_flows[3], today)
                 .unwrap()
                 .amount,
             100. * f64::exp(-0.05 * (366. + 2. * 365. + 2.) / 365.),
@@ -258,7 +275,7 @@ mod tests {
                 + f64::exp(-0.05 * (366. + 365. + 182.) / 365.)
                 + f64::exp(-0.05 * (366. + 2. * 365. + 2.) / 365.));
         assert_fuzzy_eq!(
-            rate.discount_cash_flow_stream(cash_flows, today)
+            rate.discount_cash_flow_stream(&cash_flows, today)
                 .unwrap()
                 .amount,
             sum,

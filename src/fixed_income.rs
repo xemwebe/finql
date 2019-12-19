@@ -1,5 +1,9 @@
 use crate::currency::Currency;
+use crate::day_count_conv::DayCountConv;
 use crate::market::Market;
+use crate::rates::{Compounding, DiscountError, Discounter, FlatRate};
+use argmin::prelude::*;
+use argmin::solver::brent::Brent;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use std::f64;
@@ -78,7 +82,7 @@ pub fn get_cash_flows_after(cash_flows: &Vec<CashFlow>, date: NaiveDate) -> Vec<
 }
 
 pub trait FixedIncome {
-    type Error;
+    type Error: std::convert::From<DiscountError>;
 
     /// Transform product into series of cash flows
     fn rollout_cash_flows(
@@ -89,4 +93,91 @@ pub trait FixedIncome {
 
     /// Calculate accrued interest for current coupon period
     fn accrued_interest(&self, today: NaiveDate) -> Result<f64, Self::Error>;
+
+    /// Calculate the yield to maturity (YTM) given a purchase price and date
+    fn calculate_ytm(
+        &self,
+        purchase_cash_flow: CashFlow,
+        market: &Market,
+    ) -> Result<f64, Self::Error> {
+        let cash_flows = self.rollout_cash_flows(1., market)?;
+        let value = calculate_cash_flows_ytm(cash_flows, purchase_cash_flow)?;
+        Ok(value)
+    }
+}
+
+/// Calculate the internal rate of return of a stream of cash flows
+/// The calculation assumes, that the notional payments and beginning and end are
+/// included and calculates that annual rate, that gives total aggregate zero value
+/// of all cash flows provided as `cash_flows`, if discounted to the payment date
+/// of the first cash flow. It is assumed that all cash flow are in the same currency,
+/// otherwise a `DiscountError` will be returned.
+pub fn calculate_cash_flows_ytm(
+    cash_flows: Vec<CashFlow>,
+    init_cash_flow: CashFlow,
+) -> Result<f64, DiscountError> {
+    let rate = FlatRate::new(
+        0.05,
+        DayCountConv::Act365,
+        Compounding::Annual,
+        init_cash_flow.amount.currency,
+    );
+    let init_param = 0.5;
+    let solver = Brent::new(0., 0.5, 1e-11);
+    let func = FlatRateDiscounter {
+        init_cash_flow,
+        cash_flows,
+        rate,
+    };
+    let res = Executor::new(func, solver, init_param).max_iters(100).run();
+    match res {
+        Ok(val) => Ok(val.state.get_param()),
+        Err(_) => Err(DiscountError),
+    }
+}
+
+/// Calculate discounted value for given flat rate
+#[derive(Clone, Serialize, Deserialize)]
+struct FlatRateDiscounter {
+    init_cash_flow: CashFlow,
+    cash_flows: Vec<CashFlow>,
+    rate: FlatRate,
+}
+
+impl ArgminOp for FlatRateDiscounter {
+    // one dimensional problem, no vector needed
+    type Param = f64;
+    type Output = f64;
+    type Hessian = ();
+    type Jacobian = ();
+
+    fn apply(&self, p: &Self::Param) -> Result<Self::Output, Error> {
+        let mut discount_rate = self.rate.clone();
+        discount_rate.rate = *p;
+        let mut sum = self.init_cash_flow.amount.amount;
+        let today = self.init_cash_flow.date;
+        for cf in self.cash_flows.clone() {
+            if cf.date > today {
+                sum += discount_rate.discount_cash_flow(&cf, today)?.amount;
+            }
+        }
+        Ok(sum)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn yield_to_maturity() {
+        let tol = 1e-11;
+        let curr = Currency::from_str("EUR").unwrap();
+        let cash_flows = vec![CashFlow::new(1050., curr, NaiveDate::from_ymd(2021, 10, 1))];
+        let init_cash_flow = CashFlow::new(-1000., curr, NaiveDate::from_ymd(2020, 10, 1));
+
+        let ytm = calculate_cash_flows_ytm(cash_flows, init_cash_flow).unwrap();
+        assert_fuzzy_eq!(ytm, 0.05, tol);
+    }
 }

@@ -7,6 +7,7 @@ use crate::day_adjust::DayAdjust;
 use crate::day_count_conv::{DayCountConv, DayCountConvError};
 use crate::fixed_income::{CashFlow, FixedIncome};
 use crate::market::{Market, MarketError};
+use crate::rates::DiscountError;
 use crate::time_period::TimePeriod;
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
@@ -16,6 +17,7 @@ use std::fmt;
 /// Error related to bonds
 #[derive(Debug)]
 pub enum BondError {
+    DiscountingFailure(DiscountError),
     MissingCalendar,
     DayCountError(DayCountConvError),
 }
@@ -27,6 +29,7 @@ impl fmt::Display for BondError {
             BondError::DayCountError(_) => {
                 write!(f, "invalid day count convention in this context")
             }
+            BondError::DiscountingFailure(_) => write!(f, "discounting cash flows failed"),
         }
     }
 }
@@ -35,6 +38,7 @@ impl Error for BondError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             BondError::DayCountError(err) => Some(err),
+            BondError::DiscountingFailure(err) => Some(err),
             _ => None,
         }
     }
@@ -49,6 +53,12 @@ impl From<DayCountConvError> for BondError {
 impl From<MarketError> for BondError {
     fn from(_: MarketError) -> Self {
         BondError::MissingCalendar
+    }
+}
+
+impl From<crate::rates::DiscountError> for BondError {
+    fn from(error: DiscountError) -> Self {
+        BondError::DiscountingFailure(error)
     }
 }
 
@@ -71,7 +81,7 @@ pub struct Bond {
     issue_date: NaiveDate,
     maturity: NaiveDate,
     /// Smallest purchasable unit
-    denomination: u32,
+    pub denomination: u32,
     volume: Option<f64>,
 }
 
