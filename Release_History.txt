@@ -1,3 +1,12 @@
+Version 0.3.3
+* Calculation of yield-to-maturity for fixed income products added.
+  This needs to be optimized, since currently the cash flow vector is
+  copied instead for borrowed.
+* More elaborate bond comparison example
+* Assert macro for fuzzy comparison of floats
+* Test cases for discounting added
+* New struct `Amount`
+
 Version 0.3.2
 * CompoundingMethod added
 * New trait Discounter for discounting future cash flows
