@@ -97,11 +97,11 @@ pub trait FixedIncome {
     /// Calculate the yield to maturity (YTM) given a purchase price and date
     fn calculate_ytm(
         &self,
-        purchase_cash_flow: CashFlow,
+        purchase_cash_flow: &CashFlow,
         market: &Market,
     ) -> Result<f64, Self::Error> {
         let cash_flows = self.rollout_cash_flows(1., market)?;
-        let value = calculate_cash_flows_ytm(cash_flows, purchase_cash_flow)?;
+        let value = calculate_cash_flows_ytm(&cash_flows, &purchase_cash_flow)?;
         Ok(value)
     }
 }
@@ -113,8 +113,8 @@ pub trait FixedIncome {
 /// of the first cash flow. It is assumed that all cash flow are in the same currency,
 /// otherwise a `DiscountError` will be returned.
 pub fn calculate_cash_flows_ytm(
-    cash_flows: Vec<CashFlow>,
-    init_cash_flow: CashFlow,
+    cash_flows: &Vec<CashFlow>,
+    init_cash_flow: &CashFlow,
 ) -> Result<f64, DiscountError> {
     let rate = FlatRate::new(
         0.05,
@@ -125,8 +125,8 @@ pub fn calculate_cash_flows_ytm(
     let init_param = 0.5;
     let solver = Brent::new(0., 0.5, 1e-11);
     let func = FlatRateDiscounter {
-        init_cash_flow,
-        cash_flows,
+        init_cash_flow: init_cash_flow.clone(),
+        cash_flows: cash_flows.clone(),
         rate,
     };
     let res = Executor::new(func, solver, init_param).max_iters(100).run();
@@ -137,6 +137,8 @@ pub fn calculate_cash_flows_ytm(
 }
 
 /// Calculate discounted value for given flat rate
+/// Since `argmin` requires `Serialize` and `Deserialize`,
+/// we can't use reference here but must clone all data to this struct
 #[derive(Clone, Serialize, Deserialize)]
 struct FlatRateDiscounter {
     init_cash_flow: CashFlow,
@@ -177,7 +179,7 @@ mod tests {
         let cash_flows = vec![CashFlow::new(1050., curr, NaiveDate::from_ymd(2021, 10, 1))];
         let init_cash_flow = CashFlow::new(-1000., curr, NaiveDate::from_ymd(2020, 10, 1));
 
-        let ytm = calculate_cash_flows_ytm(cash_flows, init_cash_flow).unwrap();
+        let ytm = calculate_cash_flows_ytm(&cash_flows, &init_cash_flow).unwrap();
         assert_fuzzy_eq!(ytm, 0.05, tol);
     }
 }

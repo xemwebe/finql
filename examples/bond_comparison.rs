@@ -56,8 +56,8 @@ fn main() {
     let purchase2_cash_flow = CashFlow::new(-dirty_price2 * price_quote_factor2, eur_curr, today);
     println!(
         "Yield-to-Maturity: {:16.4}%|{:16.4}%",
-        100. * bond1.calculate_ytm(purchase1_cash_flow, &market).unwrap(),
-        100. * bond2.calculate_ytm(purchase2_cash_flow, &market).unwrap()
+        100. * bond1.calculate_ytm(&purchase1_cash_flow, &market).unwrap(),
+        100. * bond2.calculate_ytm(&purchase2_cash_flow, &market).unwrap()
     );
     println!("\n    Future cash flows bond1      |    Future cash flows bond2");
     println!("===================================================================");
