@@ -35,30 +35,29 @@ fn main() {
     println!("                     =================================");
     println!(
         "Clean price:       {:17.4}|{:17.4}",
-        clean_price1,
-        clean_price2
+        clean_price1, clean_price2
     );
 
     let accrued1 = bond1.accrued_interest(today).unwrap();
     let accrued2 = bond2.accrued_interest(today).unwrap();
-    println!(
-        "Accr. interest:    {:17.4}|{:17.4}", accrued1, accrued2);
+    println!("Accr. interest:    {:17.4}|{:17.4}", accrued1, accrued2);
 
-    let price_quote_factor1 = (bond1.denomination as f64)/100.;
-    let price_quote_factor2 = (bond2.denomination as f64)/100.;
-    let dirty_price1 = clean_price1 + accrued1/price_quote_factor1;
-    let dirty_price2 = clean_price2 + accrued2/price_quote_factor2;
+    let price_quote_factor1 = (bond1.denomination as f64) / 100.;
+    let price_quote_factor2 = (bond2.denomination as f64) / 100.;
+    let dirty_price1 = clean_price1 + accrued1 / price_quote_factor1;
+    let dirty_price2 = clean_price2 + accrued2 / price_quote_factor2;
     println!(
-        "Dirty price:       {:17.4}|{:17.4}", dirty_price1, dirty_price2);
+        "Dirty price:       {:17.4}|{:17.4}",
+        dirty_price1, dirty_price2
+    );
 
-          
     let eur_curr = Currency::from_str("EUR").unwrap();
-    let purchase1_cash_flow = CashFlow::new(-dirty_price1*price_quote_factor1, eur_curr, today);
-    let purchase2_cash_flow = CashFlow::new(-dirty_price2*price_quote_factor2, eur_curr, today);
+    let purchase1_cash_flow = CashFlow::new(-dirty_price1 * price_quote_factor1, eur_curr, today);
+    let purchase2_cash_flow = CashFlow::new(-dirty_price2 * price_quote_factor2, eur_curr, today);
     println!(
         "Yield-to-Maturity: {:16.4}%|{:16.4}%",
-        100.*bond1.calculate_ytm(purchase1_cash_flow, &market).unwrap(),
-        100.*bond2.calculate_ytm(purchase2_cash_flow, &market).unwrap()
+        100. * bond1.calculate_ytm(purchase1_cash_flow, &market).unwrap(),
+        100. * bond2.calculate_ytm(purchase2_cash_flow, &market).unwrap()
     );
     println!("\n    Future cash flows bond1      |    Future cash flows bond2");
     println!("===================================================================");
