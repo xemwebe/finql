@@ -27,3 +27,8 @@ pub mod fixed_income;
 pub mod market;
 pub mod rates;
 pub mod time_period;
+pub mod asset;
+pub mod transaction;
+pub mod quote;
+pub mod portfolio;
+
