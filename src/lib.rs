@@ -31,4 +31,6 @@ pub mod asset;
 pub mod transaction;
 pub mod quote;
 pub mod portfolio;
+pub mod data_handler;
+pub mod sqlite_handler;
 

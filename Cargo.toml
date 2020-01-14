@@ -11,6 +11,7 @@ keywords = ["finance", "calendar", "bond", "period", "pricing"]
 categories = ["date-and-time","mathematics"]
 
 [dependencies]
+rusqlite = "0.21"
 chrono = { version = "0.4.10", features = ["serde"] }
 text_io = "0.1.7"
 computus = "1.0"

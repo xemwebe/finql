@@ -3,20 +3,22 @@
 use serde::{Serialize,Deserialize};
 
 #[derive(Debug,Serialize,Deserialize)]
-pub enum AssetType {
-    Equity,
-    ETF,
-    Fonds,
-    FixedIncome,
+pub struct AssetCategory {
+    id: u64,
+    pub name: String,
 }
 
 #[derive(Debug,Serialize,Deserialize)]
 pub struct Asset {
-    id: u64,
-    pub asset_type: AssetType,
+    pub id: Option<u64>,
     pub name: String,
-    pub wkn: String,
-    pub isin: String,
-    pub note: String,
+    pub wkn: Option<String>,
+    pub isin: Option<String>,
+    pub note: Option<String>,
 }
 
+impl Asset {
+    pub fn new(id: Option<u64>, name: &str, wkn: Option<String>, isin: Option<String>, note: Option<String>) -> Asset {
+        Asset{ id, name: name.to_string(), wkn, isin, note }
+    }
+}
