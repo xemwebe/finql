@@ -55,7 +55,7 @@ impl TryFrom<u8> for TransactionType {
 pub struct Transaction {
     pub id: Option<usize>,
     pub trans_type: TransactionType,
-    pub asset: usize,
+    pub asset: Option<usize>,
     pub cash_flow: CashFlow,
     pub related_trans: Option<usize>,
     pub position: Option<f64>,

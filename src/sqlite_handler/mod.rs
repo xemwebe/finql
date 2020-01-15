@@ -1,14 +1,13 @@
+///! Implemenation of sqlite3 data handler
 use crate::asset::Asset;
-use crate::currency::Currency;
 use crate::data_handler::{DataError, DataHandler};
-use crate::fixed_income::CashFlow;
 use crate::transaction::{Transaction, TransactionType};
-use chrono::NaiveDate;
-///! Struct to handle connections to sqlite3 databases
 use rusqlite::{params, Connection, OpenFlags, NO_PARAMS};
 use std::convert::TryFrom;
-use std::str::FromStr;
 
+mod helpers;
+
+/// Struct to handle connections to sqlite3 databases
 pub struct SqliteDB {
     conn: Connection,
 }
@@ -58,25 +57,10 @@ impl SqliteDB {
     }
 }
 
-// Transform optional `usize` to optional `i64`
-fn usize_to_int(val: Option<usize>) -> Option<i64> {
-    match val {
-        Some(v) => Some(v as i64),
-        None => None,
-    }
-}
-
-fn int_to_usize(val: Option<i64>) -> Option<usize> {
-    match val {
-        Some(v) => Some(v as usize),
-        None => None,
-    }
-}
-
 struct RawTransaction {
     id: Option<i64>,
     trans_type: u8,
-    asset: i64,
+    asset: Option<i64>,
     cash_amount: f64,
     cash_currency: String,
     cash_date: String,
@@ -85,22 +69,19 @@ struct RawTransaction {
     note: Option<String>,
 }
 
-fn raw_to_cash_flow(amount: f64, currency: &str, date: &str) -> Result<CashFlow, DataError> {
-    let currency = Currency::from_str(currency).map_err(|e| DataError::NotFound(e.to_string()))?;
-    let date = NaiveDate::parse_from_str(date, "%Y-%m-%d")
-        .map_err(|e| DataError::NotFound(e.to_string()))?;
-    Ok(CashFlow::new(amount, currency, date))
-}
-
 impl RawTransaction {
     fn to_transaction(&self) -> Result<Transaction, DataError> {
         Ok(Transaction {
-            id: int_to_usize(self.id),
+            id: helpers::int_to_usize(self.id),
             trans_type: TransactionType::try_from(self.trans_type)
                 .map_err(|e| DataError::NotFound(e.to_string()))?,
-            asset: self.asset as usize,
-            cash_flow: raw_to_cash_flow(self.cash_amount, &self.cash_currency, &self.cash_date)?,
-            related_trans: int_to_usize(self.related_trans),
+            asset: helpers::int_to_usize(self.asset),
+            cash_flow: helpers::raw_to_cash_flow(
+                self.cash_amount,
+                &self.cash_currency,
+                &self.cash_date,
+            )?,
+            related_trans: helpers::int_to_usize(self.related_trans),
             position: self.position,
             note: self.note.clone(),
         })
@@ -108,13 +89,13 @@ impl RawTransaction {
 
     fn from_transaction(transaction: &Transaction) -> RawTransaction {
         RawTransaction {
-            id: usize_to_int(transaction.id),
+            id: helpers::usize_to_int(transaction.id),
             trans_type: transaction.trans_type as u8,
-            asset: transaction.asset as i64,
+            asset: helpers::usize_to_int(transaction.asset),
             cash_amount: transaction.cash_flow.amount.amount,
             cash_currency: transaction.cash_flow.amount.currency.to_string(),
             cash_date: transaction.cash_flow.date.format("%Y-%m-%d").to_string(),
-            related_trans: usize_to_int(transaction.related_trans),
+            related_trans: helpers::usize_to_int(transaction.related_trans),
             position: transaction.position,
             note: transaction.note.clone(),
         }
