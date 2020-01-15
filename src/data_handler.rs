@@ -10,6 +10,7 @@ pub enum DataError {
     UpdateFailed(String),
     DeleteFailed(String),
     InsertFailed(String),
+    InvalidTransaction(String),
 }
 
 impl std::error::Error for DataError {
@@ -26,6 +27,7 @@ impl fmt::Display for DataError {
             Self::UpdateFailed(err) => write!(f, "update of object in database failed: {}", err),
             Self::DeleteFailed(err) => write!(f, "removing object from database failed: {}", err),
             Self::InsertFailed(err) => write!(f, "inserting object to database failed: {}", err),
+            Self::InvalidTransaction(err) => write!(f, "invalid transaction type: {}", err),
         }
     }
 }

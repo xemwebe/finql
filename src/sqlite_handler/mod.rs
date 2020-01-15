@@ -1,11 +1,12 @@
 ///! Implemenation of sqlite3 data handler
 use crate::asset::Asset;
 use crate::data_handler::{DataError, DataHandler};
-use crate::transaction::{Transaction, TransactionType};
+use crate::transaction::Transaction;
 use rusqlite::{params, Connection, OpenFlags, NO_PARAMS};
-use std::convert::TryFrom;
 
 mod helpers;
+mod raw_transaction;
+use raw_transaction::RawTransaction;
 
 /// Struct to handle connections to sqlite3 databases
 pub struct SqliteDB {
@@ -54,51 +55,6 @@ impl SqliteDB {
             NO_PARAMS,
         )?;
         Ok(())
-    }
-}
-
-struct RawTransaction {
-    id: Option<i64>,
-    trans_type: u8,
-    asset: Option<i64>,
-    cash_amount: f64,
-    cash_currency: String,
-    cash_date: String,
-    related_trans: Option<i64>,
-    position: Option<f64>,
-    note: Option<String>,
-}
-
-impl RawTransaction {
-    fn to_transaction(&self) -> Result<Transaction, DataError> {
-        Ok(Transaction {
-            id: helpers::int_to_usize(self.id),
-            trans_type: TransactionType::try_from(self.trans_type)
-                .map_err(|e| DataError::NotFound(e.to_string()))?,
-            asset: helpers::int_to_usize(self.asset),
-            cash_flow: helpers::raw_to_cash_flow(
-                self.cash_amount,
-                &self.cash_currency,
-                &self.cash_date,
-            )?,
-            related_trans: helpers::int_to_usize(self.related_trans),
-            position: self.position,
-            note: self.note.clone(),
-        })
-    }
-
-    fn from_transaction(transaction: &Transaction) -> RawTransaction {
-        RawTransaction {
-            id: helpers::usize_to_int(transaction.id),
-            trans_type: transaction.trans_type as u8,
-            asset: helpers::usize_to_int(transaction.asset),
-            cash_amount: transaction.cash_flow.amount.amount,
-            cash_currency: transaction.cash_flow.amount.currency.to_string(),
-            cash_date: transaction.cash_flow.date.format("%Y-%m-%d").to_string(),
-            related_trans: helpers::usize_to_int(transaction.related_trans),
-            position: transaction.position,
-            note: transaction.note.clone(),
-        }
     }
 }
 
