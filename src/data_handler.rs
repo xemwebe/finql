@@ -1,7 +1,7 @@
-///! Implementation of a data handler trait to deal with global data
-
-use std::fmt;
 use crate::asset::Asset;
+use crate::transaction::Transaction;
+///! Implementation of a data handler trait to deal with global data
+use std::fmt;
 
 #[derive(Debug)]
 pub enum DataError {
@@ -32,8 +32,17 @@ impl fmt::Display for DataError {
 
 /// Handler for globally available data
 pub trait DataHandler {
-    fn get_asset_by_id(&self, id: u64) -> Result<Asset, DataError>;
+    // insert, get, update and delete for assets
+    fn insert_asset(&self, asset: &Asset) -> Result<usize, DataError>;
+    fn get_asset_by_id(&self, id: usize) -> Result<Asset, DataError>;
+    fn get_all_assets(&self) -> Result<Vec<Asset>, DataError>;
     fn update_asset(&self, asset: &Asset) -> Result<(), DataError>;
-    fn insert_asset(&self, asset: &Asset) -> Result<u64, DataError>;
-    fn delete_asset(&self, id: u64) -> Result<(), DataError>;
+    fn delete_asset(&self, id: usize) -> Result<(), DataError>;
+
+    // insert, get, update and delete for transactions
+    fn insert_transaction(&self, transaction: &Transaction) -> Result<(), DataError>;
+    fn get_transaction_by_id(&self, id: usize) -> Result<Transaction, DataError>;
+    fn get_all_transactions(&self) -> Result<Vec<Transaction>, DataError>;
+    fn update_transaction(&self, transaction: &Transaction) -> Result<(), DataError>;
+    fn delete_transaction(&self, id: usize) -> Result<(), DataError>;
 }

@@ -9,7 +9,7 @@ macro_rules! assert_fuzzy_eq {
                 if !((*left_val - *right_val).abs() < *tol) {
                     panic!(
                         "assertion failed: left differs from right by more than `{:?}` \
-                                   (left: `{:?}`, right: `{:?}`)",
+                         (left: `{:?}`, right: `{:?}`)",
                         *tol, *left_val, *right_val
                     )
                 }

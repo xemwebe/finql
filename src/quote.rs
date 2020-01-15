@@ -1,23 +1,22 @@
-///! Implementation of a container for basic asset data
-
-use serde::{Serialize,Deserialize};
 use crate::fixed_income::Amount;
-use chrono::{Utc,DateTime};
+use chrono::{DateTime, Utc};
+///! Implementation of a container for basic asset data
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MarketDataSource {
     id: u64,
     pub name: String,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Ticker {
     id: u64,
     pub name: String,
     source: u64,
 }
 
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Quote {
     id: u64,
     ticker: u64,

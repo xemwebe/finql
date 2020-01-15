@@ -171,20 +171,24 @@ impl<'a> ArgminOp for FlatRateDiscounter<'a> {
 impl<'a> Serialize for FlatRateDiscounter<'a> {
     fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer
-        {
-            Err(serde::ser::Error::custom(format!("serialization is disabled")))
-        }
+        S: Serializer,
+    {
+        Err(serde::ser::Error::custom(format!(
+            "serialization is disabled"
+        )))
+    }
 }
 
 /// Dummy implementation fo Deserialize
 impl<'de> Deserialize<'de> for FlatRateDiscounter<'de> {
     fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de>
-        {
-            Err(serde::de::Error::custom(format!("deserialization is disabled")))
-        }
+        D: Deserializer<'de>,
+    {
+        Err(serde::de::Error::custom(format!(
+            "deserialization is disabled"
+        )))
+    }
 }
 
 #[cfg(test)]

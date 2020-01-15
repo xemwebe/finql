@@ -17,20 +17,19 @@
 pub mod macros;
 
 // module exports
+pub mod asset;
 pub mod bond;
 pub mod calendar;
 pub mod coupon_date;
 pub mod currency;
+pub mod data_handler;
 pub mod day_adjust;
 pub mod day_count_conv;
 pub mod fixed_income;
 pub mod market;
-pub mod rates;
-pub mod time_period;
-pub mod asset;
-pub mod transaction;
-pub mod quote;
 pub mod portfolio;
-pub mod data_handler;
+pub mod quote;
+pub mod rates;
 pub mod sqlite_handler;
-
+pub mod time_period;
+pub mod transaction;
