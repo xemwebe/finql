@@ -1,3 +1,9 @@
+Version 0.4.1
+* DataHandler extended for transactions
+* Sqlite data handler implemented for transactions and refactoring
+* Refactoring of Transaction struct
+* sqlitedb example extended
+
 Version 0.4.0
 * DataHandler trait for abstraction of data storage facility added
 * Sqlite handler as example of DataHandler implementation added
