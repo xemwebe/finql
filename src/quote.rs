@@ -5,22 +5,22 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MarketDataSource {
-    id: u64,
+    id: usize,
     pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Ticker {
-    id: u64,
+    id: usize,
     pub name: String,
-    source: u64,
+    source: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Quote {
-    id: u64,
-    ticker: u64,
+    id: usize,
+    ticker: usize,
     pub price: Amount,
     pub time: DateTime<Utc>,
-    pub volume: Option<u64>,
+    pub volume: Option<usize>,
 }
