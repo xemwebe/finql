@@ -41,8 +41,8 @@ impl SqliteDB {
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS transactions (
                 id INTEGER PRIMARY KEY,
-                trans_type INTEGER NOT NULL,
-                asset_id INTEGER NOT NULL,
+                trans_type TEXT NOT NULL,
+                asset_id INTEGER,
                 cash_amount REAL NOT NULL,
                 cash_currency TXT NOT NULL,
                 cash_date TEXT NOT NULL,
@@ -155,7 +155,7 @@ impl DataHandler for SqliteDB {
     }
 
     // insert, get, update and delete for transactions
-    fn insert_transaction(&self, transaction: &Transaction) -> Result<(), DataError> {
+    fn insert_transaction(&self, transaction: &Transaction) -> Result<usize, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
         self.conn
             .execute(
@@ -175,7 +175,14 @@ impl DataHandler for SqliteDB {
                 ],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        Ok(())
+        let id = self
+            .conn
+            .query_row("SELECT last_insert_rowid();", NO_PARAMS, |row| {
+                let id: i64 = row.get(0)?;
+                Ok(id as usize)
+            })
+            .map_err(|e| DataError::NotFound(e.to_string()))?;
+        Ok(id)
     }
 
     fn get_transaction_by_id(&self, id: usize) -> Result<Transaction, DataError> {

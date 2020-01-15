@@ -42,7 +42,7 @@ pub trait DataHandler {
     fn delete_asset(&self, id: usize) -> Result<(), DataError>;
 
     // insert, get, update and delete for transactions
-    fn insert_transaction(&self, transaction: &Transaction) -> Result<(), DataError>;
+    fn insert_transaction(&self, transaction: &Transaction) -> Result<usize, DataError>;
     fn get_transaction_by_id(&self, id: usize) -> Result<Transaction, DataError>;
     fn get_all_transactions(&self) -> Result<Vec<Transaction>, DataError>;
     fn update_transaction(&self, transaction: &Transaction) -> Result<(), DataError>;

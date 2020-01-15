@@ -85,24 +85,24 @@ impl RawTransaction {
         };
         match transaction.transaction_type {
             TransactionType::Cash => raw_transaction.trans_type = CASH.to_string(),
-            TransactionType::Asset{asset_id, position} => {
+            TransactionType::Asset { asset_id, position } => {
                 raw_transaction.trans_type = ASSET.to_string();
                 raw_transaction.asset = Some(asset_id as i64);
                 raw_transaction.position = Some(position);
-            },
-            TransactionType::Dividend{asset_id} => {
+            }
+            TransactionType::Dividend { asset_id } => {
                 raw_transaction.trans_type = DIVIDEND.to_string();
                 raw_transaction.asset = Some(asset_id as i64);
-            },
-            TransactionType::Interest{asset_id} => {
+            }
+            TransactionType::Interest { asset_id } => {
                 raw_transaction.trans_type = INTEREST.to_string();
                 raw_transaction.asset = Some(asset_id as i64);
-            },
-            TransactionType::Tax{transaction_ref} => {
+            }
+            TransactionType::Tax { transaction_ref } => {
                 raw_transaction.trans_type = TAX.to_string();
                 raw_transaction.related_trans = usize_to_int(transaction_ref);
-            },
-            TransactionType::Fee{transaction_ref} => {
+            }
+            TransactionType::Fee { transaction_ref } => {
                 raw_transaction.trans_type = FEE.to_string();
                 raw_transaction.related_trans = usize_to_int(transaction_ref);
             }
