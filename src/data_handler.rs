@@ -32,7 +32,7 @@ impl fmt::Display for DataError {
     }
 }
 
-/// Handler for globally available data
+/// Handler for globally available data of transactions and related data
 pub trait DataHandler {
     // insert, get, update and delete for assets
     fn insert_asset(&self, asset: &Asset) -> Result<usize, DataError>;

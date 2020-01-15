@@ -1,6 +1,7 @@
+///! Implementation of a container for basic asset data
+
 use crate::fixed_income::Amount;
 use chrono::{DateTime, Utc};
-///! Implementation of a container for basic asset data
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
