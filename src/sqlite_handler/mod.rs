@@ -57,8 +57,7 @@ impl SqliteDB {
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS market_data_sources (
                 id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE,
-            );",
+                name TEXT NOT NULL UNIQUE );",
             NO_PARAMS,
         )?;
         self.conn.execute(
@@ -67,8 +66,7 @@ impl SqliteDB {
                 name TEXT NOT NULL,
                 source_id INTEGER NOT NULL,
                 currency TEXT NOT NULL,
-                FOREIGN KEY(source_id) REFERENCES market_data_sources(id),
-            );",
+                FOREIGN KEY(source_id) REFERENCES market_data_sources(id) );",
             NO_PARAMS,
         )?;
         self.conn.execute(
@@ -78,8 +76,7 @@ impl SqliteDB {
                 price REAL NOT NULL,
                 time TEXT NOT NULL,
                 volume REAL,
-                FOREIGN KEY(ticker_id) REFERENCES ticker(id),
-            );",
+                FOREIGN KEY(ticker_id) REFERENCES ticker(id) );",
             NO_PARAMS,
         )?;
 
