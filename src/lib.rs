@@ -11,6 +11,13 @@
 //! this target include time periods (e.g. "3M" or "10Y"), bank holiday calendars, business day adjustment
 //! rules, calculation of year fraction with respect to typical day count convention methods, roll-out of
 //! cash flows and setup of interest rate curves for calculating the discounted cash flow value.
+//!
+//! The library also supports storing data, like market data, e.g. market quote information, data related
+//! to portfolio and transaction management to be able to support portfolio analysis (e.g. calculation
+//! of risk figures), and generic storage of product details (e.g. bond specification). This is done by
+//! defining data handler traits for various data categories, with concrete implementations supporting
+//! storage in memory or in a databases (supporting `sqlite3` and `postgreSQL`).
+//!
 
 // macro exports
 #[macro_use]
@@ -26,6 +33,7 @@ pub mod data_handler;
 pub mod day_adjust;
 pub mod day_count_conv;
 pub mod fixed_income;
+pub mod helpers;
 pub mod market;
 pub mod portfolio;
 pub mod quote;
@@ -33,4 +41,3 @@ pub mod rates;
 pub mod sqlite_handler;
 pub mod time_period;
 pub mod transaction;
-pub mod helpers;

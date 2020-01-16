@@ -1,9 +1,9 @@
 use finql::currency::Currency;
 ///! Demonstration of storing Assets in Sqlite3 database
 use finql::data_handler::QuoteHandler;
-use finql::quote::{MarketDataSource, Ticker, Quote};
-use finql::sqlite_handler::SqliteDB;
 use finql::helpers::make_time;
+use finql::quote::{MarketDataSource, Quote, Ticker};
+use finql::sqlite_handler::SqliteDB;
 use std::str::FromStr;
 
 fn main() {
@@ -110,29 +110,65 @@ fn main() {
 
     // Dealing with quotes
     print!("Insert market quotes...");
-    let time = make_time(2019,12,30,20,0,0).unwrap();
-    let quote = Quote{ id: None, ticker: basf_id, price: 67.35, time, volume: None};
+    let time = make_time(2019, 12, 30, 20, 0, 0).unwrap();
+    let quote = Quote {
+        id: None,
+        ticker: basf_id,
+        price: 67.35,
+        time,
+        volume: None,
+    };
     db.insert_quote(&quote).unwrap();
-    let time = make_time(2020,1,2,20,0,0).unwrap();
-    let quote = Quote{ id: None, ticker: basf_id, price: 68.29, time, volume: None};
+    let time = make_time(2020, 1, 2, 20, 0, 0).unwrap();
+    let quote = Quote {
+        id: None,
+        ticker: basf_id,
+        price: 68.29,
+        time,
+        volume: None,
+    };
     db.insert_quote(&quote).unwrap();
-    let time = make_time(2020,1,3,20,0,0).unwrap();
-    let quote = Quote{ id: None, ticker: basf_id, price: 67.27, time, volume: None};
+    let time = make_time(2020, 1, 3, 20, 0, 0).unwrap();
+    let quote = Quote {
+        id: None,
+        ticker: basf_id,
+        price: 67.27,
+        time,
+        volume: None,
+    };
     db.insert_quote(&quote).unwrap();
-    let time = make_time(2020,1,6,20,0,0).unwrap();
-    let quote = Quote{ id: None, ticker: basf_id, price: 66.27, time, volume: None};
+    let time = make_time(2020, 1, 6, 20, 0, 0).unwrap();
+    let quote = Quote {
+        id: None,
+        ticker: basf_id,
+        price: 66.27,
+        time,
+        volume: None,
+    };
     db.insert_quote(&quote).unwrap();
-    let time = make_time(2020,1,7,20,0,0).unwrap();
-    let quote = Quote{ id: None, ticker: basf_id, price: 66.30, time, volume: None};
+    let time = make_time(2020, 1, 7, 20, 0, 0).unwrap();
+    let quote = Quote {
+        id: None,
+        ticker: basf_id,
+        price: 66.30,
+        time,
+        volume: None,
+    };
     db.insert_quote(&quote).unwrap();
-    let time = make_time(2020,1,8,20,0,0).unwrap();
-    let mut wrong_quote = Quote{ id: None, ticker: siemens_id, price: 65.73, time, volume: None};
+    let time = make_time(2020, 1, 8, 20, 0, 0).unwrap();
+    let mut wrong_quote = Quote {
+        id: None,
+        ticker: siemens_id,
+        price: 65.73,
+        time,
+        volume: None,
+    };
     let wrong_quote_id = db.insert_quote(&wrong_quote).unwrap();
     println!("ok");
-    let time = make_time(2020,1,4,0,0,0).unwrap();
+    let time = make_time(2020, 1, 4, 0, 0, 0).unwrap();
     print!("get last quote...");
     let (quote, currency) = db.get_last_quote_before(basf_id, time).unwrap();
-    if currency == eur && (quote.price-67.27)<1e-10 {
+    if currency == eur && (quote.price - 67.27) < 1e-10 {
         println!("ok");
     } else {
         println!("failed");

@@ -1,3 +1,8 @@
+Version 0.4.2
+* New QuoteHandler trait for handling data related to marekt quotes
+* Implementation of QuoteHandler for sqlite3
+* Example for QuoteHandler with sqlite3 added.
+
 Version 0.4.1
 * DataHandler extended for transactions
 * Sqlite data handler implemented for transactions and refactoring
