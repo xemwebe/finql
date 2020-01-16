@@ -1,7 +1,7 @@
+use crate::currency::Currency;
 ///! Implementation of a container for basic asset data
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::currency::Currency;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MarketDataSource {

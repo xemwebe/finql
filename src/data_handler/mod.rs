@@ -30,8 +30,8 @@ impl fmt::Display for DataError {
     }
 }
 
-pub mod transaction_handler;
 pub mod quote_handler;
+pub mod transaction_handler;
 
-pub use transaction_handler::DataHandler;
 pub use quote_handler::QuoteHandler;
+pub use transaction_handler::DataHandler;

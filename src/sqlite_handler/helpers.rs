@@ -1,7 +1,7 @@
 use super::DataError;
 use crate::currency::Currency;
 use crate::fixed_income::CashFlow;
-use chrono::{DateTime,NaiveDate,Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use std::str::FromStr;
 
 /// Transform optional `usize` to optional `i64`
@@ -28,10 +28,10 @@ pub fn raw_to_cash_flow(amount: f64, currency: &str, date: &str) -> Result<CashF
     Ok(CashFlow::new(amount, currency, date))
 }
 
-
 /// Convert string to DateTime<Utc>
-pub fn to_time(time: &str) -> Result<DateTime<Utc>,DataError> {
-    let time = DateTime::parse_from_rfc3339(time).map_err(|e| DataError::NotFound(e.to_string()))?;
+pub fn to_time(time: &str) -> Result<DateTime<Utc>, DataError> {
+    let time =
+        DateTime::parse_from_rfc3339(time).map_err(|e| DataError::NotFound(e.to_string()))?;
     let time: DateTime<Utc> = DateTime::from(time);
     Ok(time)
 }
