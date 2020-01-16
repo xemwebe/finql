@@ -203,7 +203,7 @@ impl QuoteHandler for SqliteDB {
     fn insert_quote(&self, quote: &Quote) -> Result<usize, DataError> {
         self.conn
             .execute(
-                "INSERT INTO quotes (ticker_id, price, time, volume) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO quotes (ticker_id, price, time, volume) VALUES (?, ?, ?, ?)",
                 params![
                     quote.ticker as i64,
                     quote.price,

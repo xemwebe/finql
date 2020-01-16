@@ -33,3 +33,4 @@ pub mod rates;
 pub mod sqlite_handler;
 pub mod time_period;
 pub mod transaction;
+pub mod helpers;
