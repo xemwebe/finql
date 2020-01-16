@@ -1,7 +1,7 @@
 ///! Implementation of a container for basic asset data
-use crate::fixed_income::Amount;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use crate::currency::Currency;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MarketDataSource {
@@ -13,6 +13,7 @@ pub struct MarketDataSource {
 pub struct Ticker {
     pub id: Option<usize>,
     pub name: String,
+    pub currency: Currency,
     pub source: usize,
 }
 
@@ -20,7 +21,7 @@ pub struct Ticker {
 pub struct Quote {
     pub id: Option<usize>,
     pub ticker: usize,
-    pub price: Amount,
+    pub price: f64,
     pub time: DateTime<Utc>,
     pub volume: Option<f64>,
 }

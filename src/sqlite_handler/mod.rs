@@ -66,6 +66,7 @@ impl SqliteDB {
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
                 source_id INTEGER NOT NULL,
+                currency TEXT NOT NULL,
                 FOREIGN KEY(source_id) REFERENCES market_data_sources(id),
             );",
             NO_PARAMS,
@@ -114,18 +115,16 @@ impl DataHandler for SqliteDB {
         let asset = self
             .conn
             .query_row(
-                "SELECT id, name, wkn, isin, note FROM assets
+                "SELECT name, wkn, isin, note FROM assets
         WHERE id=?;",
                 &[id as i64],
                 |row| {
-                    let id: i64 = row.get(0)?;
-                    let id = Some(id as usize);
                     Ok(Asset {
-                        id,
-                        name: row.get(1)?,
-                        wkn: row.get(2)?,
-                        isin: row.get(3)?,
-                        note: row.get(4)?,
+                        id: Some(id),
+                        name: row.get(0)?,
+                        wkn: row.get(1)?,
+                        isin: row.get(2)?,
+                        note: row.get(3)?,
                     })
                 },
             )
@@ -217,22 +216,22 @@ impl DataHandler for SqliteDB {
         let transaction = self
             .conn
             .query_row(
-                "SELECT id, trans_type, asset_id, 
+                "SELECT trans_type, asset_id, 
         cash_amount, cash_currency, cash_date, related_trans, position, note 
         FROM transactions
         WHERE id=?;",
                 params![id as i64],
                 |row| {
                     Ok(RawTransaction {
-                        id: row.get(0)?,
-                        trans_type: row.get(1)?,
-                        asset: row.get(2)?,
-                        cash_amount: row.get(3)?,
-                        cash_currency: row.get(4)?,
-                        cash_date: row.get(5)?,
-                        related_trans: row.get(6)?,
-                        position: row.get(7)?,
-                        note: row.get(8)?,
+                        id: Some(id as i64),
+                        trans_type: row.get(0)?,
+                        asset: row.get(1)?,
+                        cash_amount: row.get(2)?,
+                        cash_currency: row.get(3)?,
+                        cash_date: row.get(4)?,
+                        related_trans: row.get(5)?,
+                        position: row.get(6)?,
+                        note: row.get(7)?,
                     })
                 },
             )
