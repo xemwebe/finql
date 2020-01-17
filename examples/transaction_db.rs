@@ -1,14 +1,14 @@
 ///! Demonstration of storing Assets in Sqlite3 database
-
 use chrono::NaiveDate;
 use finql::asset::Asset;
 use finql::currency::Currency;
 use finql::data_handler::DataHandler;
 use finql::fixed_income::CashFlow;
-use finql::sqlite_handler::SqliteDB;
 use finql::memory_handler::InMemoryDB;
+use finql::sqlite_handler::SqliteDB;
 use finql::transaction::{Transaction, TransactionType};
 use std::str::FromStr;
+use std::fs;
 
 fn transaction_tests<DB: DataHandler>(db: &mut DB) {
     print!("Store asset...");
@@ -29,7 +29,7 @@ fn transaction_tests<DB: DataHandler>(db: &mut DB) {
     print!("Get list of assets...");
     let _assets = db.get_all_assets().unwrap();
     println!("ok");
-    
+
     // put some cash into the account
     print!("Store cash transaction...");
     let eur = Currency::from_str("EUR").unwrap();
@@ -109,8 +109,10 @@ fn main() {
     assert!(
         args.len() >= 2,
         format!(
-            concat!("usage: {} <db_type> [<database connection string>]\n",
-            "where <db_type> is any of 'sqlite' or 'memory'"),
+            concat!(
+                "usage: {} <db_type> [<database connection string>]\n",
+                "where <db_type> is any of 'sqlite' or 'memory'"
+            ),
             args[0]
         )
     );
@@ -118,15 +120,21 @@ fn main() {
         "memory" => {
             let mut db = InMemoryDB::new();
             transaction_tests(&mut db);
-        },
+        }
         "sqlite" => {
-            if args.len()<3 {
-                println!("Please give the sqlite database path as parameter");
+            if args.len() < 3 {
+                eprintln!("Please give the sqlite database path as parameter");
             } else {
-                let mut db = SqliteDB::create(&args[2]).unwrap();
-                transaction_tests(&mut db);   
+                let path = &args[2];
+                if fs::metadata(path).is_ok() {
+                    eprintln!("Apparently there exists already a file with this path.");
+                    eprintln!("Please provide another path or remove the file, since a new database will be created.");
+                } else {
+                    let mut db = SqliteDB::create(path).unwrap();
+                    transaction_tests(&mut db);
+                }
             }
-        },
+        }
         other => println!("Unknown database type {}", other),
     }
 }
