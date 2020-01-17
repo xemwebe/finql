@@ -1,13 +1,13 @@
 ///! Implementation of a container for basic asset data
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssetCategory {
     id: usize,
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Asset {
     pub id: Option<usize>,
     pub name: String,

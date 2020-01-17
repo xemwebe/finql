@@ -86,7 +86,7 @@ impl SqliteDB {
 
 /// Handler for globally available data
 impl DataHandler for SqliteDB {
-    fn insert_asset(&self, asset: &Asset) -> Result<usize, DataError> {
+    fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {
         self.conn
             .execute(
                 "INSERT INTO assets (name, wkn, isin, note) VALUES (?1, ?2, ?3, ?4)",
@@ -154,7 +154,7 @@ impl DataHandler for SqliteDB {
         Ok(assets)
     }
 
-    fn update_asset(&self, asset: &Asset) -> Result<(), DataError> {
+    fn update_asset(&mut self, asset: &Asset) -> Result<(), DataError> {
         if asset.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -171,7 +171,7 @@ impl DataHandler for SqliteDB {
         Ok(())
     }
 
-    fn delete_asset(&self, id: usize) -> Result<(), DataError> {
+    fn delete_asset(&mut self, id: usize) -> Result<(), DataError> {
         self.conn
             .execute("DELETE FROM assets WHERE id=?1;", params![id as i64])
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
@@ -179,7 +179,7 @@ impl DataHandler for SqliteDB {
     }
 
     // insert, get, update and delete for transactions
-    fn insert_transaction(&self, transaction: &Transaction) -> Result<usize, DataError> {
+    fn insert_transaction(&mut self, transaction: &Transaction) -> Result<usize, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
         self.conn
             .execute(
@@ -268,7 +268,7 @@ impl DataHandler for SqliteDB {
         Ok(transactions)
     }
 
-    fn update_transaction(&self, transaction: &Transaction) -> Result<(), DataError> {
+    fn update_transaction(&mut self, transaction: &Transaction) -> Result<(), DataError> {
         if transaction.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -303,7 +303,7 @@ impl DataHandler for SqliteDB {
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
-    fn delete_transaction(&self, id: usize) -> Result<(), DataError> {
+    fn delete_transaction(&mut self, id: usize) -> Result<(), DataError> {
         self.conn
             .execute("DELETE FROM transactions WHERE id=?1;", params![id as i64])
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;

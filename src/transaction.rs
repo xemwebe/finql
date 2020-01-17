@@ -14,7 +14,7 @@ pub enum TransactionType {
 }
 
 /// Basic transaction data
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
     // Before a transaction is stored to a database, the id maybe None
     pub id: Option<usize>,

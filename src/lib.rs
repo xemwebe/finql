@@ -35,6 +35,7 @@ pub mod day_count_conv;
 pub mod fixed_income;
 pub mod helpers;
 pub mod market;
+pub mod memory_handler;
 pub mod portfolio;
 pub mod quote;
 pub mod rates;
