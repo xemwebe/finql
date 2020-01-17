@@ -1,20 +1,17 @@
-use chrono::NaiveDate;
 ///! Demonstration of storing Assets in Sqlite3 database
+
+use chrono::NaiveDate;
 use finql::asset::Asset;
 use finql::currency::Currency;
 use finql::data_handler::DataHandler;
 use finql::fixed_income::CashFlow;
 use finql::sqlite_handler::SqliteDB;
+use finql::memory_handler::InMemoryDB;
 use finql::transaction::{Transaction, TransactionType};
 use std::str::FromStr;
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    assert!(
-        args.len() == 2,
-        format!("usage: {} <name of sqlite3 db>", args[0])
-    );
-    let db = SqliteDB::create(&args[1]).unwrap();
+fn transaction_tests<DB: DataHandler>(db: &mut DB) {
+    print!("Store asset...");
     let asset = Asset::new(
         None,
         "Admiral Group plc",
@@ -24,18 +21,17 @@ fn main() {
     );
     let asset_id = db.insert_asset(&asset);
     match asset_id {
-        Ok(id) => println!("Asset has been stored successfully with id {}", id),
-        Err(err) => println!(
-            "Could not insert asset! Did the database already contained the entry? Error was {}",
-            err
-        ),
+        Ok(_) => println!("ok"),
+        Err(err) => println!("failed with error: {}", err),
     }
 
     // Show all assets in database
-    let assets = db.get_all_assets().unwrap();
-    println!("Here comes a list of all stored assets:\n{:?}", assets);
-
+    print!("Get list of assets...");
+    let _assets = db.get_all_assets().unwrap();
+    println!("ok");
+    
     // put some cash into the account
+    print!("Store cash transaction...");
     let eur = Currency::from_str("EUR").unwrap();
     let cash_flow = CashFlow::new(10_000.0, eur, NaiveDate::from_ymd(2020, 01, 15));
     let cash_in = Transaction {
@@ -46,11 +42,12 @@ fn main() {
     };
     let result = db.insert_transaction(&cash_in);
     match result {
-        Ok(_) => println!("Start capital has been stored successfully!"),
-        Err(err) => println!("Could not insert start capital! Error was {}", err),
+        Ok(_) => println!("ok"),
+        Err(err) => println!("failed with error: {}", err),
     };
 
     // Lets buy the asset!
+    print!("Store buy asset transaction...");
     let cash_flow = CashFlow::new(-9_000.0, eur, NaiveDate::from_ymd(2020, 01, 15));
     let asset_buy = Transaction {
         id: None,
@@ -62,7 +59,9 @@ fn main() {
         note: None,
     };
     let trans_id = db.insert_transaction(&asset_buy).unwrap();
+    println!("ok");
 
+    print!("Store associated fee transaction...");
     // Associate some fees with the trade
     let fee = Transaction {
         id: None,
@@ -73,8 +72,10 @@ fn main() {
         note: None,
     };
     let _ = db.insert_transaction(&fee).unwrap();
+    println!("ok");
 
     // You got some dividends later
+    print!("Store dividend transaction...");
     let dividend = Transaction {
         id: None,
         transaction_type: TransactionType::Dividend { asset_id: 1 },
@@ -82,8 +83,10 @@ fn main() {
         note: None,
     };
     let dividend_id = db.insert_transaction(&dividend).unwrap();
+    println!("ok");
 
     // But you get taxed, too!
+    print!("Insert related tax transaction...");
     let tax = Transaction {
         id: None,
         transaction_type: TransactionType::Tax {
@@ -93,11 +96,37 @@ fn main() {
         note: None,
     };
     let _ = db.insert_transaction(&tax).unwrap();
+    println!("ok");
 
     // Show all transactions in database
-    let transactions = db.get_all_transactions().unwrap();
-    println!("Here comes a list of all stored transactions:");
-    for transaction in transactions {
-        println!("{:?}", transaction);
+    print!("Get list of all transactions...");
+    let _transactions = db.get_all_transactions().unwrap();
+    println!("ok");
+}
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    assert!(
+        args.len() >= 2,
+        format!(
+            concat!("usage: {} <db_type> [<database connection string>]\n",
+            "where <db_type> is any of 'sqlite' or 'memory'"),
+            args[0]
+        )
+    );
+    match args[1].as_str() {
+        "memory" => {
+            let mut db = InMemoryDB::new();
+            transaction_tests(&mut db);
+        },
+        "sqlite" => {
+            if args.len()<3 {
+                println!("Please give the sqlite database path as parameter");
+            } else {
+                let mut db = SqliteDB::create(&args[2]).unwrap();
+                transaction_tests(&mut db);   
+            }
+        },
+        other => println!("Unknown database type {}", other),
     }
 }
