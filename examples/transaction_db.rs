@@ -7,8 +7,8 @@ use finql::fixed_income::CashFlow;
 use finql::memory_handler::InMemoryDB;
 use finql::sqlite_handler::SqliteDB;
 use finql::transaction::{Transaction, TransactionType};
-use std::str::FromStr;
 use std::fs;
+use std::str::FromStr;
 
 fn transaction_tests<DB: DataHandler>(db: &mut DB) {
     print!("Store asset...");

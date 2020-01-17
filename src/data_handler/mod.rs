@@ -30,6 +30,13 @@ impl fmt::Display for DataError {
     }
 }
 
+pub trait DataItem {
+    // get id or return error if id hasn't been set yet
+    fn get_id(&self) -> Result<usize, DataError>;
+    // set id or return error if id has already been set
+    fn set_id(&mut self, id: usize) -> Result<(), DataError>;
+}
+
 pub mod quote_handler;
 pub mod transaction_handler;
 
