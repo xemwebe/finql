@@ -1,6 +1,7 @@
 ///! Implementation of in-memory data handler
 use crate::asset::Asset;
 use crate::data_handler::{DataError, DataItem};
+use crate::quote::{MarketDataSource, Quote, Ticker};
 use crate::transaction::Transaction;
 use std::collections::BTreeMap;
 
@@ -70,6 +71,9 @@ impl<T: DataItem + Clone> InMemoryContainer<T> {
 pub struct InMemoryDB {
     assets: InMemoryContainer<Asset>,
     transactions: InMemoryContainer<Transaction>,
+    md_sources: InMemoryContainer<MarketDataSource>,
+    ticker_map: InMemoryContainer<Ticker>,
+    quotes: InMemoryContainer<Quote>,
 }
 
 impl InMemoryDB {
@@ -77,8 +81,12 @@ impl InMemoryDB {
         InMemoryDB {
             assets: InMemoryContainer::new(),
             transactions: InMemoryContainer::new(),
+            md_sources: InMemoryContainer::new(),
+            ticker_map: InMemoryContainer::new(),
+            quotes: InMemoryContainer::new(),
         }
     }
 }
 
+pub mod quote_handler;
 pub mod transaction_handler;

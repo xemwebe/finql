@@ -11,7 +11,7 @@ use std::str::FromStr;
 /// Sqlite implementation of quote handler
 impl QuoteHandler for SqliteDB {
     // insert, get, update and delete for market data sources
-    fn insert_md_source(&self, source: &MarketDataSource) -> Result<usize, DataError> {
+    fn insert_md_source(&mut self, source: &MarketDataSource) -> Result<usize, DataError> {
         self.conn
             .execute(
                 "INSERT INTO market_data_sources (name) VALUES (?1)",
@@ -69,7 +69,7 @@ impl QuoteHandler for SqliteDB {
         }
         Ok(sources)
     }
-    fn update_md_source(&self, source: &MarketDataSource) -> Result<(), DataError> {
+    fn update_md_source(&mut self, source: &MarketDataSource) -> Result<(), DataError> {
         if source.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -85,7 +85,7 @@ impl QuoteHandler for SqliteDB {
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
-    fn delete_md_source(&self, id: usize) -> Result<(), DataError> {
+    fn delete_md_source(&mut self, id: usize) -> Result<(), DataError> {
         self.conn
             .execute(
                 "DELETE FROM market_data_sources WHERE id=?1;",
@@ -96,7 +96,7 @@ impl QuoteHandler for SqliteDB {
     }
 
     // insert, get, update and delete for market data sources
-    fn insert_ticker(&self, ticker: &Ticker) -> Result<usize, DataError> {
+    fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
         self.conn
             .execute(
                 "INSERT INTO ticker (name, source_id, currency) VALUES (?, ?, ?)",
@@ -171,7 +171,7 @@ impl QuoteHandler for SqliteDB {
         }
         Ok(all_ticker)
     }
-    fn update_ticker(&self, ticker: &Ticker) -> Result<(), DataError> {
+    fn update_ticker(&mut self, ticker: &Ticker) -> Result<(), DataError> {
         if ticker.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -192,7 +192,7 @@ impl QuoteHandler for SqliteDB {
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
-    fn delete_ticker(&self, id: usize) -> Result<(), DataError> {
+    fn delete_ticker(&mut self, id: usize) -> Result<(), DataError> {
         self.conn
             .execute("DELETE FROM ticker WHERE id=?1;", params![id as i64])
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
@@ -200,7 +200,7 @@ impl QuoteHandler for SqliteDB {
     }
 
     // insert, get, update and delete for market data sources
-    fn insert_quote(&self, quote: &Quote) -> Result<usize, DataError> {
+    fn insert_quote(&mut self, quote: &Quote) -> Result<usize, DataError> {
         self.conn
             .execute(
                 "INSERT INTO quotes (ticker_id, price, time, volume) VALUES (?, ?, ?, ?)",
@@ -291,7 +291,7 @@ impl QuoteHandler for SqliteDB {
         Ok(quotes)
     }
 
-    fn update_quote(&self, quote: &Quote) -> Result<(), DataError> {
+    fn update_quote(&mut self, quote: &Quote) -> Result<(), DataError> {
         if quote.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -313,7 +313,7 @@ impl QuoteHandler for SqliteDB {
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
-    fn delete_quote(&self, id: usize) -> Result<(), DataError> {
+    fn delete_quote(&mut self, id: usize) -> Result<(), DataError> {
         self.conn
             .execute("DELETE FROM quotes WHERE id=?1;", params![id as i64])
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
