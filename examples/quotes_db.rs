@@ -1,19 +1,16 @@
+///! Demonstration of storing quotes and related data in Sqlite3 or in-memory database
+
+
 use finql::currency::Currency;
-///! Demonstration of storing Assets in Sqlite3 database
 use finql::data_handler::QuoteHandler;
 use finql::helpers::make_time;
 use finql::quote::{MarketDataSource, Quote, Ticker};
 use finql::sqlite_handler::SqliteDB;
+use finql::memory_handler::InMemoryDB;
+use std::fs;
 use std::str::FromStr;
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    assert!(
-        args.len() == 2,
-        format!("usage: {} <name of sqlite3 db>", args[0])
-    );
-    let db = SqliteDB::create(&args[1]).unwrap();
-
+fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     // Create some market data sources
     let yahoo = MarketDataSource {
         id: None,
@@ -191,4 +188,40 @@ fn main() {
     db.delete_quote(wrong_quote_id).unwrap();
     println!("ok");
     println!("\nDone. You may have a look at the database for further inspection.");
+}
+
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    assert!(
+        args.len() >= 2,
+        format!(
+            concat!(
+                "usage: {} <db_type> [<database connection string>]\n",
+                "where <db_type> is any of 'sqlite' or 'memory'"
+            ),
+            args[0]
+        )
+    );
+    match args[1].as_str() {
+        "memory" => {
+            let mut db = InMemoryDB::new();
+            quote_tests(&mut db);
+        }
+        "sqlite" => {
+            if args.len() < 3 {
+                eprintln!("Please give the sqlite database path as parameter");
+            } else {
+                let path = &args[2];
+                if fs::metadata(path).is_ok() {
+                    eprintln!("Apparently there exists already a file with this path.");
+                    eprintln!("Please provide another path or remove the file, since a new database will be created.");
+                } else {
+                    let mut db = SqliteDB::create(path).unwrap();
+                    quote_tests(&mut db);
+                }
+            }
+        }
+        other => println!("Unknown database type {}", other),
+    }
 }
