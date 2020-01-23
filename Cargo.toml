@@ -1,6 +1,6 @@
 [package]
 name = "finql"
-version = "0.4.2"
+version = "0.4.3"
 authors = ["Mark Beinker <mwb@quantlink.de>"]
 edition = "2018"
 description = "A quantitative finance toolbox"
@@ -13,8 +13,8 @@ categories = ["date-and-time","mathematics"]
 [dependencies]
 rusqlite = "0.21"
 chrono = { version = "0.4.10", features = ["serde"] }
-text_io = "0.1.7"
+text_io = "0.1"
 computus = "1.0"
 serde = { version = "1.0.*", features = ["derive"] }
 serde_json = "1.0"
-argmin = "0.2.6"
+argmin = "0.2"

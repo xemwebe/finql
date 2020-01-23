@@ -1,5 +1,13 @@
+Version 0.4.3
+* As an alternative to sqlite3 a simple In-Memory DB handler has been
+  added (currently without guarantee of referential integrity; if this
+  is required, an sqlite in-memory db could be used). This
+  made some changes to the underlying data structures necessary.
+* The sqlite examples have been renamed and generalized to support
+  different databases as storage devices.
+
 Version 0.4.2
-* New QuoteHandler trait for handling data related to marekt quotes
+* New QuoteHandler trait for handling data related to market quotes
 * Implementation of QuoteHandler for sqlite3
 * Example for QuoteHandler with sqlite3 added.
 
