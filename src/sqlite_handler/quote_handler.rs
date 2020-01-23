@@ -1,8 +1,8 @@
-use super::helpers::to_time;
 ///! Implementation for quote handler with Sqlite3 database as backend
 use super::SqliteDB;
 use crate::currency::Currency;
 use crate::data_handler::{DataError, QuoteHandler};
+use crate::helpers::to_time;
 use crate::quote::{MarketDataSource, Quote, Ticker};
 use chrono::{DateTime, Utc};
 use rusqlite::{params, NO_PARAMS};

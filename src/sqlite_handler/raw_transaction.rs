@@ -1,7 +1,7 @@
 use crate::data_handler::DataError;
 use crate::transaction::{Transaction, TransactionType};
 
-use super::helpers::*;
+use crate::helpers::*;
 
 pub struct RawTransaction {
     pub id: Option<i64>,

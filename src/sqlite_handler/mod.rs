@@ -4,7 +4,6 @@ use crate::data_handler::{DataError, DataHandler};
 use crate::transaction::Transaction;
 use rusqlite::{params, Connection, OpenFlags, NO_PARAMS};
 
-mod helpers;
 mod raw_transaction;
 use raw_transaction::RawTransaction;
 

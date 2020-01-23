@@ -1,12 +1,10 @@
 ///! Demonstration of storing quotes and related data in Sqlite3 or in-memory database
-
-
 use finql::currency::Currency;
 use finql::data_handler::QuoteHandler;
 use finql::helpers::make_time;
+use finql::memory_handler::InMemoryDB;
 use finql::quote::{MarketDataSource, Quote, Ticker};
 use finql::sqlite_handler::SqliteDB;
-use finql::memory_handler::InMemoryDB;
 use std::fs;
 use std::str::FromStr;
 
@@ -189,7 +187,6 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     println!("ok");
     println!("\nDone. You may have a look at the database for further inspection.");
 }
-
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
