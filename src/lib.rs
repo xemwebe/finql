@@ -10,7 +10,12 @@
 //! is in the focus, based on what information is given by a standard prospect. Building blocks to achieve
 //! this target include time periods (e.g. "3M" or "10Y"), bank holiday calendars, business day adjustment
 //! rules, calculation of year fraction with respect to typical day count convention methods, roll-out of
-//! cash flows and setup of interest rate curves for calculating the discounted cash flow value.
+//! cash flows, and calculating valuation and risk figures like internal yield or duration that are useful 
+//! for an investor in these products. 
+//!
+//! Functionality to calculate of figures like fair values which are primarily interesting in scenarios 
+//! where one is fully hedged are not in the initial focus, since an investor is by definition not
+//! fully hedged. Nevertheless, they might be added later for comparison and estimating market prices.
 //!
 //! The library also supports storing data, like market data, e.g. market quote information, data related
 //! to portfolio and transaction management to be able to support portfolio analysis (e.g. calculation
@@ -18,6 +23,7 @@
 //! defining data handler traits for various data categories, with concrete implementations supporting
 //! storage in memory or in a databases (supporting `sqlite3` and `postgreSQL`).
 //!
+
 
 // macro exports
 #[macro_use]
