@@ -7,7 +7,7 @@ use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Utc};
 use std::str::FromStr;
 
 /// Transform optional `usize` to optional `i64`
-pub fn usize_to_int(val: Option<usize>) -> Option<i64> {
+pub fn usize_to_int64(val: Option<usize>) -> Option<i64> {
     match val {
         Some(v) => Some(v as i64),
         None => None,
@@ -15,13 +15,29 @@ pub fn usize_to_int(val: Option<usize>) -> Option<i64> {
 }
 
 /// Transform optional `i64` to optional `usize`
-pub fn int_to_usize(val: Option<i64>) -> Option<usize> {
+pub fn int64_to_usize(val: Option<i64>) -> Option<usize> {
     match val {
         Some(v) => Some(v as usize),
         None => None,
     }
 }
 
+
+/// Transform optional `usize` to optional `i64`
+pub fn usize_to_int(val: Option<usize>) -> Option<i32> {
+    match val {
+        Some(v) => Some(v as i32),
+        None => None,
+    }
+}
+
+/// Transform optional `i64` to optional `usize`
+pub fn int_to_usize(val: Option<i32>) -> Option<usize> {
+    match val {
+        Some(v) => Some(v as usize),
+        None => None,
+    }
+}
 /// Construct cash flow from raw strings
 pub fn raw_to_cash_flow(amount: f64, currency: &str, date: &str) -> Result<CashFlow, DataError> {
     let currency = Currency::from_str(currency).map_err(|e| DataError::NotFound(e.to_string()))?;

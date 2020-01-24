@@ -11,10 +11,12 @@ keywords = ["finance", "calendar", "bond", "period", "pricing"]
 categories = ["date-and-time","mathematics"]
 
 [dependencies]
-rusqlite = "0.21"
 chrono = { version = "0.4.10", features = ["serde"] }
 text_io = "0.1"
 computus = "1.0"
 serde = { version = "1.0.*", features = ["derive"] }
 serde_json = "1.0"
 argmin = "0.2"
+rusqlite = "0.21"
+postgres = "0.17"
+tokio-postgres = "0.5"

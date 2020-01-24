@@ -11,11 +11,11 @@ impl QuoteHandler for InMemoryDB {
         self.md_sources.insert(source)
     }
 
-    fn get_md_source_by_id(&self, id: usize) -> Result<MarketDataSource, DataError> {
+    fn get_md_source_by_id(&mut self, id: usize) -> Result<MarketDataSource, DataError> {
         self.md_sources.get_by_id(id)
     }
 
-    fn get_all_md_sources(&self) -> Result<Vec<MarketDataSource>, DataError> {
+    fn get_all_md_sources(&mut self) -> Result<Vec<MarketDataSource>, DataError> {
         self.md_sources.get_all()
     }
 
@@ -32,11 +32,11 @@ impl QuoteHandler for InMemoryDB {
         self.ticker_map.insert(asset)
     }
 
-    fn get_ticker_by_id(&self, id: usize) -> Result<Ticker, DataError> {
+    fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
         self.ticker_map.get_by_id(id)
     }
 
-    fn get_all_ticker_for_source(&self, source_id: usize) -> Result<Vec<Ticker>, DataError> {
+    fn get_all_ticker_for_source(&mut self, source_id: usize) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for ticker in self.ticker_map.items.values() {
             if ticker.source == source_id {
@@ -60,7 +60,7 @@ impl QuoteHandler for InMemoryDB {
     }
 
     fn get_last_quote_before(
-        &self,
+        &mut self,
         ticker_id: usize,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError> {
@@ -92,7 +92,7 @@ impl QuoteHandler for InMemoryDB {
         Ok((last_quote, ticker.currency))
     }
 
-    fn get_all_quotes_for_ticker(&self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {
+    fn get_all_quotes_for_ticker(&mut self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {
         let mut all_quotes = Vec::new();
         for quote in self.quotes.items.values() {
             if quote.ticker == ticker_id {

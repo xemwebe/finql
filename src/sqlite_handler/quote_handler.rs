@@ -32,8 +32,8 @@ impl QuoteHandler for SqliteDB {
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(id)
     }
-    fn get_md_source_by_id(&self, id: usize) -> Result<MarketDataSource, DataError> {
-        let ticker = self
+    fn get_md_source_by_id(&mut self, id: usize) -> Result<MarketDataSource, DataError> {
+        let source = self
             .conn
             .query_row(
                 "SELECT name FROM market_data_sources WHERE id=?;",
@@ -46,9 +46,9 @@ impl QuoteHandler for SqliteDB {
                 },
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
-        Ok(ticker)
+        Ok(source)
     }
-    fn get_all_md_sources(&self) -> Result<Vec<MarketDataSource>, DataError> {
+    fn get_all_md_sources(&mut self) -> Result<Vec<MarketDataSource>, DataError> {
         let mut stmt = self
             .conn
             .prepare("SELECT id, name FROM market_data_sources;")
@@ -121,7 +121,7 @@ impl QuoteHandler for SqliteDB {
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(id)
     }
-    fn get_ticker_by_id(&self, id: usize) -> Result<Ticker, DataError> {
+    fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
         let (name, source, currency) = self
             .conn
             .query_row(
@@ -144,7 +144,7 @@ impl QuoteHandler for SqliteDB {
             currency,
         })
     }
-    fn get_all_ticker_for_source(&self, source: usize) -> Result<Vec<Ticker>, DataError> {
+    fn get_all_ticker_for_source(&mut self, source: usize) -> Result<Vec<Ticker>, DataError> {
         let mut stmt = self
             .conn
             .prepare("SELECT id, name, currency FROM ticker WHERE source_id=?;")
@@ -222,7 +222,7 @@ impl QuoteHandler for SqliteDB {
         Ok(id)
     }
     fn get_last_quote_before(
-        &self,
+        &mut self,
         ticker: usize,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError> {
@@ -259,7 +259,7 @@ impl QuoteHandler for SqliteDB {
             currency,
         ))
     }
-    fn get_all_quotes_for_ticker(&self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {
+    fn get_all_quotes_for_ticker(&mut self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {
         let mut stmt = self
             .conn
             .prepare(

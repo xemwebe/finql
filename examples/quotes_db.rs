@@ -1,8 +1,11 @@
-///! Demonstration of storing quotes and related data in Sqlite3 or in-memory database
+///! Demonstration of storing quotes and related data in Sqlite3, PostgreSQL or in-memory database
+///! Please note: The postgres example will delete all existing content of the database
+
 use finql::currency::Currency;
 use finql::data_handler::QuoteHandler;
 use finql::helpers::make_time;
 use finql::memory_handler::InMemoryDB;
+use finql::postgres_handler::PostgresDB;
 use finql::quote::{MarketDataSource, Quote, Ticker};
 use finql::sqlite_handler::SqliteDB;
 use std::fs;
@@ -217,6 +220,17 @@ fn main() {
                     let mut db = SqliteDB::create(path).unwrap();
                     quote_tests(&mut db);
                 }
+            }
+        }
+        "postgres" => {
+            if args.len() < 3 {
+                eprintln!("Please give the connection string to PostgreSQL as parameter, in the form of");
+                eprintln!("'host=127.0.0.1 user=<username> password=<password> dbname=<database name> sslmode=disable'");
+            } else {
+                let connect_str = &args[2];
+                let mut db = PostgresDB::connect(connect_str).unwrap();
+                db.clean().unwrap();
+                quote_tests(&mut db);
             }
         }
         other => println!("Unknown database type {}", other),
