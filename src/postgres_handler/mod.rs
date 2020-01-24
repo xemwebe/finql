@@ -1,5 +1,4 @@
 ///! Implemenation of PostgreSQL data handler
-
 use postgres::{Client, NoTls};
 use tokio_postgres::error::Error;
 
@@ -14,16 +13,18 @@ pub struct PostgresDB {
 impl PostgresDB {
     pub fn connect(conn_str: &str) -> Result<PostgresDB, Error> {
         let conn = Client::connect(conn_str, NoTls)?;
-        Ok(PostgresDB{ conn })
+        Ok(PostgresDB { conn })
     }
 
     /// Clean database by dropping all tables and than run init
     pub fn clean(&mut self) -> Result<(), Error> {
-        self.conn.execute("DROP TABLE IF EXISTS transactions", &[])?;
+        self.conn
+            .execute("DROP TABLE IF EXISTS transactions", &[])?;
         self.conn.execute("DROP TABLE IF EXISTS assets", &[])?;
         self.conn.execute("DROP TABLE IF EXISTS quotes", &[])?;
         self.conn.execute("DROP TABLE IF EXISTS ticker", &[])?;
-        self.conn.execute("DROP TABLE IF EXISTS market_data_sources", &[])?;
+        self.conn
+            .execute("DROP TABLE IF EXISTS market_data_sources", &[])?;
         self.init()
     }
 
@@ -75,7 +76,7 @@ impl PostgresDB {
                 id SERIAL PRIMARY KEY,
                 ticker_id INTEGER NOT NULL,
                 price FLOAT8 NOT NULL,
-                time TEXT NOT NULL,
+                time TIMESTAMP WITH TIME ZONE NOT NULL,
                 volume FLOAT8,
                 FOREIGN KEY(ticker_id) REFERENCES ticker(id) );",
             &[],
@@ -84,4 +85,3 @@ impl PostgresDB {
         Ok(())
     }
 }
-

@@ -22,7 +22,6 @@ pub fn int64_to_usize(val: Option<i64>) -> Option<usize> {
     }
 }
 
-
 /// Transform optional `usize` to optional `i64`
 pub fn usize_to_int(val: Option<usize>) -> Option<i32> {
     match val {

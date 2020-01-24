@@ -1,6 +1,5 @@
 ///! Demonstration of storing quotes and related data in Sqlite3, PostgreSQL or in-memory database
 ///! Please note: The postgres example will delete all existing content of the database
-
 use finql::currency::Currency;
 use finql::data_handler::QuoteHandler;
 use finql::helpers::make_time;
@@ -224,7 +223,9 @@ fn main() {
         }
         "postgres" => {
             if args.len() < 3 {
-                eprintln!("Please give the connection string to PostgreSQL as parameter, in the form of");
+                eprintln!(
+                    "Please give the connection string to PostgreSQL as parameter, in the form of"
+                );
                 eprintln!("'host=127.0.0.1 user=<username> password=<password> dbname=<database name> sslmode=disable'");
             } else {
                 let connect_str = &args[2];
