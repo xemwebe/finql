@@ -1,3 +1,7 @@
+Version 0.4.4
+* DataHandler for PostgreSQL implemented (including update of 
+  example transaction_db)
+
 Version 0.4.3
 * As an alternative to sqlite3 a simple In-Memory DB handler has been
   added (currently without guarantee of referential integrity; if this
