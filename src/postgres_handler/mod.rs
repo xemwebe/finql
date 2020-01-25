@@ -3,7 +3,7 @@ use postgres::{Client, NoTls};
 use tokio_postgres::error::Error;
 
 pub mod quote_handler;
-//pub mod transaction_handler;
+pub mod transaction_handler;
 
 /// Struct to handle connections to sqlite3 databases
 pub struct PostgresDB {
@@ -38,8 +38,7 @@ impl PostgresDB {
                 isin TEXT UNIQUE,
                 note TEXT
             )",
-            &[],
-        )?;
+            &[] )?;
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY,
@@ -47,21 +46,19 @@ impl PostgresDB {
                 asset_id INTEGER,
                 cash_amount FLOAT8 NOT NULL,
                 cash_currency TEXT NOT NULL,
-                cash_date TEXT NOT NULL,
+                cash_date DATE NOT NULL,
                 related_trans INTEGER,
                 position FLOAT8,
                 note TEXT,
                 FOREIGN KEY(asset_id) REFERENCES assets(id),
                 FOREIGN KEY(related_trans) REFERENCES transactions(id)
             );",
-            &[],
-        )?;
+            &[]  )?;
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS market_data_sources (
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL UNIQUE );",
-            &[],
-        )?;
+            &[]  )?;
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS ticker (
                 id SERIAL PRIMARY KEY,

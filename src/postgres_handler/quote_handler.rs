@@ -10,16 +10,8 @@ use std::str::FromStr;
 impl QuoteHandler for PostgresDB {
     // insert, get, update and delete for market data sources
     fn insert_md_source(&mut self, source: &MarketDataSource) -> Result<usize, DataError> {
-        self.conn
-            .execute(
-                "INSERT INTO market_data_sources (name) VALUES ($1)",
-                &[&source.name],
-            )
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let row = self
-            .conn
-            .query_one(
-                "SELECT id FROM market_data_sources WHERE name=$1;",
+        let row = self.conn.query_one(
+                "INSERT INTO market_data_sources (name) VALUES ($1) RETURNING id",
                 &[&source.name],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
@@ -86,23 +78,15 @@ impl QuoteHandler for PostgresDB {
 
     // insert, get, update and delete for market data sources
     fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
-        self.conn
-            .execute(
-                "INSERT INTO ticker (name, source_id, currency) VALUES ($1, $2, $3)",
+        let row = self.conn.query_one(
+                "INSERT INTO ticker (name, source_id, currency) VALUES ($1, $2, $3) RETURNING id",
                 &[
                     &ticker.name,
                     &(ticker.source as i32),
                     &(ticker.currency.to_string()),
-                ],
+                ]
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let row = self
-            .conn
-            .query_one(
-                "SELECT id FROM ticker WHERE name=$1 AND source_id=$2;",
-                &[&ticker.name, &(ticker.source as i32)],
-            )
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
         let id: i32 = row.get(0);
         Ok(id as usize)
     }
@@ -185,13 +169,13 @@ impl QuoteHandler for PostgresDB {
             .conn
             .query_one(
                 "INSERT INTO quotes (ticker_id, price, time, volume) 
-                VALUES ($1, $2, $3, $4) RETURNING ticker_id",
+                VALUES ($1, $2, $3, $4) RETURNING id",
                 &[
                     &(quote.ticker as i32),
                     &quote.price,
                     &quote.time, //&quote.time.to_rfc3339(),
                     &quote.volume,
-                ],
+                ]
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id: i32 = row.get(0);

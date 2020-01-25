@@ -7,7 +7,7 @@ use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Utc};
 use std::str::FromStr;
 
 /// Transform optional `usize` to optional `i64`
-pub fn usize_to_int64(val: Option<usize>) -> Option<i64> {
+pub fn usize_to_i64(val: Option<usize>) -> Option<i64> {
     match val {
         Some(v) => Some(v as i64),
         None => None,
@@ -15,7 +15,7 @@ pub fn usize_to_int64(val: Option<usize>) -> Option<i64> {
 }
 
 /// Transform optional `i64` to optional `usize`
-pub fn int64_to_usize(val: Option<i64>) -> Option<usize> {
+pub fn i64_to_usize(val: Option<i64>) -> Option<usize> {
     match val {
         Some(v) => Some(v as usize),
         None => None,
@@ -23,7 +23,7 @@ pub fn int64_to_usize(val: Option<i64>) -> Option<usize> {
 }
 
 /// Transform optional `usize` to optional `i64`
-pub fn usize_to_int(val: Option<usize>) -> Option<i32> {
+pub fn usize_to_i32(val: Option<usize>) -> Option<i32> {
     match val {
         Some(v) => Some(v as i32),
         None => None,
@@ -31,7 +31,7 @@ pub fn usize_to_int(val: Option<usize>) -> Option<i32> {
 }
 
 /// Transform optional `i64` to optional `usize`
-pub fn int_to_usize(val: Option<i32>) -> Option<usize> {
+pub fn i32_to_usize(val: Option<i32>) -> Option<usize> {
     match val {
         Some(v) => Some(v as usize),
         None => None,

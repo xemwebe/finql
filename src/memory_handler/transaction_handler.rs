@@ -10,11 +10,11 @@ impl DataHandler for InMemoryDB {
         self.assets.insert(asset)
     }
 
-    fn get_asset_by_id(&self, id: usize) -> Result<Asset, DataError> {
+    fn get_asset_by_id(&mut self, id: usize) -> Result<Asset, DataError> {
         self.assets.get_by_id(id)
     }
 
-    fn get_all_assets(&self) -> Result<Vec<Asset>, DataError> {
+    fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError> {
         self.assets.get_all()
     }
 
@@ -31,11 +31,11 @@ impl DataHandler for InMemoryDB {
         self.transactions.insert(transaction)
     }
 
-    fn get_transaction_by_id(&self, id: usize) -> Result<Transaction, DataError> {
+    fn get_transaction_by_id(&mut self, id: usize) -> Result<Transaction, DataError> {
         self.transactions.get_by_id(id)
     }
 
-    fn get_all_transactions(&self) -> Result<Vec<Transaction>, DataError> {
+    fn get_all_transactions(&mut self) -> Result<Vec<Transaction>, DataError> {
         self.transactions.get_all()
     }
 

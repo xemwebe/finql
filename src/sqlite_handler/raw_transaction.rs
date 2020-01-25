@@ -25,7 +25,7 @@ const FEE: &str = "f";
 
 impl RawTransaction {
     pub fn to_transaction(&self) -> Result<Transaction, DataError> {
-        let id = int64_to_usize(self.id);
+        let id = i64_to_usize(self.id);
         let cash_flow = raw_to_cash_flow(self.cash_amount, &self.cash_currency, &self.cash_date)?;
         let note = self.note.clone();
         let transaction_type = match self.trans_type.as_str() {
@@ -49,10 +49,10 @@ impl RawTransaction {
                 ))? as usize,
             },
             TAX => TransactionType::Tax {
-                transaction_ref: int64_to_usize(self.id),
+                transaction_ref: i64_to_usize(self.id),
             },
             FEE => TransactionType::Fee {
-                transaction_ref: int64_to_usize(self.id),
+                transaction_ref: i64_to_usize(self.id),
             },
             unknown => {
                 return Err(DataError::InvalidTransaction(unknown.to_string()));
@@ -67,7 +67,7 @@ impl RawTransaction {
     }
 
     pub fn from_transaction(transaction: &Transaction) -> RawTransaction {
-        let id = usize_to_int64(transaction.id);
+        let id = usize_to_i64(transaction.id);
         let cash_amount = transaction.cash_flow.amount.amount;
         let cash_currency = transaction.cash_flow.amount.currency.to_string();
         let cash_date = transaction.cash_flow.date.format("%Y-%m-%d").to_string();
@@ -100,11 +100,11 @@ impl RawTransaction {
             }
             TransactionType::Tax { transaction_ref } => {
                 raw_transaction.trans_type = TAX.to_string();
-                raw_transaction.related_trans = usize_to_int64(transaction_ref);
+                raw_transaction.related_trans = usize_to_i64(transaction_ref);
             }
             TransactionType::Fee { transaction_ref } => {
                 raw_transaction.trans_type = FEE.to_string();
-                raw_transaction.related_trans = usize_to_int64(transaction_ref);
+                raw_transaction.related_trans = usize_to_i64(transaction_ref);
             }
         };
         raw_transaction

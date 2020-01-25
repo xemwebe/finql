@@ -6,6 +6,7 @@ use finql::data_handler::DataHandler;
 use finql::fixed_income::CashFlow;
 use finql::memory_handler::InMemoryDB;
 use finql::sqlite_handler::SqliteDB;
+use finql::postgres_handler::PostgresDB;
 use finql::transaction::{Transaction, TransactionType};
 use std::fs;
 use std::str::FromStr;
@@ -120,7 +121,7 @@ fn main() {
         "memory" => {
             let mut db = InMemoryDB::new();
             transaction_tests(&mut db);
-        }
+        },
         "sqlite" => {
             if args.len() < 3 {
                 eprintln!("Please give the sqlite database path as parameter");
@@ -134,7 +135,20 @@ fn main() {
                     transaction_tests(&mut db);
                 }
             }
-        }
+        },
+        "postgres" => {
+            if args.len() < 3 {
+                eprintln!(
+                    "Please give the connection string to PostgreSQL as parameter, in the form of"
+                );
+                eprintln!("'host=127.0.0.1 user=<username> password=<password> dbname=<database name> sslmode=disable'");
+            } else {
+                let connect_str = &args[2];
+                let mut db = PostgresDB::connect(connect_str).unwrap();
+                db.clean().unwrap();
+                transaction_tests(&mut db);
+            }
+        },
         other => println!("Unknown database type {}", other),
     }
 }

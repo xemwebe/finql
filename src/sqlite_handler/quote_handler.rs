@@ -36,7 +36,7 @@ impl QuoteHandler for SqliteDB {
         let source = self
             .conn
             .query_row(
-                "SELECT name FROM market_data_sources WHERE id=?;",
+                "SELECT name FROM market_data_sources WHERE id=?",
                 params![id as i64],
                 |row| {
                     Ok(MarketDataSource {
@@ -51,7 +51,7 @@ impl QuoteHandler for SqliteDB {
     fn get_all_md_sources(&mut self) -> Result<Vec<MarketDataSource>, DataError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, name FROM market_data_sources;")
+            .prepare("SELECT id, name FROM market_data_sources")
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let sources_map = stmt
             .query_map(NO_PARAMS, |row| {
@@ -78,8 +78,7 @@ impl QuoteHandler for SqliteDB {
         let id = source.id.unwrap() as i64;
         self.conn
             .execute(
-                "UPDATE market_data_sources SET name=?2 
-                WHERE id=?1;",
+                "UPDATE market_data_sources SET name=?2 WHERE id=?1",
                 params![id, source.name],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;

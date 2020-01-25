@@ -4,9 +4,9 @@ use finql::currency::Currency;
 use finql::data_handler::QuoteHandler;
 use finql::helpers::make_time;
 use finql::memory_handler::InMemoryDB;
+use finql::sqlite_handler::SqliteDB;
 use finql::postgres_handler::PostgresDB;
 use finql::quote::{MarketDataSource, Quote, Ticker};
-use finql::sqlite_handler::SqliteDB;
 use std::fs;
 use std::str::FromStr;
 
