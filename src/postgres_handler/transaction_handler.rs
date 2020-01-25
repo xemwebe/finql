@@ -1,8 +1,12 @@
 use super::PostgresDB;
 use crate::asset::Asset;
+use chrono::NaiveDate;
 use crate::data_handler::{DataError, DataHandler};
 use crate::transaction::{Transaction, TransactionType};
-use crate::helpers::{i32_to_usize, usize_to_i32, raw_to_cash_flow};
+use crate::fixed_income::{Amount, CashFlow};
+use crate::currency::Currency;
+use crate::helpers::{i32_to_usize, usize_to_i32};
+use std::str::FromStr;
 
 
 pub struct RawTransaction {
@@ -11,10 +15,11 @@ pub struct RawTransaction {
     pub asset: Option<i32>,
     pub cash_amount: f64,
     pub cash_currency: String,
-    pub cash_date: String,
+    pub cash_date: NaiveDate,
     pub related_trans: Option<i32>,
     pub position: Option<f64>,
-    pub note: Option<String>,
+    pub
+     note: Option<String>,
 }
 
 /// Raw transaction type constants
@@ -27,8 +32,14 @@ const FEE: &str = "f";
 
 impl RawTransaction {
     pub fn to_transaction(&self) -> Result<Transaction, DataError> {
+        let currency = Currency::from_str(&self.cash_currency)
+        .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id = i32_to_usize(self.id);
-        let cash_flow = raw_to_cash_flow(self.cash_amount, &self.cash_currency, &self.cash_date)?;
+        let cash_flow = CashFlow{
+            amount: Amount{ amount: self.cash_amount, 
+                            currency },
+            date: self.cash_date,
+        };
         let note = self.note.clone();
         let transaction_type = match self.trans_type.as_str() {
             CASH => TransactionType::Cash,
@@ -72,7 +83,6 @@ impl RawTransaction {
         let id = usize_to_i32(transaction.id);
         let cash_amount = transaction.cash_flow.amount.amount;
         let cash_currency = transaction.cash_flow.amount.currency.to_string();
-        let cash_date = transaction.cash_flow.date.format("%Y-%m-%d").to_string();
         let note = transaction.note.clone();
         let mut raw_transaction = RawTransaction {
             id,
@@ -80,7 +90,7 @@ impl RawTransaction {
             asset: None,
             cash_amount,
             cash_currency,
-            cash_date,
+            cash_date: transaction.cash_flow.date,
             related_trans: None,
             position: None,
             note,
