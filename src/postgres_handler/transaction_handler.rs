@@ -1,13 +1,12 @@
 use super::PostgresDB;
 use crate::asset::Asset;
-use chrono::NaiveDate;
-use crate::data_handler::{DataError, DataHandler};
-use crate::transaction::{Transaction, TransactionType};
-use crate::fixed_income::{Amount, CashFlow};
 use crate::currency::Currency;
+use crate::data_handler::{DataError, DataHandler};
+use crate::fixed_income::{Amount, CashFlow};
 use crate::helpers::{i32_to_usize, usize_to_i32};
+use crate::transaction::{Transaction, TransactionType};
+use chrono::NaiveDate;
 use std::str::FromStr;
-
 
 pub struct RawTransaction {
     pub id: Option<i32>,
@@ -18,8 +17,7 @@ pub struct RawTransaction {
     pub cash_date: NaiveDate,
     pub related_trans: Option<i32>,
     pub position: Option<f64>,
-    pub
-     note: Option<String>,
+    pub note: Option<String>,
 }
 
 /// Raw transaction type constants
@@ -33,11 +31,13 @@ const FEE: &str = "f";
 impl RawTransaction {
     pub fn to_transaction(&self) -> Result<Transaction, DataError> {
         let currency = Currency::from_str(&self.cash_currency)
-        .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id = i32_to_usize(self.id);
-        let cash_flow = CashFlow{
-            amount: Amount{ amount: self.cash_amount, 
-                            currency },
+        let cash_flow = CashFlow {
+            amount: Amount {
+                amount: self.cash_amount,
+                currency,
+            },
             date: self.cash_date,
         };
         let note = self.note.clone();
@@ -123,15 +123,17 @@ impl RawTransaction {
     }
 }
 
-
 /// Handler for globally available data
 impl DataHandler for PostgresDB {
     fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {
-        let row = self.conn.query_one(
+        let row = self
+            .conn
+            .query_one(
                 "INSERT INTO assets (name, wkn, isin, note) VALUES ($1, $2, $3, $4) RETURNING id",
-                &[&asset.name, &asset.wkn, &asset.isin, &asset.note] )
+                &[&asset.name, &asset.wkn, &asset.isin, &asset.note],
+            )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id: i32= row.get(0);
+        let id: i32 = row.get(0);
         Ok(id as usize)
     }
 
@@ -140,20 +142,23 @@ impl DataHandler for PostgresDB {
             .conn
             .query_one(
                 "SELECT name, wkn, isin, note FROM assets WHERE id=$1",
-                &[&(id as i32)])
+                &[&(id as i32)],
+            )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
-            Ok(Asset {
-                id: Some(id),
-                name: row.get(0),
-                wkn: row.get(1),
-                isin: row.get(2),
-                note: row.get(3),
-            })
+        Ok(Asset {
+            id: Some(id),
+            name: row.get(0),
+            wkn: row.get(1),
+            isin: row.get(2),
+            note: row.get(3),
+        })
     }
 
     fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError> {
         let mut assets = Vec::new();
-        for row in self.conn.query("SELECT id, name, wkn, isin, note FROM assets", &[])
+        for row in self
+            .conn
+            .query("SELECT id, name, wkn, isin, note FROM assets", &[])
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
             let id: i32 = row.get(0);
@@ -196,7 +201,9 @@ impl DataHandler for PostgresDB {
     // insert, get, update and delete for transactions
     fn insert_transaction(&mut self, transaction: &Transaction) -> Result<usize, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
-        let row = self.conn.query_one(
+        let row = self
+            .conn
+            .query_one(
                 "INSERT INTO transactions (trans_type, asset_id, cash_amount, 
                 cash_currency, cash_date, related_trans, position,
                 note) 
@@ -209,8 +216,8 @@ impl DataHandler for PostgresDB {
                     &transaction.cash_date,
                     &transaction.related_trans,
                     &transaction.position,
-                    &transaction.note
-                ]
+                    &transaction.note,
+                ],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id: i32 = row.get(0);
@@ -218,49 +225,55 @@ impl DataHandler for PostgresDB {
     }
 
     fn get_transaction_by_id(&mut self, id: usize) -> Result<Transaction, DataError> {
-        let row = self.conn.query_one(
+        let row = self
+            .conn
+            .query_one(
                 "SELECT trans_type, asset_id, 
         cash_amount, cash_currency, cash_date, related_trans, position, note 
         FROM transactions
         WHERE id=$1",
-                &[&(id as i32)])
-                .map_err(|e| DataError::NotFound(e.to_string()))?;
+                &[&(id as i32)],
+            )
+            .map_err(|e| DataError::NotFound(e.to_string()))?;
         let transaction = RawTransaction {
-                        id: Some(id as i32),
-                        trans_type: row.get(0),
-                        asset: row.get(1),
-                        cash_amount: row.get(2),
-                        cash_currency: row.get(3),
-                        cash_date: row.get(4),
-                        related_trans: row.get(5),
-                        position: row.get(6),
-                        note: row.get(7),
-                    };
+            id: Some(id as i32),
+            trans_type: row.get(0),
+            asset: row.get(1),
+            cash_amount: row.get(2),
+            cash_currency: row.get(3),
+            cash_date: row.get(4),
+            related_trans: row.get(5),
+            position: row.get(6),
+            note: row.get(7),
+        };
         Ok(transaction.to_transaction()?)
     }
 
     fn get_all_transactions(&mut self) -> Result<Vec<Transaction>, DataError> {
         let mut transactions = Vec::new();
-        for row in self.conn.query(
+        for row in self
+            .conn
+            .query(
                 "SELECT id, trans_type, asset_id, 
         cash_amount, cash_currency, cash_date, related_trans, position, note 
-        FROM transactions", &[]
+        FROM transactions",
+                &[],
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?
-            {
-                let transaction = RawTransaction {
-                    id: row.get(0),
-                    trans_type: row.get(1),
-                    asset: row.get(2),
-                    cash_amount: row.get(3),
-                    cash_currency: row.get(4),
-                    cash_date: row.get(5),
-                    related_trans: row.get(6),
-                    position: row.get(7),
-                    note: row.get(8),
-                };
-                transactions.push(transaction.to_transaction()?);
-            }
+        {
+            let transaction = RawTransaction {
+                id: row.get(0),
+                trans_type: row.get(1),
+                asset: row.get(2),
+                cash_amount: row.get(3),
+                cash_currency: row.get(4),
+                cash_date: row.get(5),
+                related_trans: row.get(6),
+                position: row.get(7),
+                note: row.get(8),
+            };
+            transactions.push(transaction.to_transaction()?);
+        }
         Ok(transactions)
     }
 
@@ -293,8 +306,8 @@ impl DataHandler for PostgresDB {
                     &transaction.cash_date,
                     &transaction.related_trans,
                     &transaction.position,
-                    &transaction.note
-                ]
+                    &transaction.note,
+                ],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
@@ -307,4 +320,3 @@ impl DataHandler for PostgresDB {
         Ok(())
     }
 }
-

@@ -38,7 +38,8 @@ impl PostgresDB {
                 isin TEXT UNIQUE,
                 note TEXT
             )",
-            &[] )?;
+            &[],
+        )?;
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY,
@@ -53,12 +54,14 @@ impl PostgresDB {
                 FOREIGN KEY(asset_id) REFERENCES assets(id),
                 FOREIGN KEY(related_trans) REFERENCES transactions(id)
             );",
-            &[]  )?;
+            &[],
+        )?;
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS market_data_sources (
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL UNIQUE );",
-            &[]  )?;
+            &[],
+        )?;
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS ticker (
                 id SERIAL PRIMARY KEY,

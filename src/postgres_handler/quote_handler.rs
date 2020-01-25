@@ -10,7 +10,9 @@ use std::str::FromStr;
 impl QuoteHandler for PostgresDB {
     // insert, get, update and delete for market data sources
     fn insert_md_source(&mut self, source: &MarketDataSource) -> Result<usize, DataError> {
-        let row = self.conn.query_one(
+        let row = self
+            .conn
+            .query_one(
                 "INSERT INTO market_data_sources (name) VALUES ($1) RETURNING id",
                 &[&source.name],
             )
@@ -78,13 +80,15 @@ impl QuoteHandler for PostgresDB {
 
     // insert, get, update and delete for market data sources
     fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
-        let row = self.conn.query_one(
+        let row = self
+            .conn
+            .query_one(
                 "INSERT INTO ticker (name, source_id, currency) VALUES ($1, $2, $3) RETURNING id",
                 &[
                     &ticker.name,
                     &(ticker.source as i32),
                     &(ticker.currency.to_string()),
-                ]
+                ],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id: i32 = row.get(0);
@@ -175,7 +179,7 @@ impl QuoteHandler for PostgresDB {
                     &quote.price,
                     &quote.time, //&quote.time.to_rfc3339(),
                     &quote.volume,
-                ]
+                ],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id: i32 = row.get(0);
