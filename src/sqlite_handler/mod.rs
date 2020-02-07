@@ -2,7 +2,7 @@
 use crate::asset::Asset;
 use crate::data_handler::{DataError, DataHandler};
 use crate::transaction::Transaction;
-use rusqlite::{params, Connection, OpenFlags, NO_PARAMS, Row};
+use rusqlite::{params, Connection, OpenFlags, Row, NO_PARAMS};
 
 mod raw_transaction;
 use raw_transaction::RawTransaction;
@@ -107,17 +107,20 @@ impl DataHandler for SqliteDB {
     }
 
     fn get_asset_id(&mut self, asset: &Asset) -> Option<usize> {
-        let get_id = |row: &Row| -> rusqlite::Result<i64> { row.get(0) }; 
+        let get_id = |row: &Row| -> rusqlite::Result<i64> { row.get(0) };
         let id = if let Some(isin) = &asset.isin {
-            self.conn.query_row("SELECT id FROM assets WHERE isin=?", &[&isin], get_id)
+            self.conn
+                .query_row("SELECT id FROM assets WHERE isin=?", &[&isin], get_id)
         } else if let Some(wkn) = &asset.wkn {
-            self.conn.query_row("SELECT id FROM assets WHERE wkn=?", &[&wkn], get_id)
+            self.conn
+                .query_row("SELECT id FROM assets WHERE wkn=?", &[&wkn], get_id)
         } else {
-            self.conn.query_row("SELECT id FROM assets WHERE name=?", &[&asset.name], get_id)
+            self.conn
+                .query_row("SELECT id FROM assets WHERE name=?", &[&asset.name], get_id)
         };
         match id {
             Ok(id) => Some(id as usize),
-            _ => None
+            _ => None,
         }
     }
 

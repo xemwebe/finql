@@ -21,19 +21,19 @@ impl DataHandler for InMemoryDB {
         if let Some(isin) = &asset.isin {
             for (id, a) in &self.assets.items {
                 if some_equal(&a.isin, &isin) {
-                    return Some(*id)
+                    return Some(*id);
                 }
             }
         } else if let Some(wkn) = &asset.wkn {
-            for (id,a) in &self.assets.items {
+            for (id, a) in &self.assets.items {
                 if some_equal(&a.wkn, &wkn) {
-                    return Some(*id)
+                    return Some(*id);
                 }
             }
         } else {
-            for (id,a) in &self.assets.items {
+            for (id, a) in &self.assets.items {
                 if a.name == asset.name {
-                    return Some(*id)
+                    return Some(*id);
                 }
             }
         }

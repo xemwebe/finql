@@ -139,19 +139,22 @@ impl DataHandler for PostgresDB {
 
     fn get_asset_id(&mut self, asset: &Asset) -> Option<usize> {
         let row = if let Some(isin) = &asset.isin {
-            self.conn.query_one("SELECT id FROM assets WHERE isin=$1", &[&isin])
+            self.conn
+                .query_one("SELECT id FROM assets WHERE isin=$1", &[&isin])
         } else if let Some(wkn) = &asset.wkn {
-            self.conn.query_one("SELECT id FROM assets WHERE wkn=$1", &[&wkn])
+            self.conn
+                .query_one("SELECT id FROM assets WHERE wkn=$1", &[&wkn])
         } else {
-            self.conn.query_one("SELECT id FROM assets WHERE name=$1", &[&asset.name])
+            self.conn
+                .query_one("SELECT id FROM assets WHERE name=$1", &[&asset.name])
         };
-        match row {   
-            Ok(row) => { 
+        match row {
+            Ok(row) => {
                 let id: i32 = row.get(0);
                 Some(id as usize)
-            },
-            _ => None
-        }  
+            }
+            _ => None,
+        }
     }
 
     fn get_asset_by_id(&mut self, id: usize) -> Result<Asset, DataError> {
