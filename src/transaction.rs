@@ -24,6 +24,30 @@ pub struct Transaction {
     pub note: Option<String>,
 }
 
+impl Transaction {
+    /// Assign or change transaction's asset_id, if possible
+    /// This is often required for transactions on new assets
+    pub fn set_asset_id(&mut self, asset_id: usize) {
+        self.transaction_type = match self.transaction_type {
+            TransactionType::Asset{asset_id: _, position} => TransactionType::Asset{asset_id, position},
+            TransactionType::Dividend{asset_id: _} => TransactionType::Dividend{asset_id},
+            TransactionType::Interest{asset_id: _} => TransactionType::Interest{asset_id},
+            _ => self.transaction_type,
+        }
+    }
+
+    /// Assign new transaction reference, if applicable
+    pub fn set_transaction_ref(&mut self, trans_ref: usize) {
+        self.transaction_type = match self.transaction_type {
+            TransactionType::Tax{transaction_ref: _} => TransactionType::Tax{transaction_ref: Some(trans_ref)},
+            TransactionType::Fee{transaction_ref: _} => TransactionType::Fee{transaction_ref: Some(trans_ref)},
+            _ => self.transaction_type,
+        }
+    }
+
+
+}
+
 impl DataItem for Transaction {
     // get id or return error if id hasn't been set yet
     fn get_id(&self) -> Result<usize, DataError> {
