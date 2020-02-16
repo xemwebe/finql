@@ -33,7 +33,7 @@ Version 0.3.3
 * More elaborate bond comparison example
 * Assert macro for fuzzy comparison of floats
 * Test cases for discounting added
-* New struct `Amount`
+* New struct `CashAmount`
 
 Version 0.3.2
 * CompoundingMethod added

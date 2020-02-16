@@ -2,7 +2,7 @@ use super::PostgresDB;
 use crate::asset::Asset;
 use crate::currency::Currency;
 use crate::data_handler::{DataError, DataHandler};
-use crate::fixed_income::{Amount, CashFlow};
+use crate::fixed_income::{CashAmount, CashFlow};
 use crate::helpers::{i32_to_usize, usize_to_i32};
 use crate::transaction::{Transaction, TransactionType};
 use chrono::NaiveDate;
@@ -34,7 +34,7 @@ impl RawTransaction {
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id = i32_to_usize(self.id);
         let cash_flow = CashFlow {
-            amount: Amount {
+            amount: CashAmount {
                 amount: self.cash_amount,
                 currency,
             },

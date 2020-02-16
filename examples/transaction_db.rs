@@ -108,7 +108,7 @@ fn transaction_tests<DB: DataHandler>(db: &mut DB) {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     assert!(
-        args.len() >= 3,
+        args.len() >= 2 && args.len() <= 3,
         format!(
             concat!(
                 "usage: {} <db_type> [<database connection string>]\n",

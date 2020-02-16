@@ -1,6 +1,6 @@
 use crate::currency::Currency;
 use crate::day_count_conv::DayCountConv;
-use crate::fixed_income::{Amount, CashFlow};
+use crate::fixed_income::{CashAmount, CashFlow};
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
@@ -51,10 +51,14 @@ pub trait Discounter {
     fn currency(&self) -> Currency;
 
     /// Discount given cash flow
-    fn discount_cash_flow(&self, cf: &CashFlow, today: NaiveDate) -> Result<Amount, DiscountError> {
+    fn discount_cash_flow(
+        &self,
+        cf: &CashFlow,
+        today: NaiveDate,
+    ) -> Result<CashAmount, DiscountError> {
         if self.currency() == cf.amount.currency {
             let amount = self.discount_factor(today, cf.date) * cf.amount.amount;
-            Ok(Amount {
+            Ok(CashAmount {
                 amount,
                 currency: cf.amount.currency,
             })
@@ -68,8 +72,8 @@ pub trait Discounter {
         &self,
         cf_stream: &Vec<CashFlow>,
         today: NaiveDate,
-    ) -> Result<Amount, DiscountError> {
-        let mut amount = Amount {
+    ) -> Result<CashAmount, DiscountError> {
+        let mut amount = CashAmount {
             amount: 0.0,
             currency: self.currency(),
         };

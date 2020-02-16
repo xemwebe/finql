@@ -12,12 +12,12 @@ use std::fmt::{Display, Formatter};
 
 /// Container for an amount of money in some currency
 #[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq)]
-pub struct Amount {
+pub struct CashAmount {
     pub amount: f64,
     pub currency: Currency,
 }
 
-impl Display for Amount {
+impl Display for CashAmount {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:16.4} {}", self.amount, self.currency)
     }
@@ -26,7 +26,7 @@ impl Display for Amount {
 /// Container for a single cash flow
 #[derive(Deserialize, Serialize, Debug, Clone, Copy)]
 pub struct CashFlow {
-    pub amount: Amount,
+    pub amount: CashAmount,
     pub date: NaiveDate,
 }
 
@@ -34,7 +34,7 @@ impl CashFlow {
     /// Construct new cash flow
     pub fn new(amount: f64, currency: Currency, date: NaiveDate) -> CashFlow {
         CashFlow {
-            amount: Amount { amount, currency },
+            amount: CashAmount { amount, currency },
             date,
         }
     }
