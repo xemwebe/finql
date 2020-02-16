@@ -2,7 +2,7 @@
 use chrono::NaiveDate;
 use finql::asset::Asset;
 use finql::currency::Currency;
-use finql::data_handler::DataHandler;
+use finql::data_handler::TransactionHandler;
 use finql::fixed_income::CashFlow;
 use finql::memory_handler::InMemoryDB;
 use finql::postgres_handler::PostgresDB;
@@ -11,7 +11,7 @@ use finql::transaction::{Transaction, TransactionType};
 use std::fs;
 use std::str::FromStr;
 
-fn transaction_tests<DB: DataHandler>(db: &mut DB) {
+fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
     print!("Store asset...");
     let asset = Asset::new(
         None,

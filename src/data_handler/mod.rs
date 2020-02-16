@@ -37,8 +37,10 @@ pub trait DataItem {
     fn set_id(&mut self, id: usize) -> Result<(), DataError>;
 }
 
+pub mod asset_handler;
 pub mod quote_handler;
 pub mod transaction_handler;
 
+pub use asset_handler::AssetHandler;
 pub use quote_handler::QuoteHandler;
-pub use transaction_handler::DataHandler;
+pub use transaction_handler::TransactionHandler;

@@ -5,6 +5,10 @@ use crate::quote::{MarketDataSource, Quote, Ticker};
 use crate::transaction::Transaction;
 use std::collections::BTreeMap;
 
+mod asset_handler;
+mod quote_handler;
+mod transaction_handler;
+
 struct InMemoryContainer<T: DataItem + Clone> {
     next_id: usize,
     items: BTreeMap<usize, T>,
@@ -87,6 +91,3 @@ impl InMemoryDB {
         }
     }
 }
-
-pub mod quote_handler;
-pub mod transaction_handler;

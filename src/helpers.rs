@@ -6,6 +6,14 @@ use chrono::offset::TimeZone;
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Utc};
 use std::str::FromStr;
 
+/// Returns true if some optional String argument is not None and  the value equals a given str reference
+pub fn some_equal(opt: &Option<String>, s: &str) -> bool {
+    match opt {
+        None => false,
+        Some(opt_s) => &opt_s == &s,
+    }
+}
+
 /// Transform optional `usize` to optional `i64`
 pub fn usize_to_i64(val: Option<usize>) -> Option<i64> {
     match val {
