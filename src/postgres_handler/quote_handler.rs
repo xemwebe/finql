@@ -83,10 +83,13 @@ impl QuoteHandler for PostgresDB {
         let row = self
             .conn
             .query_one(
-                "INSERT INTO ticker (name, source_id, currency) VALUES ($1, $2, $3) RETURNING id",
+                "INSERT INTO ticker (name, asset_id, source_id, priority, currency) 
+                VALUES ($1, $2, $3, $4, $5) RETURNING id",
                 &[
                     &ticker.name,
+                    &(ticker.asset as i32),
                     &(ticker.source as i32),
+                    &ticker.priority,
                     &(ticker.currency.to_string()),
                 ],
             )
@@ -98,19 +101,22 @@ impl QuoteHandler for PostgresDB {
         let row = self
             .conn
             .query_one(
-                "SELECT name, source_id, currency FROM ticker WHERE id=$1;",
+                "SELECT name, asset_id, source_id, priority, currency FROM ticker WHERE id=$1;",
                 &[&(id as i32)],
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let name: String = row.get(0);
-        let source: i32 = row.get(1);
-        let currency: String = row.get(2);
+        let asset: i32 = row.get(1);
+        let source: i32 = row.get(2);
+        let currency: String = row.get(4);
         let currency =
             Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(Ticker {
             id: Some(id),
             name,
+            asset: asset as usize,
             source: source as usize,
+            priority: row.get(3),
             currency,
         })
     }
@@ -119,19 +125,22 @@ impl QuoteHandler for PostgresDB {
         for row in self
             .conn
             .query(
-                "SELECT id, name, currency FROM ticker WHERE source_id=$1;",
+                "SELECT id, name, asset_id, priority, currency FROM ticker WHERE source_id=$1;",
                 &[&(source as i32)],
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
             let id: i32 = row.get(0);
-            let currency: String = row.get(2);
+            let asset: i32 = row.get(2);
+            let currency: String = row.get(4);
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
             all_ticker.push(Ticker {
                 id: Some(id as usize),
                 name: row.get(1),
+                asset: asset as usize,
                 source,
+                priority: row.get(3),
                 currency,
             });
         }
@@ -147,12 +156,14 @@ impl QuoteHandler for PostgresDB {
         let id = ticker.id.unwrap() as i32;
         self.conn
             .execute(
-                "UPDATE ticker SET name=$2, source_id=$3, currency=$4
+                "UPDATE ticker SET name=$2, asset_id=$3, source_id=$4, priority=$5, currency=$6
                 WHERE id=$1",
                 &[
                     &id,
                     &ticker.name,
+                    &(ticker.asset as i32),
                     &(ticker.source as i32),
+                    &ticker.priority,
                     &ticker.currency.to_string(),
                 ],
             )

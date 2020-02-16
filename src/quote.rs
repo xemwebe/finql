@@ -13,9 +13,11 @@ pub struct MarketDataSource {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ticker {
     pub id: Option<usize>,
+    pub asset: usize,
     pub name: String,
     pub currency: Currency,
     pub source: usize,
+    pub priority: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

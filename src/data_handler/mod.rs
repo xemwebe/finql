@@ -1,6 +1,14 @@
 ///! Implementation of a data handler trait to deal with global data
 use std::fmt;
 
+pub mod asset_handler;
+pub mod quote_handler;
+pub mod transaction_handler;
+
+pub use asset_handler::AssetHandler;
+pub use quote_handler::QuoteHandler;
+pub use transaction_handler::TransactionHandler;
+
 #[derive(Debug)]
 pub enum DataError {
     DataAccessFailure(String),
@@ -36,11 +44,3 @@ pub trait DataItem {
     // set id or return error if id has already been set
     fn set_id(&mut self, id: usize) -> Result<(), DataError>;
 }
-
-pub mod asset_handler;
-pub mod quote_handler;
-pub mod transaction_handler;
-
-pub use asset_handler::AssetHandler;
-pub use quote_handler::QuoteHandler;
-pub use transaction_handler::TransactionHandler;

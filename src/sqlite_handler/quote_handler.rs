@@ -98,10 +98,12 @@ impl QuoteHandler for SqliteDB {
     fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
         self.conn
             .execute(
-                "INSERT INTO ticker (name, source_id, currency) VALUES (?, ?, ?)",
+                "INSERT INTO ticker (name, asset_id, source_id, priority, currency) VALUES (?, ?, ?, ?, ?)",
                 params![
                     ticker.name,
+                    ticker.asset as i64,
                     ticker.source as i64,
+                    ticker.priority,
                     ticker.currency.to_string()
                 ],
             )
@@ -121,16 +123,18 @@ impl QuoteHandler for SqliteDB {
         Ok(id)
     }
     fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
-        let (name, source, currency) = self
+        let (name, asset, source, priority, currency) = self
             .conn
             .query_row(
-                "SELECT name, source_id, currency FROM ticker WHERE id=?;",
+                "SELECT name, asset_id, source_id, priority, currency FROM ticker WHERE id=?;",
                 params![id as i64],
                 |row| {
                     let name: String = row.get(0)?;
-                    let source: i64 = row.get(1)?;
-                    let currency: String = row.get(2)?;
-                    Ok((name, source, currency))
+                    let asset: i64 = row.get(1)?;
+                    let source: i64 = row.get(2)?;
+                    let priority: i32 = row.get(3)?;
+                    let currency: String = row.get(4)?;
+                    Ok((name, asset, source, priority, currency))
                 },
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
@@ -139,32 +143,38 @@ impl QuoteHandler for SqliteDB {
         Ok(Ticker {
             id: Some(id),
             name,
+            asset: asset as usize,
             source: source as usize,
+            priority,
             currency,
         })
     }
     fn get_all_ticker_for_source(&mut self, source: usize) -> Result<Vec<Ticker>, DataError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, name, currency FROM ticker WHERE source_id=?;")
+            .prepare("SELECT id, name, asset_id, priority, currency FROM ticker WHERE source_id=?;")
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let ticker_map = stmt
             .query_map(params![source as i64], |row| {
                 let id: i64 = row.get(0)?;
                 let name: String = row.get(1)?;
-                let currency: String = row.get(2)?;
-                Ok((id, name, currency))
+                let asset: i64 = row.get(2)?;
+                let priority: i32 = row.get(3)?;
+                let currency: String = row.get(4)?;
+                Ok((id, name, asset, priority, currency))
             })
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let mut all_ticker = Vec::new();
         for ticker in ticker_map {
-            let (id, name, currency) = ticker.unwrap();
+            let (id, name, asset, priority, currency) = ticker.unwrap();
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
             all_ticker.push(Ticker {
                 id: Some(id as usize),
                 name,
+                asset: asset as usize,
                 source,
+                priority,
                 currency,
             });
         }
@@ -179,12 +189,14 @@ impl QuoteHandler for SqliteDB {
         let id = ticker.id.unwrap() as i64;
         self.conn
             .execute(
-                "UPDATE ticker SET name=?2, source_id=?3, currency=?4
+                "UPDATE ticker SET name=?2, asset_id=?3, source_id=?4, priority=?5, currency=?6
                 WHERE id=?1",
                 params![
                     id,
                     ticker.name,
+                    ticker.asset as i64,
                     ticker.source as i64,
+                    ticker.priority,
                     ticker.currency.to_string()
                 ],
             )

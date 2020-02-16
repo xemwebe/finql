@@ -1,5 +1,6 @@
 ///! Demonstration of storing quotes and related data in Sqlite3, PostgreSQL or in-memory database
 ///! Please note: The postgres example will delete all existing content of the database
+use finql::asset::Asset;
 use finql::currency::Currency;
 use finql::data_handler::QuoteHandler;
 use finql::helpers::make_time;
@@ -8,9 +9,44 @@ use finql::postgres_handler::PostgresDB;
 use finql::quote::{MarketDataSource, Quote, Ticker};
 use finql::sqlite_handler::SqliteDB;
 use std::fs;
+use std::io::{stdout, Write};
 use std::str::FromStr;
 
+fn log(s: &str) {
+    print!("{}", s);
+    stdout().flush().unwrap();
+}
+
 fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
+    // We need some assets the quotess are related
+    let basf_id = db
+        .insert_asset(&Asset {
+            id: None,
+            name: "BASF AG".to_string(),
+            wkn: None,
+            isin: None,
+            note: None,
+        })
+        .unwrap();
+    let siemens_id = db
+        .insert_asset(&Asset {
+            id: None,
+            name: "Siemens AG".to_string(),
+            wkn: None,
+            isin: None,
+            note: None,
+        })
+        .unwrap();
+    let bhp_id = db
+        .insert_asset(&Asset {
+            id: None,
+            name: "BHP Inc.".to_string(),
+            wkn: None,
+            isin: None,
+            note: None,
+        })
+        .unwrap();
+
     // Create some market data sources
     let yahoo = MarketDataSource {
         id: None,
@@ -26,28 +62,28 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     };
 
     // Store market data sources
-    print!("Insert new market data source...");
+    log("Insert new market data source...");
     let yahoo_id = db.insert_md_source(&yahoo).unwrap();
     println!("ok");
 
     // get back source
-    print!("Reading market data source from db...");
+    log("Reading market data source from db...");
     db.get_md_source_by_id(yahoo_id).unwrap();
     let gf_id = db.insert_md_source(&guru_focus).unwrap();
     let av_id = db.insert_md_source(&alpha_vantage).unwrap();
     println!("ok");
     // update source
-    print!("Updating market data source...");
+    log("Updating market data source...");
     alpha_vantage.id = Some(av_id);
     alpha_vantage.name = "AlphaVantage".to_string();
     db.update_md_source(&alpha_vantage).unwrap();
     println!("ok");
     // delete source
-    print!("Deleting market data source...");
+    log("Deleting market data source...");
     db.delete_md_source(gf_id).unwrap();
     println!("ok");
     // Get all sources
-    print!("Get list of all market data sources...");
+    log("Get list of all market data sources...");
     let sources = db.get_all_md_sources().unwrap();
     if sources.len() == 2 {
         println!("ok");
@@ -59,11 +95,13 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     let eur = Currency::from_str("EUR").unwrap();
     let aus = Currency::from_str("AUS").unwrap();
     // Insert ticker
-    print!("Insert quote ticker...");
+    log("Insert quote ticker...");
     let basf = Ticker {
         id: None,
         name: "BAS.DE".to_string(),
+        asset: basf_id,
         currency: eur,
+        priority: 10,
         source: yahoo_id,
     };
     let basf_id = db.insert_ticker(&basf).unwrap();
@@ -73,6 +111,8 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     let siemens = Ticker {
         id: None,
         name: "SIE.DE".to_string(),
+        asset: siemens_id,
+        priority: 10,
         currency: eur,
         source: yahoo_id,
     };
@@ -81,6 +121,8 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     let mut bhp = Ticker {
         id: None,
         name: "BHP.AUS".to_string(),
+        asset: bhp_id,
+        priority: 10,
         currency: eur,
         source: av_id,
     };
@@ -90,10 +132,10 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     bhp.id = Some(bhp_id);
     bhp.currency = aus;
     // Show all ticker with yahoo as market source
-    print!("Update ticker...");
+    log("Update ticker...");
     db.update_ticker(&bhp).unwrap();
     println!("ok");
-    print!("Get all ticker by source...");
+    log("Get all ticker by source...");
     db.get_all_ticker_for_source(yahoo_id).unwrap();
     if sources.len() == 2 {
         println!("ok");
@@ -101,12 +143,12 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
         println!("failed");
     }
     // Don't need this ticker anymore, delete
-    print!("Delete ticker...");
+    log("Delete ticker...");
     db.delete_ticker(bhp_id).unwrap();
     println!("ok");
 
     // Dealing with quotes
-    print!("Insert market quotes...");
+    log("Insert market quotes...");
     let time = make_time(2019, 12, 30, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
@@ -163,14 +205,14 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     let wrong_quote_id = db.insert_quote(&wrong_quote).unwrap();
     println!("ok");
     let time = make_time(2020, 1, 4, 0, 0, 0).unwrap();
-    print!("get last quote...");
+    log("get last quote...");
     let (quote, currency) = db.get_last_quote_before(basf_id, time).unwrap();
     if currency == eur && (quote.price - 67.27) < 1e-10 {
         println!("ok");
     } else {
         println!("failed");
     }
-    print!("get all quotes for ticker...");
+    log("get all quotes for ticker...");
     let quotes = db.get_all_quotes_for_ticker(basf_id).unwrap();
     if quotes.len() == 5 {
         println!("ok");
@@ -178,13 +220,13 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
         println!("failed");
     }
     // correct wrong quote
-    print!("update quote...");
+    log("update quote...");
     wrong_quote.id = Some(wrong_quote_id);
     wrong_quote.ticker = basf_id;
     db.update_quote(&wrong_quote).unwrap();
     println!("ok");
     // Maybe deleting strange quote is better...
-    print!("delete quote...");
+    log("delete quote...");
     db.delete_quote(wrong_quote_id).unwrap();
     println!("ok");
     println!("\nDone. You may have a look at the database for further inspection.");

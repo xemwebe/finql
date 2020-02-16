@@ -21,11 +21,11 @@ impl PostgresDB {
     pub fn clean(&mut self) -> Result<(), Error> {
         self.conn
             .execute("DROP TABLE IF EXISTS transactions", &[])?;
-        self.conn.execute("DROP TABLE IF EXISTS assets", &[])?;
         self.conn.execute("DROP TABLE IF EXISTS quotes", &[])?;
         self.conn.execute("DROP TABLE IF EXISTS ticker", &[])?;
         self.conn
             .execute("DROP TABLE IF EXISTS market_data_sources", &[])?;
+        self.conn.execute("DROP TABLE IF EXISTS assets", &[])?;
         self.init()
     }
 
@@ -67,9 +67,13 @@ impl PostgresDB {
             "CREATE TABLE IF NOT EXISTS ticker (
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
+                asset_id INTEGER NOT NULL,
                 source_id INTEGER NOT NULL,
+                priority INTEGER NOT NULL,
                 currency TEXT NOT NULL,
-                FOREIGN KEY(source_id) REFERENCES market_data_sources(id) );",
+                FOREIGN KEY(source_id) REFERENCES market_data_sources(id),
+                FOREIGN KEY(asset_id) REFERENCES assets(id) 
+            );",
             &[],
         )?;
         self.conn.execute(

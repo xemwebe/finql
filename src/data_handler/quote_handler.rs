@@ -1,3 +1,4 @@
+use super::AssetHandler;
 ///! Data handler trait for market quotes
 use super::DataError;
 use crate::currency::Currency;
@@ -5,7 +6,7 @@ use crate::quote::{MarketDataSource, Quote, Ticker};
 use chrono::{DateTime, Utc};
 
 /// Handler for globally available market quotes data
-pub trait QuoteHandler {
+pub trait QuoteHandler: AssetHandler {
     // insert, get, update and delete for market data sources
     fn insert_md_source(&mut self, source: &MarketDataSource) -> Result<usize, DataError>;
     fn get_md_source_by_id(&mut self, id: usize) -> Result<MarketDataSource, DataError>;

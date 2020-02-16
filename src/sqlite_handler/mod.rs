@@ -62,9 +62,13 @@ impl SqliteDB {
             "CREATE TABLE IF NOT EXISTS ticker (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
+                asset_id INTEGER NOT NULL,
                 source_id INTEGER NOT NULL,
+                priority INTEGER NOT NULL,
                 currency TEXT NOT NULL,
-                FOREIGN KEY(source_id) REFERENCES market_data_sources(id) );",
+                FOREIGN KEY(source_id) REFERENCES market_data_sources(id) 
+                FOREIGN KEY(asset_id) REFERENCES assets(id) 
+            );",
             NO_PARAMS,
         )?;
         self.conn.execute(
