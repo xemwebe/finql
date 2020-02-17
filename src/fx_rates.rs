@@ -3,24 +3,18 @@
 use crate::currency::Currency;
 use crate::data_handler::{QuoteHandler, DataError};
 use chrono::{DateTime,Utc};
-use crate::quote::Quote;
 
 /// Calculate foreign exchange rates by reading data from quotes table
-/// If no direct quote is available, try to calculate cross rates using a simple heuristic.
-pub fn  get_fx_rate(foreign: Currency, base: Currency, time: DateTime<Utc>, quotes: &mut dyn QuoteHandler) -> Result<(Quote, Currency), DataError> {
+pub fn  get_fx_rate(foreign: Currency, base: Currency, time: DateTime<Utc>, quotes: &mut dyn QuoteHandler) -> Result<f64, DataError> {
     if foreign == base {
-        let dummy_quote = Quote{
-            id: Some(0),
-            ticker: 0,
-            price: 1.0,
-            time: Utc::now(), 
-            volume: None,
-        };
-        Ok((dummy_quote, base))
+        return Ok(1.0);
     } else {
-        let fx_quote = quotes.get_last_quote_before(&format!("{}",foreign), time)?;
-        Ok(fx_quote)
+        let (fx_quote, quote_currency) = quotes.get_last_quote_before(&format!("{}",foreign), time)?;
+        if quote_currency == base {
+            return Ok(fx_quote.price);
         }
+    }
+    Err(DataError::NotFound(format!("{}/{}", foreign, base)))
 }
              
 #[cfg(test)]
@@ -82,10 +76,10 @@ mod tests {
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
         let time = Utc::now();
-        let fx = get_fx_rate(eur, eur, time, &mut db).unwrap().0.price;
+        let fx = get_fx_rate(eur, eur, time, &mut db).unwrap();
         assert_fuzzy_eq!(
             fx, 1.0, tol  );
-        let fx = get_fx_rate(usd, eur, time, &mut db).unwrap().0.price;
+        let fx = get_fx_rate(usd, eur, time, &mut db).unwrap();
         assert_fuzzy_eq!(
             fx, 0.9, tol  );
     
