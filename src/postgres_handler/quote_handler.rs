@@ -199,31 +199,32 @@ impl QuoteHandler for PostgresDB {
 
     fn get_last_quote_before(
         &mut self,
-        ticker: usize,
+        asset_name: &str,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError> {
         let row = self
             .conn
             .query_one(
-                "SELECT q.id, q.price, q.time, q.volume, t.currency 
-                FROM quotes q, ticker t 
-                WHERE t.id=$1 AND t.id=q.ticker_id AND q.time<= $2
-                ORDER BY q.time DESC LIMIT 1",
-                &[&(ticker as i32), &time],
+                "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
+                FROM quotes q, ticker t, assets a 
+                WHERE a.name=$1 AND t.asset_id=a.id AND t.id=q.ticker_id AND q.time<= $2
+                ORDER BY q.time DESC, t.priority ASC LIMIT 1",
+                &[&asset_name, &time],
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
 
         let id: i32 = row.get(0);
-        let price: f64 = row.get(1);
-        let time: DateTime<Utc> = row.get(2);
-        let volume: Option<f64> = row.get(3);
-        let currency: String = row.get(4);
+        let ticker: i32 = row.get(1);
+        let price: f64 = row.get(2);
+        let time: DateTime<Utc> = row.get(3);
+        let volume: Option<f64> = row.get(4);
+        let currency: String = row.get(5);
         let currency =
             Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok((
             Quote {
                 id: Some(id as usize),
-                ticker,
+                ticker: ticker as usize,
                 price,
                 time,
                 volume,

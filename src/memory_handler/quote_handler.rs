@@ -2,7 +2,9 @@ use super::InMemoryDB;
 use crate::currency::Currency;
 use crate::data_handler::{DataError, QuoteHandler};
 use crate::quote::{MarketDataSource, Quote, Ticker};
+use std::collections::BTreeMap;
 use chrono::{DateTime, Utc, MIN_DATE};
+use std::str::FromStr;
 
 /// Handler for globally available market data quotes information
 impl QuoteHandler for InMemoryDB {
@@ -61,9 +63,27 @@ impl QuoteHandler for InMemoryDB {
 
     fn get_last_quote_before(
         &mut self,
-        ticker_id: usize,
+        asset_name: &str,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError> {
+        // For now, use very inefficient linear search
+        let mut asset_id: usize = 0;
+        let mut asset_found = false;
+        for asset in self.assets.items.values() {
+            if &asset.name == asset_name {
+                asset_id = asset.id.unwrap();
+                asset_found = true;
+            }
+        }
+        if asset_found == false {
+            return Err(DataError::NotFound(asset_name.to_string()));
+        }
+        let mut ticker_ids = BTreeMap::new();
+        for ticker in self.ticker_map.items.values() {
+            if ticker.asset == asset_id {
+                ticker_ids.insert(ticker.priority, ticker.id);
+            }
+        }
         let mut last_quote = Quote {
             id: None,
             ticker: 0,
@@ -71,16 +91,24 @@ impl QuoteHandler for InMemoryDB {
             time: MIN_DATE.and_hms(0, 0, 0),
             volume: Some(0.0),
         };
-        // For now, use very inefficient linear search
-        for quote in self.quotes.items.values() {
-            if quote.ticker == ticker_id {
-                if quote.time <= time {
-                    if last_quote.id == None {
-                        last_quote = quote.clone()
-                    } else if last_quote.time < quote.time {
-                        last_quote = quote.clone()
+        let mut last_currency = Currency::from_str("XXX").unwrap();
+        for (_,ticker_id) in ticker_ids {
+            let ticker_id = ticker_id.unwrap();
+            let ticker = self.get_ticker_by_id(ticker_id)?;
+            last_currency = ticker.currency;
+            for quote in self.quotes.items.values() {
+                if quote.ticker == ticker_id {
+                    if quote.time <= time {
+                        if last_quote.id == None {
+                            last_quote = quote.clone()
+                        } else if last_quote.time < quote.time {
+                            last_quote = quote.clone()
+                        }
                     }
                 }
+            }
+            if last_quote.id.is_some() {
+                break;
             }
         }
         if last_quote.id == None {
@@ -88,8 +116,7 @@ impl QuoteHandler for InMemoryDB {
                 "No valid quote found before specified date".to_string(),
             ));
         }
-        let ticker = self.get_ticker_by_id(ticker_id)?;
-        Ok((last_quote, ticker.currency))
+        Ok((last_quote, last_currency))
     }
 
     fn get_all_quotes_for_ticker(&mut self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {

@@ -48,6 +48,7 @@ pub mod rates;
 pub mod sqlite_handler;
 pub mod time_period;
 pub mod transaction;
+pub mod fx_rates;
 
 pub use currency::Currency;
 pub use fixed_income::CashAmount;

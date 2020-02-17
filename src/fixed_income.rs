@@ -9,6 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::f64;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+//use crate::data_handler::{QuoteHandler, DataError};
 
 /// Container for an amount of money in some currency
 #[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq)]
@@ -16,6 +17,47 @@ pub struct CashAmount {
     pub amount: f64,
     pub currency: Currency,
 }
+
+// impl CashAmount {
+//     pub fn add(&mut self, cash_amount: CashAmount, quotes: &mut QuoteHandler)
+//         -> Result<&mut Self, DataError> {
+//             if self.currency = cash_amount.currency {
+//                 self.amount += cash_amount.amount;
+//                 Ok(&self)
+//             } else {
+//                 fx_rate = get_fx_rate(cash_amount.currency, self.currency, quotes)?;
+//                 self.amount += fx_rate * cash_amount.amount;
+//             }
+//     }
+
+//     pub fn addOpt(&mut self, cash_amount: Option<CashAmount>, quotes: &mut QuoteHandler)
+//         -> Result<&mut Self, DataError> {
+//             match cash_amount {
+//                 None => Ok(&self),
+//                 Some(cash_amount) => self.add(cash_amount)?;
+//             }
+//     }
+
+//     pub fn sub(&mut self, cash_amount: CashAmount, quotes: &mut QuoteHandler)
+//     -> Result<&mut Self, DataError> {
+//         if self.currency = cash_amount.currency {
+//             self.amount += cash_amount.amount;
+//             Ok(&self)
+//         } else {
+//             fx_rate = get_fx_rate(cash_amount.currency, self.currency, quotes)?;
+//             self.amount += fx_rate * cash_amount.amount;
+//         }
+//     }
+
+//     pub fn subOpt(&mut self, cash_amount: Option<CashAmount>, quotes: &mut QuoteHandler)
+//         -> Result<&mut Self, DataError> {
+//             match cash_amount {
+//                 None => Ok(&self),
+//                 Some(cash_amount) => self.add(cash_amount)?;
+//          }
+//     }
+
+// }
 
 impl Display for CashAmount {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

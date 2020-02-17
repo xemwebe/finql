@@ -142,6 +142,7 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     } else {
         println!("failed");
     }
+
     // Don't need this ticker anymore, delete
     log("Delete ticker...");
     db.delete_ticker(bhp_id).unwrap();
@@ -206,7 +207,7 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     println!("ok");
     let time = make_time(2020, 1, 4, 0, 0, 0).unwrap();
     log("get last quote...");
-    let (quote, currency) = db.get_last_quote_before(basf_id, time).unwrap();
+    let (quote, currency) = db.get_last_quote_before("BASF AG", time).unwrap();
     if currency == eur && (quote.price - 67.27) < 1e-10 {
         println!("ok");
     } else {

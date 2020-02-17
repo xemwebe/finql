@@ -25,9 +25,10 @@ pub trait QuoteHandler: AssetHandler {
     fn insert_quote(&mut self, quote: &Quote) -> Result<usize, DataError>;
     fn get_last_quote_before(
         &mut self,
-        ticker_id: usize,
+        asset_name: &str,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError>;
+
     fn get_all_quotes_for_ticker(&mut self, ticker_id: usize) -> Result<Vec<Quote>, DataError>;
     fn update_quote(&mut self, quote: &Quote) -> Result<(), DataError>;
     fn delete_quote(&mut self, id: usize) -> Result<(), DataError>;
