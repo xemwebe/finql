@@ -9,6 +9,13 @@ use chrono::{DateTime, Utc};
 pub trait QuoteHandler: AssetHandler {
     // insert, get, update and delete for market data sources
     fn insert_md_source(&mut self, source: &MarketDataSource) -> Result<usize, DataError>;
+    fn get_md_source_id(&mut self, source: &str) -> Option<usize>;
+    fn insert_if_new_md_source(&mut self, source: &MarketDataSource) -> Result<usize, DataError> {
+        match self.get_md_source_id(&source.name) {
+            Some(id) => Ok(id),
+            None => self.insert_md_source(source),
+        }
+    }
     fn get_md_source_by_id(&mut self, id: usize) -> Result<MarketDataSource, DataError>;
     fn get_all_md_sources(&mut self) -> Result<Vec<MarketDataSource>, DataError>;
     fn update_md_source(&mut self, source: &MarketDataSource) -> Result<(), DataError>;
@@ -16,6 +23,13 @@ pub trait QuoteHandler: AssetHandler {
 
     // insert, get, update and delete for market data sources
     fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError>;
+    fn get_ticker_id(&mut self, ticker: &str) -> Option<usize>;
+    fn insert_if_new_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
+        match self.get_md_source_id(&ticker.name) {
+            Some(id) => Ok(id),
+            None => self.insert_ticker(ticker),
+        }
+    }
     fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError>;
     fn get_all_ticker_for_source(&mut self, source_id: usize) -> Result<Vec<Ticker>, DataError>;
     fn update_ticker(&mut self, ticker: &Ticker) -> Result<(), DataError>;

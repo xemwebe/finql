@@ -2,8 +2,8 @@ use super::InMemoryDB;
 use crate::currency::Currency;
 use crate::data_handler::{DataError, QuoteHandler};
 use crate::quote::{MarketDataSource, Quote, Ticker};
-use std::collections::BTreeMap;
 use chrono::{DateTime, Utc, MIN_DATE};
+use std::collections::BTreeMap;
 use std::str::FromStr;
 
 /// Handler for globally available market data quotes information
@@ -11,6 +11,15 @@ impl QuoteHandler for InMemoryDB {
     // insert, get, update and delete for market data sources
     fn insert_md_source(&mut self, source: &MarketDataSource) -> Result<usize, DataError> {
         self.md_sources.insert(source)
+    }
+
+    fn get_md_source_id(&mut self, source: &str) -> Option<usize> {
+        for (id, s) in &self.md_sources.items {
+            if s.name == source {
+                return Some(*id);
+            }
+        }
+        return None;
     }
 
     fn get_md_source_by_id(&mut self, id: usize) -> Result<MarketDataSource, DataError> {
@@ -32,6 +41,15 @@ impl QuoteHandler for InMemoryDB {
     // insert, get, update and delete for market data ticker
     fn insert_ticker(&mut self, asset: &Ticker) -> Result<usize, DataError> {
         self.ticker_map.insert(asset)
+    }
+
+    fn get_ticker_id(&mut self, ticker: &str) -> Option<usize> {
+        for (id, t) in &self.ticker_map.items {
+            if t.name == ticker {
+                return Some(*id);
+            }
+        }
+        return None;
     }
 
     fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
@@ -92,7 +110,7 @@ impl QuoteHandler for InMemoryDB {
             volume: Some(0.0),
         };
         let mut last_currency = Currency::from_str("XXX").unwrap();
-        for (_,ticker_id) in ticker_ids {
+        for (_, ticker_id) in ticker_ids {
             let ticker_id = ticker_id.unwrap();
             let ticker = self.get_ticker_by_id(ticker_id)?;
             last_currency = ticker.currency;

@@ -1,16 +1,16 @@
 use crate::currency::Currency;
+use crate::data_handler::{DataError, QuoteHandler};
 use crate::day_count_conv::DayCountConv;
+use crate::fx_rates::get_fx_rate;
 use crate::market::Market;
 use crate::rates::{Compounding, DiscountError, Discounter, FlatRate};
 use argmin::prelude::*;
 use argmin::solver::brent::Brent;
-use chrono::{NaiveDate, DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::f64;
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use crate::data_handler::{QuoteHandler, DataError};
-use crate::fx_rates::get_fx_rate;
 
 /// Container for an amount of money in some currency
 #[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq)]
@@ -20,28 +20,12 @@ pub struct CashAmount {
 }
 
 impl CashAmount {
-    pub fn add(&mut self, cash_amount: CashAmount, time: DateTime<Utc>, quotes: &mut dyn QuoteHandler)
-        -> Result<&mut Self, DataError> {
-            if self.currency == cash_amount.currency {
-                self.amount += cash_amount.amount;
-                Ok(self)
-            } else {
-                let fx_rate = get_fx_rate(cash_amount.currency, self.currency, time, quotes)?;
-                self.amount += fx_rate * cash_amount.amount;
-                Ok(self)
-            }
-    }
-
-    pub fn add_opt(&mut self, cash_amount: Option<CashAmount>, time: DateTime<Utc>, quotes: &mut dyn QuoteHandler)
-        -> Result<&mut Self, DataError> {
-            match cash_amount {
-                None => Ok(self),
-                Some(cash_amount) => self.add(cash_amount, time, quotes)
-            }
-    }
-
-    pub fn sub(&mut self, cash_amount: CashAmount, time: DateTime<Utc>, quotes: &mut dyn QuoteHandler)
-    -> Result<&mut Self, DataError> {
+    pub fn add(
+        &mut self,
+        cash_amount: CashAmount,
+        time: DateTime<Utc>,
+        quotes: &mut dyn QuoteHandler,
+    ) -> Result<&mut Self, DataError> {
         if self.currency == cash_amount.currency {
             self.amount += cash_amount.amount;
             Ok(self)
@@ -52,14 +36,45 @@ impl CashAmount {
         }
     }
 
-    pub fn sub_opt(&mut self, cash_amount: Option<CashAmount>, time: DateTime<Utc>, quotes: &mut dyn QuoteHandler)
-        -> Result<&mut Self, DataError> {
-            match cash_amount {
-                None => Ok(self),
-                Some(cash_amount) => self.add(cash_amount, time, quotes)
-         }
+    pub fn add_opt(
+        &mut self,
+        cash_amount: Option<CashAmount>,
+        time: DateTime<Utc>,
+        quotes: &mut dyn QuoteHandler,
+    ) -> Result<&mut Self, DataError> {
+        match cash_amount {
+            None => Ok(self),
+            Some(cash_amount) => self.add(cash_amount, time, quotes),
+        }
     }
 
+    pub fn sub(
+        &mut self,
+        cash_amount: CashAmount,
+        time: DateTime<Utc>,
+        quotes: &mut dyn QuoteHandler,
+    ) -> Result<&mut Self, DataError> {
+        if self.currency == cash_amount.currency {
+            self.amount += cash_amount.amount;
+            Ok(self)
+        } else {
+            let fx_rate = get_fx_rate(cash_amount.currency, self.currency, time, quotes)?;
+            self.amount += fx_rate * cash_amount.amount;
+            Ok(self)
+        }
+    }
+
+    pub fn sub_opt(
+        &mut self,
+        cash_amount: Option<CashAmount>,
+        time: DateTime<Utc>,
+        quotes: &mut dyn QuoteHandler,
+    ) -> Result<&mut Self, DataError> {
+        match cash_amount {
+            None => Ok(self),
+            Some(cash_amount) => self.add(cash_amount, time, quotes),
+        }
+    }
 }
 
 impl Display for CashAmount {

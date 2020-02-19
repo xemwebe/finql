@@ -5,7 +5,7 @@ use crate::data_handler::{DataError, QuoteHandler};
 use crate::helpers::to_time;
 use crate::quote::{MarketDataSource, Quote, Ticker};
 use chrono::{DateTime, Utc};
-use rusqlite::{params, NO_PARAMS};
+use rusqlite::{params, Row, NO_PARAMS};
 use std::str::FromStr;
 
 /// Sqlite implementation of quote handler
@@ -32,6 +32,20 @@ impl QuoteHandler for SqliteDB {
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(id)
     }
+
+    fn get_md_source_id(&mut self, source: &str) -> Option<usize> {
+        let get_id = |row: &Row| -> rusqlite::Result<i64> { row.get(0) };
+        let id = self.conn.query_row(
+            "SELECT id FROM market_data_sources WHERE name=?",
+            params![source],
+            get_id,
+        );
+        match id {
+            Ok(id) => Some(id as usize),
+            _ => None,
+        }
+    }
+
     fn get_md_source_by_id(&mut self, id: usize) -> Result<MarketDataSource, DataError> {
         let source = self
             .conn
@@ -122,6 +136,20 @@ impl QuoteHandler for SqliteDB {
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(id)
     }
+
+    fn get_ticker_id(&mut self, ticker: &str) -> Option<usize> {
+        let get_id = |row: &Row| -> rusqlite::Result<i64> { row.get(0) };
+        let id = self.conn.query_row(
+            "SELECT id FROM ticker WHERE name=?",
+            params![ticker],
+            get_id,
+        );
+        match id {
+            Ok(id) => Some(id as usize),
+            _ => None,
+        }
+    }
+
     fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
         let (name, asset, source, priority, currency) = self
             .conn

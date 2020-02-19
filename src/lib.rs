@@ -38,6 +38,7 @@ pub mod data_handler;
 pub mod day_adjust;
 pub mod day_count_conv;
 pub mod fixed_income;
+pub mod fx_rates;
 pub mod helpers;
 pub mod market;
 pub mod memory_handler;
@@ -48,7 +49,6 @@ pub mod rates;
 pub mod sqlite_handler;
 pub mod time_period;
 pub mod transaction;
-pub mod fx_rates;
 
 pub use currency::Currency;
 pub use fixed_income::CashAmount;
