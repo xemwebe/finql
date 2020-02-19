@@ -8,6 +8,7 @@ use finql::memory_handler::InMemoryDB;
 use finql::postgres_handler::PostgresDB;
 use finql::quote::{MarketDataSource, Quote, Ticker};
 use finql::sqlite_handler::SqliteDB;
+use finql::fx_rates::{get_fx_rate,insert_fx_quote};
 use std::fs;
 use std::io::{stdout, Write};
 use std::str::FromStr;
@@ -230,7 +231,22 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     log("delete quote...");
     db.delete_quote(wrong_quote_id).unwrap();
     println!("ok");
-    println!("\nDone. You may have a look at the database for further inspection.");
+    log("insert fx quote...");
+    insert_fx_quote(0.9, aus, eur, time, db).unwrap();
+    println!("ok");
+    log("read fx quote...");
+    let fx1 = get_fx_rate(aus, eur, time, db).unwrap();
+    println!("ok");
+    log("read inverse fx quote...");
+    let fx2 = get_fx_rate(eur, aus, time, db).unwrap();
+    println!("ok");
+    log("sanity check fx quotes...");
+    if (fx1*fx2).abs()>1.0e-10 {
+        println!("ok");
+    } else {
+        println!("not ok: fx1: {}, fx2: {}, fx1*fx2: {}", fx1, fx2, fx1*fx2);
+    }
+    println!("\nDone.");
 }
 
 fn main() {
@@ -261,6 +277,7 @@ fn main() {
                 } else {
                     let mut db = SqliteDB::create(path).unwrap();
                     quote_tests(&mut db);
+                    println!("You may have a look at the database for further inspection.");
                 }
             }
         }
@@ -275,6 +292,7 @@ fn main() {
                 let mut db = PostgresDB::connect(connect_str).unwrap();
                 db.clean().unwrap();
                 quote_tests(&mut db);
+                println!("You may have a look at the database for further inspection.");
             }
         }
         other => println!("Unknown database type {}", other),
