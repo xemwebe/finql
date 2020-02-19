@@ -3,12 +3,12 @@
 use finql::asset::Asset;
 use finql::currency::Currency;
 use finql::data_handler::QuoteHandler;
+use finql::fx_rates::{get_fx_rate, insert_fx_quote};
 use finql::helpers::make_time;
 use finql::memory_handler::InMemoryDB;
 use finql::postgres_handler::PostgresDB;
 use finql::quote::{MarketDataSource, Quote, Ticker};
 use finql::sqlite_handler::SqliteDB;
-use finql::fx_rates::{get_fx_rate,insert_fx_quote};
 use std::fs;
 use std::io::{stdout, Write};
 use std::str::FromStr;
@@ -241,10 +241,10 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     let fx2 = get_fx_rate(eur, aus, time, db).unwrap();
     println!("ok");
     log("sanity check fx quotes...");
-    if (fx1*fx2).abs()>1.0e-10 {
+    if (fx1 * fx2).abs() > 1.0e-10 {
         println!("ok");
     } else {
-        println!("not ok: fx1: {}, fx2: {}, fx1*fx2: {}", fx1, fx2, fx1*fx2);
+        println!("not ok: fx1: {}, fx2: {}, fx1*fx2: {}", fx1, fx2, fx1 * fx2);
     }
     println!("\nDone.");
 }
