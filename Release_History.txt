@@ -1,3 +1,16 @@
+Version 0.5.0
+* Support for fx quotes, simplified insertion and request of quotes
+* Addition and substraction (optional) CashAmount entities with
+  automatic lookup of fx rates
+* Tests and example extended for testing the new features
+* Ticker include now a reference to Asset and extended by a priority field
+* DataHandler trait has been split in to separate traits, AssetHandler
+  and TransactionHandler
+* Traits TransactionHandler and TickerHandler require AssetHandler to
+  be implemented, too
+* The form Amount has been renamed to CashAmount
+* Some commonly used structs are re-exported on library level
+
 Version 0.4.4
 * DataHandler for PostgreSQL implemented (including update of 
   example transaction_db)
