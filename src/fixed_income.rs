@@ -55,11 +55,11 @@ impl CashAmount {
         quotes: &mut dyn QuoteHandler,
     ) -> Result<&mut Self, DataError> {
         if self.currency == cash_amount.currency {
-            self.amount += cash_amount.amount;
+            self.amount -= cash_amount.amount;
             Ok(self)
         } else {
             let fx_rate = get_fx_rate(cash_amount.currency, self.currency, time, quotes)?;
-            self.amount += fx_rate * cash_amount.amount;
+            self.amount -= fx_rate * cash_amount.amount;
             Ok(self)
         }
     }
