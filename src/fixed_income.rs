@@ -72,7 +72,7 @@ impl CashAmount {
     ) -> Result<&mut Self, DataError> {
         match cash_amount {
             None => Ok(self),
-            Some(cash_amount) => self.add(cash_amount, time, quotes),
+            Some(cash_amount) => self.sub(cash_amount, time, quotes),
         }
     }
 }
