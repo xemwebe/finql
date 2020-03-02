@@ -8,7 +8,8 @@ mod transaction_handler;
 
 /// Struct to handle connections to sqlite3 databases
 pub struct SqliteDB {
-    conn: Connection,
+    /// conn is made public to allow extending this struct outside of the library
+    pub conn: Connection,
 }
 
 impl SqliteDB {
