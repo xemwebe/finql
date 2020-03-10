@@ -5,10 +5,23 @@ use crate::asset::Asset;
 pub trait AssetHandler {
     // insert, get, update and delete for assets
     fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError>;
-    fn insert_asset_if_new(&mut self, asset: &Asset) -> Result<usize, DataError> {
+    fn insert_asset_if_new(&mut self, asset: &Asset, rename_asset: bool) -> Result<usize, DataError> {
         match self.get_asset_id(asset) {
             Some(id) => Ok(id),
-            None => self.insert_asset(asset),
+            None => match self.insert_asset(asset) {
+                Ok(id) => Ok(id),
+                Err(err) => if rename_asset {
+                    let new_name = format!("{} (NEW)", asset.name);
+                    self.insert_asset(&Asset{ 
+                        id: None,
+                        name: new_name,
+                        wkn: asset.wkn.clone(),
+                        isin: asset.isin.clone(),
+                        note: asset.note.clone()})
+                } else {
+                    Err(err)
+                }
+            }
         }
     }
     fn get_asset_id(&mut self, asset: &Asset) -> Option<usize>;
