@@ -37,6 +37,16 @@ impl AssetHandler for InMemoryDB {
         self.assets.get_by_id(id)
     }
 
+    fn get_asset_by_isin(&mut self, isin: &String) -> Result<Asset, DataError> {
+        for (_, a) in &self.assets.items {
+            if some_equal(&a.isin, &isin) {
+                return Ok(a.clone());
+            }
+        }
+        Err(DataError::NotFound("no asset found in db with the given ISIN".to_string()))
+    }
+
+
     fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError> {
         self.assets.get_all()
     }

@@ -65,6 +65,28 @@ impl AssetHandler for SqliteDB {
         Ok(asset)
     }
 
+    fn get_asset_by_isin(&mut self, isin: &String) -> Result<Asset, DataError> {
+        let asset = self
+            .conn
+            .query_row(
+                "SELECT id, name, wkn, note FROM assets
+        WHERE isin=?;",
+                &[isin],
+                |row| {
+                    let id: i32 = row.get(0)?;
+                    Ok(Asset {
+                        id: Some(id as usize),
+                        name: row.get(1)?,
+                        wkn: row.get(2)?,
+                        isin: Some(isin.clone()),
+                        note: row.get(3)?,
+                    })
+                },
+            )
+            .map_err(|e| DataError::NotFound(e.to_string()))?;
+        Ok(asset)
+    }
+
     fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError> {
         let mut stmt = self
             .conn

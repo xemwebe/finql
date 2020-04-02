@@ -26,6 +26,7 @@ pub trait AssetHandler {
     }
     fn get_asset_id(&mut self, asset: &Asset) -> Option<usize>;
     fn get_asset_by_id(&mut self, id: usize) -> Result<Asset, DataError>;
+    fn get_asset_by_isin(&mut self, id: &String) -> Result<Asset, DataError>;
     fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError>;
     fn update_asset(&mut self, asset: &Asset) -> Result<(), DataError>;
     fn delete_asset(&mut self, id: usize) -> Result<(), DataError>;

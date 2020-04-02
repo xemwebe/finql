@@ -53,6 +53,24 @@ impl AssetHandler for PostgresDB {
         })
     }
 
+    fn get_asset_by_isin(&mut self, isin: &String) -> Result<Asset, DataError> {
+        let row = self
+            .conn
+            .query_one(
+                "SELECT id, name, wkn, note FROM assets WHERE isin=$1",
+                &[isin],
+            )
+            .map_err(|e| DataError::NotFound(e.to_string()))?;
+        let id: i32 = row.get(0);
+        Ok(Asset {
+            id: Some(id as usize),
+            name: row.get(1),
+            wkn: row.get(2),
+            isin: Some(isin.clone()),
+            note: row.get(3),
+        })
+    }
+
     fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError> {
         let mut assets = Vec::new();
         for row in self
