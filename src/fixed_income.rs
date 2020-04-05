@@ -142,6 +142,17 @@ impl Display for CashFlow {
     }
 }
 
+impl Neg for CashFlow {
+    type Output = CashFlow;
+
+    fn neg(self) -> Self::Output {
+        CashFlow {
+            amount: -self.amount,
+            date: self.date,
+        }
+    }
+}
+
 /// Get all future cash flows with respect to a given date
 pub fn get_cash_flows_after(cash_flows: &Vec<CashFlow>, date: NaiveDate) -> Vec<CashFlow> {
     let mut new_cash_flows = Vec::new();
