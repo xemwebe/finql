@@ -11,6 +11,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::f64;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::ops::Neg;
 
 /// Container for an amount of money in some currency
 #[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq)]
@@ -80,6 +81,17 @@ impl CashAmount {
 impl Display for CashAmount {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:16.4} {}", self.amount, self.currency)
+    }
+}
+
+impl Neg for CashAmount {
+    type Output = CashAmount;
+
+    fn neg(self) -> Self::Output {
+        CashAmount {
+            amount: -self.amount,
+            currency: self.currency,
+        }
     }
 }
 

@@ -43,9 +43,10 @@ impl AssetHandler for InMemoryDB {
                 return Ok(a.clone());
             }
         }
-        Err(DataError::NotFound("no asset found in db with the given ISIN".to_string()))
+        Err(DataError::NotFound(
+            "no asset found in db with the given ISIN".to_string(),
+        ))
     }
-
 
     fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError> {
         self.assets.get_all()
