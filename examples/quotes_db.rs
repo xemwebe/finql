@@ -246,6 +246,27 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     } else {
         println!("not ok: fx1: {}, fx2: {}, fx1*fx2: {}", fx1, fx2, fx1 * fx2);
     }
+
+    log("insert rounding convention...");
+    let xxx = Currency::from_str("XXX").unwrap();
+    db.set_rounding_digits(xxx, 3).unwrap();
+    println!("ok");
+    log("read rounding convention...");
+
+    let digits = db.get_rounding_digits(xxx);
+    if digits == 3 {
+        println!("ok");
+    } else {
+        println!("not ok: got rounding digits {}, expected 3", digits);
+    }
+
+    log("Check default rounding convention...");
+    let digits = db.get_rounding_digits(eur);
+    if digits == 2 {
+        println!("ok");
+    } else {
+        println!("not ok: default rounding digits is {} instead of 2", digits);
+    }
     println!("\nDone.");
 }
 
@@ -256,7 +277,7 @@ fn main() {
         format!(
             concat!(
                 "usage: {} <db_type> [<database connection string>]\n",
-                "where <db_type> is any of 'sqlite' or 'memory'"
+                "where <db_type> is any of 'sqlite', 'postgres' or 'memory'"
             ),
             args[0]
         )

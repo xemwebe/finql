@@ -46,4 +46,9 @@ pub trait QuoteHandler: AssetHandler {
     fn get_all_quotes_for_ticker(&mut self, ticker_id: usize) -> Result<Vec<Quote>, DataError>;
     fn update_quote(&mut self, quote: &Quote) -> Result<(), DataError>;
     fn delete_quote(&mut self, id: usize) -> Result<(), DataError>;
+
+    // Get and set cash rounding conventions by currency
+    // This method never throws, if currency could not be found in table, return 2 by default instead
+    fn get_rounding_digits(&mut self, currency: Currency) -> i32;
+    fn set_rounding_digits(&mut self, currency: Currency, digits: i32) -> Result<(), DataError>;
 }

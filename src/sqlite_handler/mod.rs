@@ -82,7 +82,13 @@ impl SqliteDB {
                 FOREIGN KEY(ticker_id) REFERENCES ticker(id) );",
             NO_PARAMS,
         )?;
-
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS rounding_digits (
+                id INTEGER PRIMARY KEY,
+                currency TEXT NOT NULL UNIQUE,
+                digits INTEGER NOT NULL);",
+            NO_PARAMS,
+        )?;
         Ok(())
     }
 }

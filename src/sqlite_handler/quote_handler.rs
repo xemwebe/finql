@@ -360,4 +360,32 @@ impl QuoteHandler for SqliteDB {
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
+
+    fn get_rounding_digits(&mut self, currency: Currency) -> i32 {
+        let digits = self
+            .conn
+            .query_row(
+                "SELECT digits FROM rounding_digits WHERE currency=?;",
+                params![currency.to_string()],
+                |row| {
+                    let digits: i32 = row.get(0)?;
+                    Ok(digits)
+                },
+            )
+            .map_err(|e| DataError::NotFound(e.to_string()));
+        match digits {
+            Ok(digits) => digits,
+            Err(_) => 2,
+        }
+    }
+
+    fn set_rounding_digits(&mut self, currency: Currency, digits: i32) -> Result<(), DataError> {
+        self.conn
+            .execute(
+                "INSERT INTO rounding_digits (currency, digits) VALUES (?1, ?2)",
+                params![currency.to_string(), digits],
+            )
+            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+        Ok(())
+    }
 }

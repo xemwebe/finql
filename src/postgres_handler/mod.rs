@@ -27,6 +27,8 @@ impl PostgresDB {
         self.conn
             .execute("DROP TABLE IF EXISTS market_data_sources", &[])?;
         self.conn.execute("DROP TABLE IF EXISTS assets", &[])?;
+        self.conn
+            .execute("DROP TABLE IF EXISTS rounding_digits", &[])?;
         self.init()
     }
 
@@ -85,6 +87,13 @@ impl PostgresDB {
                 time TIMESTAMP WITH TIME ZONE NOT NULL,
                 volume FLOAT8,
                 FOREIGN KEY(ticker_id) REFERENCES ticker(id) );",
+            &[],
+        )?;
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS rounding_digits (
+                id SERIAL PRIMARY KEY,
+                currency TEXT NOT NULL UNIQUE,
+                digits INT NOT NULL);",
             &[],
         )?;
 

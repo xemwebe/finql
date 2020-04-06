@@ -78,6 +78,7 @@ pub struct InMemoryDB {
     md_sources: InMemoryContainer<MarketDataSource>,
     ticker_map: InMemoryContainer<Ticker>,
     quotes: InMemoryContainer<Quote>,
+    rounding_digits: BTreeMap<String, i32>,
 }
 
 impl InMemoryDB {
@@ -88,6 +89,7 @@ impl InMemoryDB {
             md_sources: InMemoryContainer::new(),
             ticker_map: InMemoryContainer::new(),
             quotes: InMemoryContainer::new(),
+            rounding_digits: BTreeMap::new(),
         }
     }
 }

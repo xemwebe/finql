@@ -154,4 +154,16 @@ impl QuoteHandler for InMemoryDB {
     fn delete_quote(&mut self, id: usize) -> Result<(), DataError> {
         self.quotes.delete(id)
     }
+
+    fn get_rounding_digits(&mut self, currency: Currency) -> i32 {
+        match self.rounding_digits.get_key_value(&currency.to_string()) {
+            Some((_, digits)) => *digits,
+            None => 2,
+        }
+    }
+
+    fn set_rounding_digits(&mut self, currency: Currency, digits: i32) -> Result<(), DataError> {
+        self.rounding_digits.insert(currency.to_string(), digits);
+        Ok(())
+    }
 }

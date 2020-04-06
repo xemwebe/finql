@@ -314,4 +314,33 @@ impl QuoteHandler for PostgresDB {
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
+
+    fn get_rounding_digits(&mut self, currency: Currency) -> i32 {
+        let rows = self.conn.query(
+            "SELECT digits FROM rounding_digits WHERE currency=$1;",
+            &[&currency.to_string()],
+        );
+        match rows {
+            Ok(row_vec) => {
+                if row_vec.len() > 0 {
+                    let digits: i32 = row_vec[0].get(0);
+                    digits
+                } else {
+                    2
+                }
+            }
+            Err(_) => 2,
+        }
+    }
+
+    fn set_rounding_digits(&mut self, currency: Currency, digits: i32) -> Result<(), DataError> {
+        let _row = self
+            .conn
+            .execute(
+                "INSERT INTO rounding_digits (currency, digits) VALUES ($1, $2)",
+                &[&currency.to_string(), &digits],
+            )
+            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+        Ok(())
+    }
 }
