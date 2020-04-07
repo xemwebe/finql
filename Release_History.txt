@@ -1,3 +1,13 @@
+Version 0.5.4
+ * Insert asset in database with optional name override (attaching ' (NEW)')
+ * Extract asset by ISIN from database
+ * Negative operator added to CashAmount
+ * Rounding methods by convention added to CashAmount
+ * Storing rounding conventions by currency in database
+ * Improvements for easier handling of FX rates
+ * Unit tests for CashAmount added
+ * Some improvements in handling databases
+
 Version 0.5.0
 * Support for fx quotes, simplified insertion and request of quotes
 * Addition and substraction (optional) CashAmount entities with
