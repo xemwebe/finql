@@ -11,7 +11,7 @@ keywords = ["finance", "calendar", "bond", "period", "pricing"]
 categories = ["date-and-time","mathematics"]
 
 [dependencies]
-chrono = { version = "0.4.10", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
 text_io = "0.1"
 computus = "1.0"
 serde = { version = "1.0.*", features = ["derive"] }
