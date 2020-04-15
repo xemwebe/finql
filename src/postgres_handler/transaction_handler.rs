@@ -61,10 +61,10 @@ impl RawTransaction {
                 ))? as usize,
             },
             TAX => TransactionType::Tax {
-                transaction_ref: i32_to_usize(self.id),
+                transaction_ref: i32_to_usize(self.related_trans),
             },
             FEE => TransactionType::Fee {
-                transaction_ref: i32_to_usize(self.id),
+                transaction_ref: i32_to_usize(self.related_trans),
             },
             unknown => {
                 return Err(DataError::InvalidTransaction(unknown.to_string()));
