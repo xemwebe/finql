@@ -6,6 +6,8 @@ mod asset_handler;
 mod quote_handler;
 mod transaction_handler;
 
+pub use transaction_handler::RawTransaction;
+
 /// Struct to handle connections to sqlite3 databases
 pub struct PostgresDB {
     /// conn is made public to allow extending this struct outside of the library
