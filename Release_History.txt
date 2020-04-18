@@ -1,3 +1,9 @@
+Version 0.6.0
+ * Support of InMemoryDB has been dropped in favor of Sqlite's feature of in-memory database
+   Since the supported database feature grew in complexity it is unlikely that a naive 
+   in-memory database will have the same flexibility and performance as an in-memory Sqlite database.
+   All examples and test have been updated. 
+
 Version 0.5.4
  * Insert asset in database with optional name override (attaching ' (NEW)')
  * Extract asset by ISIN from database

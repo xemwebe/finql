@@ -100,7 +100,7 @@ pub fn insert_fx_quote(
 mod tests {
     use super::*;
     use crate::data_handler::QuoteHandler;
-    use crate::memory_handler::InMemoryDB;
+    use crate::sqlite_handler::SqliteDB;
     use chrono::offset::TimeZone;
     use chrono::Utc;
     use std::str::FromStr;
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_get_fx_rate() {
-        let mut db = InMemoryDB::new();
+        let mut db = SqliteDB::create(":memory:").unwrap();
         prepare_db(&mut db);
         let tol = 1.0e-8;
         let eur = Currency::from_str("EUR").unwrap();

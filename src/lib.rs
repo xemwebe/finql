@@ -41,7 +41,6 @@ pub mod fixed_income;
 pub mod fx_rates;
 pub mod helpers;
 pub mod market;
-pub mod memory_handler;
 pub mod portfolio;
 pub mod postgres_handler;
 pub mod quote;

@@ -5,7 +5,6 @@ use finql::currency::Currency;
 use finql::data_handler::QuoteHandler;
 use finql::fx_rates::{get_fx_rate, insert_fx_quote};
 use finql::helpers::make_time;
-use finql::memory_handler::InMemoryDB;
 use finql::postgres_handler::PostgresDB;
 use finql::quote::{MarketDataSource, Quote, Ticker};
 use finql::sqlite_handler::SqliteDB;
@@ -284,7 +283,7 @@ fn main() {
     );
     match args[1].as_str() {
         "memory" => {
-            let mut db = InMemoryDB::new();
+            let mut db = SqliteDB::create(":memory:").unwrap();
             quote_tests(&mut db);
         }
         "sqlite" => {

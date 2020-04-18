@@ -4,7 +4,6 @@ use finql::asset::Asset;
 use finql::currency::Currency;
 use finql::data_handler::TransactionHandler;
 use finql::fixed_income::CashFlow;
-use finql::memory_handler::InMemoryDB;
 use finql::postgres_handler::PostgresDB;
 use finql::sqlite_handler::SqliteDB;
 use finql::transaction::{Transaction, TransactionType};
@@ -119,7 +118,7 @@ fn main() {
     );
     match args[1].as_str() {
         "memory" => {
-            let mut db = InMemoryDB::new();
+            let mut db = SqliteDB::create(":memory:").unwrap();
             transaction_tests(&mut db);
         }
         "sqlite" => {
