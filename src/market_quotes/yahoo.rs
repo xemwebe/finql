@@ -1,6 +1,6 @@
-use super::{MarketQuoteError,MarketQuoteProvider};
-use crate::quote::{Quote,Ticker};
-use chrono::{DateTime,Utc};
+use super::{MarketQuoteError, MarketQuoteProvider};
+use crate::quote::{Quote, Ticker};
+use chrono::{DateTime, Utc};
 use yahoo_finance;
 
 struct Yahoo {}
@@ -8,11 +8,13 @@ struct Yahoo {}
 impl MarketQuoteProvider for Yahoo {
     /// Fetch latest quote
     fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
-        let data = yahoo_finance::history::retrieve_interval(&ticker.name, yahoo_finance::Interval::_1d)
-            .map_err(|e| { MarketQuoteError::FetchFailed(e.to_string()) })?;
-        let bar = data.last()
-            .ok_or( MarketQuoteError::FetchFailed("received empty response from yahoo".to_string()) )?;
-        Ok(Quote{
+        let data =
+            yahoo_finance::history::retrieve_interval(&ticker.name, yahoo_finance::Interval::_1d)
+                .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+        let bar = data.last().ok_or(MarketQuoteError::FetchFailed(
+            "received empty response from yahoo".to_string(),
+        ))?;
+        Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
             price: bar.close,
@@ -21,12 +23,17 @@ impl MarketQuoteProvider for Yahoo {
         })
     }
     /// Fetch historic quotes between start and end date
-    fn fetch_quote_history(&self, ticker: &Ticker, start: DateTime<Utc>, end: DateTime<Utc>) -> Result<Vec<Quote>, MarketQuoteError> {
+    fn fetch_quote_history(
+        &self,
+        ticker: &Ticker,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<Quote>, MarketQuoteError> {
         let data = yahoo_finance::history::retrieve_range(&ticker.name, start, Some(end))
-            .map_err(|e| { MarketQuoteError::FetchFailed(e.to_string()) })?;
+            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
         let mut quotes = Vec::new();
         for bar in &data {
-            quotes.push( Quote{
+            quotes.push(Quote {
                 id: None,
                 ticker: ticker.id.unwrap(),
                 price: bar.close,
@@ -34,21 +41,20 @@ impl MarketQuoteProvider for Yahoo {
                 volume: Some(bar.volume as f64),
             })
         }
-        Ok(quotes)    
-    } 
+        Ok(quotes)
+    }
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str::FromStr;
     use crate::currency::Currency;
     use chrono::offset::TimeZone;
- 
+    use std::str::FromStr;
+
     #[test]
     fn test_yahoo_fetch_quote() {
-        let yahoo = Yahoo{};
+        let yahoo = Yahoo {};
         let ticker = Ticker {
             id: Some(1),
             asset: 1,
@@ -63,7 +69,7 @@ mod tests {
 
     #[test]
     fn test_yahoo_fetch_history() {
-        let yahoo = Yahoo{};
+        let yahoo = Yahoo {};
         let ticker = Ticker {
             id: Some(1),
             asset: 1,
@@ -78,5 +84,4 @@ mod tests {
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);
     }
-
 }
