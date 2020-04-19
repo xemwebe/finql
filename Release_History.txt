@@ -1,3 +1,7 @@
+Version 0.6.1
+ * Fetching market data quotes from yahoo finance or gurufocus.com (requires a API token)
+ * Storage of fetched market data in database
+ 
 Version 0.6.0
  * Support of InMemoryDB has been dropped in favor of Sqlite's feature of in-memory database
    Since the supported database feature grew in complexity it is unlikely that a naive 
