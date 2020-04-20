@@ -1,3 +1,6 @@
+Version 0.6.2
+ * Support for eodhistoricaldata as third market data provider added
+
 Version 0.6.1
  * Fetching market data quotes from yahoo finance or gurufocus.com (requires a API token)
  * Storage of fetched market data in database
