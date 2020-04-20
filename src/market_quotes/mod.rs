@@ -1,7 +1,8 @@
 use crate::data_handler::QuoteHandler;
 use crate::quote::{Quote, Ticker};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, NaiveDate, TimeZone, Utc};
 use std::fmt;
+use std::time::{Duration, UNIX_EPOCH};
 
 #[derive(Debug)]
 pub enum MarketQuoteError {
@@ -63,8 +64,34 @@ pub fn update_ticker_history(
     Ok(())
 }
 
+pub mod eod_historical_data;
 pub mod guru_focus;
 pub mod yahoo;
+
+fn unix_to_date_time(seconds: u64) -> DateTime<Utc> {
+    // Creates a new SystemTime from the specified number of whole seconds
+    let d = UNIX_EPOCH + Duration::from_secs(seconds);
+    // Create DateTime from SystemTime
+    DateTime::<Utc>::from(d)
+}
+
+// Create UTC time from NaiveDate string, assume UTC 6pm (close of business) time
+fn naive_date_string_to_time(date_string: &str) -> Result<DateTime<Utc>, MarketQuoteError> {
+    let date = NaiveDate::parse_from_str(date_string, "%Y-%m-%d")
+        .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+    Ok(Utc
+        .ymd(date.year(), date.month(), date.day())
+        .and_hms_milli(18, 0, 0, 0))
+}
+
+// Create UTC time from NaiveDate string, assume UTC 6pm (close of business) time (English convention)
+fn naive_date_string_to_time_english(date_string: &str) -> Result<DateTime<Utc>, MarketQuoteError> {
+    let date = NaiveDate::parse_from_str(date_string, "%m-%d-%Y")
+        .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+    Ok(Utc
+        .ymd(date.year(), date.month(), date.day())
+        .and_hms_milli(18, 0, 0, 0))
+}
 
 #[cfg(test)]
 mod tests {
@@ -170,5 +197,26 @@ mod tests {
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).unwrap();
         assert_eq!(quotes.len(), 31);
         assert_eq!(quotes[0].price, 1.23);
+    }
+
+    #[test]
+    fn test_unix_to_date_time() {
+        let date = unix_to_date_time(1587099600);
+        let date_string = date.format("%Y-%m-%d %H:%M:%S").to_string();
+        assert_eq!("2020-04-17 05:00:00", &date_string);
+    }
+
+    #[test]
+    fn test_naive_date_string_to_time_english() {
+        let date = naive_date_string_to_time_english("02-10-2020").unwrap();
+        let date_string = date.format("%Y-%m-%d %H:%M:%S").to_string();
+        assert_eq!("2020-02-10 18:00:00", &date_string);
+    }
+
+    #[test]
+    fn test_naive_date_string_to_time() {
+        let date = naive_date_string_to_time("2020-02-10").unwrap();
+        let date_string = date.format("%Y-%m-%d %H:%M:%S").to_string();
+        assert_eq!("2020-02-10 18:00:00", &date_string);
     }
 }
