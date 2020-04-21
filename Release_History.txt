@@ -1,3 +1,8 @@
+Version 0.7.1
+  * `Market` holds now a market quote data base (implementing trait QuoteHandler)
+  * `Market` holds now list of support market data quote providers
+  * Added method for updating quotes to `Market`
+
 Version 0.7.0
   * `MarketDataSource` is now en `enum` instead of a `struct`. In the database, it is no
   longer stored in a separate table, but as `TEXT` field in `ticker`. The number of
