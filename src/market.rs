@@ -5,8 +5,11 @@
 /// asset prices, or foreign exchange rates.
 /// Currently, this is only a stub implementation.
 use crate::calendar::{Calendar, Holiday, NthWeek};
+use crate::data_handler::QuoteHandler;
+use crate::market_quotes::MarketQuoteProvider;
+
 use chrono::{NaiveDate, Weekday};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
 
@@ -28,16 +31,23 @@ impl Error for MarketError {
     }
 }
 
-/// Container or adapter to market data
+/// Container or adaptor to market data
 pub struct Market {
-    calendars: HashMap<String, Calendar>,
+    calendars: BTreeMap<String, Calendar>,
+    /// collection of market data quotes provider
+    provider: BTreeMap<String, Box<dyn MarketQuoteProvider>>,
+    /// Quotes database
+    db: Box<dyn QuoteHandler>,
 }
 
 impl Market {
     /// For now, market data statically generated and stored in memory
-    pub fn new() -> Market {
+    pub fn new(db: Box<dyn QuoteHandler>) -> Market {
         Market {
+            // Set of default calendars
             calendars: generate_calendars(),
+            provider: BTreeMap::new(),
+            db,
         }
     }
 
@@ -49,11 +59,17 @@ impl Market {
             Err(MarketError::CalendarNotFound)
         }
     }
+
+    /// Add market data source
+    pub fn add_provider(&mut self, name: String, provider: Box<dyn MarketQuoteProvider>) {
+        self.provider.insert(name, provider);
+    }
+
 }
 
 /// Generate fixed set of some calendars for testing purposes only
-fn generate_calendars() -> HashMap<String, Calendar> {
-    let mut calendars = HashMap::new();
+fn generate_calendars() -> BTreeMap<String, Calendar> {
+    let mut calendars = BTreeMap::new();
     let uk_settlement_holidays = vec![
         // Saturdays
         Holiday::WeekDay(Weekday::Sat),

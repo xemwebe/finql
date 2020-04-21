@@ -1,6 +1,8 @@
 ///! Implementation of a container for basic asset data
 use crate::currency::Currency;
 use crate::data_handler::{DataError, DataItem};
+use crate::market_quotes;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -44,6 +46,17 @@ impl fmt::Display for MarketDataSource {
             Self::Yahoo => write!(f, "yahoo"),
             Self::GuruFocus => write!(f, "gurufocus"),
             Self::EodHistData => write!(f, "eodhistdata"),
+        }
+    }
+}
+
+impl MarketDataSource {
+    pub fn get_provider(&self, token: String) -> Option<Box<dyn market_quotes::MarketQuoteProvider>> {
+        match self {
+            Self::Yahoo => Some(Box::new(market_quotes::yahoo::Yahoo{})),
+            Self::GuruFocus => Some(Box::new(market_quotes::guru_focus::GuruFocus::new(token))),
+            Self::EodHistData => Some(Box::new(market_quotes::eod_historical_data::EODHistData::new(token))),
+            _ => None, 
         }
     }
 }

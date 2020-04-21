@@ -3,7 +3,7 @@ use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use yahoo_finance;
 
-struct Yahoo {}
+pub struct Yahoo {}
 
 impl MarketQuoteProvider for Yahoo {
     /// Fetch latest quote
