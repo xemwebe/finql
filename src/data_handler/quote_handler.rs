@@ -17,6 +17,7 @@ pub trait QuoteHandler: AssetHandler {
         }
     }
     fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError>;
+    fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError>;
     fn get_all_ticker_for_source(
         &mut self,
         source: MarketDataSource,

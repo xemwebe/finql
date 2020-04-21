@@ -66,6 +66,35 @@ impl QuoteHandler for PostgresDB {
             currency,
         })
     }
+    fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError> {
+        let mut all_ticker = Vec::new();
+        for row in self
+            .conn
+            .query(
+                "SELECT id, name, asset_id, priority, source, currency FROM ticker",
+                &[],
+            )
+            .map_err(|e| DataError::NotFound(e.to_string()))?
+        {
+            let id: i32 = row.get(0);
+            let asset: i32 = row.get(2);
+            let source: String = row.get(4);
+            let source = MarketDataSource::from_str(&source).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let currency: String = row.get(5);
+            let currency =
+                Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            all_ticker.push(Ticker {
+                id: Some(id as usize),
+                name: row.get(1),
+                asset: asset as usize,
+                source,
+                priority: row.get(3),
+                currency,
+            });
+        }
+        Ok(all_ticker)
+    }
+
     fn get_all_ticker_for_source(
         &mut self,
         source: MarketDataSource,

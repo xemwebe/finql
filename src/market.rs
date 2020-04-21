@@ -6,31 +6,54 @@
 /// Currently, this is only a stub implementation.
 use crate::calendar::{Calendar, Holiday, NthWeek};
 use crate::data_handler::QuoteHandler;
+use crate::data_handler;
 use crate::market_quotes::MarketQuoteProvider;
+use crate::market_quotes;
 
 use chrono::{NaiveDate, Weekday};
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
+use std::ops::{Deref,DerefMut};
 
 /// Error related to market data object
 #[derive(Debug)]
 pub enum MarketError {
     CalendarNotFound,
+    MarketQuoteError(market_quotes::MarketQuoteError),
+    DBError(data_handler::DataError),
 }
 
 impl fmt::Display for MarketError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "unknown calendar")
+        match self {
+            Self::CalendarNotFound => write!(f, "unknown calendar"),
+            Self::MarketQuoteError(_) => write!(f, "market quote error"),
+            Self::DBError(_) => write!(f, "database error"),
+        }
     }
 }
 
 impl Error for MarketError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
+    fn cause(&self) -> Option<&dyn Error> {
+        match self {
+            Self::MarketQuoteError(err) => Some(err),
+            Self::DBError(err) => Some(err),
+            _ => None,
+        }
     }
 }
 
+impl From<market_quotes::MarketQuoteError> for MarketError {
+    fn from(error: market_quotes::MarketQuoteError) -> Self {
+        Self::MarketQuoteError(error)
+    }
+}
+impl From<data_handler::DataError> for MarketError {
+    fn from(error: data_handler::DataError) -> Self {
+        Self::DBError(error)
+    }
+}
 /// Container or adaptor to market data
 pub struct Market {
     calendars: BTreeMap<String, Calendar>,
@@ -60,11 +83,28 @@ impl Market {
         }
     }
 
-    /// Add market data source
+    /// provide reference to database
+    pub fn db(&mut self) -> &mut dyn QuoteHandler {
+        self.db.deref_mut()
+    }
+
+    /// Add market data provider
     pub fn add_provider(&mut self, name: String, provider: Box<dyn MarketQuoteProvider>) {
         self.provider.insert(name, provider);
     }
 
+    /// Fetch latest quotes for all active ticker
+    pub fn update_quotes(&mut self) -> Result<(), MarketError> {
+        let tickers = self.db.deref_mut().get_all_ticker()?;
+        for ticker in tickers {
+            let source = ticker.source;
+            let provider = self.provider.get(&source.to_string());
+            if provider.is_some()  {
+                market_quotes::update_ticker(provider.unwrap().deref(), &ticker, self.db.deref_mut())?;
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Generate fixed set of some calendars for testing purposes only
