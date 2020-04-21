@@ -53,3 +53,4 @@ pub mod transaction;
 pub use currency::Currency;
 pub use fixed_income::CashAmount;
 pub use fixed_income::CashFlow;
+pub use market::Market;

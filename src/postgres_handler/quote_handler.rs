@@ -166,7 +166,7 @@ impl QuoteHandler for PostgresDB {
                 &[
                     &(quote.ticker as i32),
                     &quote.price,
-                    &quote.time, //&quote.time.to_rfc3339(),
+                    &quote.time,
                     &quote.volume,
                 ],
             )
