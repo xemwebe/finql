@@ -9,100 +9,16 @@ use std::str::FromStr;
 /// Sqlite implementation of quote handler
 impl QuoteHandler for PostgresDB {
     // insert, get, update and delete for market data sources
-    fn insert_md_source(&mut self, source: &MarketDataSource) -> Result<usize, DataError> {
-        let row = self
-            .conn
-            .query_one(
-                "INSERT INTO market_data_sources (name) VALUES ($1) RETURNING id",
-                &[&source.name],
-            )
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id: i32 = row.get::<_, i32>(0);
-        Ok(id as usize)
-    }
-
-    fn get_md_source_id(&mut self, source: &str) -> Option<usize> {
-        let row = self.conn.query_one(
-            "SELECT id FROM market_data_source WHERE name=$1",
-            &[&source],
-        );
-        match row {
-            Ok(row) => {
-                let id: i32 = row.get(0);
-                Some(id as usize)
-            }
-            _ => None,
-        }
-    }
-
-    fn get_md_source_by_id(&mut self, id: usize) -> Result<MarketDataSource, DataError> {
-        let row = self
-            .conn
-            .query_one(
-                "SELECT name FROM market_data_sources WHERE id=$1;",
-                &[&(id as i32)],
-            )
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let name: String = row.get(0);
-        Ok(MarketDataSource {
-            id: Some(id as usize),
-            name: name,
-        })
-    }
-
-    fn get_all_md_sources(&mut self) -> Result<Vec<MarketDataSource>, DataError> {
-        let mut sources = Vec::new();
-        for row in self
-            .conn
-            .query("SELECT id, name FROM market_data_sources", &[])
-            .map_err(|e| DataError::NotFound(e.to_string()))?
-        {
-            let id: i32 = row.get(0);
-            sources.push(MarketDataSource {
-                id: Some(id as usize),
-                name: row.get(1),
-            });
-        }
-        Ok(sources)
-    }
-
-    fn update_md_source(&mut self, source: &MarketDataSource) -> Result<(), DataError> {
-        if source.id.is_none() {
-            return Err(DataError::NotFound(
-                "not yet stored to database".to_string(),
-            ));
-        }
-        let id = source.id.unwrap() as i32;
-        self.conn
-            .execute(
-                "UPDATE market_data_sources SET name=$2 
-                WHERE id=$1;",
-                &[&id, &source.name],
-            )
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        Ok(())
-    }
-    fn delete_md_source(&mut self, id: usize) -> Result<(), DataError> {
-        self.conn
-            .execute(
-                "DELETE FROM market_data_sources WHERE id=$1;",
-                &[&(id as i32)],
-            )
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        Ok(())
-    }
-
-    // insert, get, update and delete for market data sources
     fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
         let row = self
             .conn
             .query_one(
-                "INSERT INTO ticker (name, asset_id, source_id, priority, currency) 
+                "INSERT INTO ticker (name, asset_id, source, priority, currency) 
                 VALUES ($1, $2, $3, $4, $5) RETURNING id",
                 &[
                     &ticker.name,
                     &(ticker.asset as i32),
-                    &(ticker.source as i32),
+                    &(ticker.source.to_string()),
                     &ticker.priority,
                     &(ticker.currency.to_string()),
                 ],
@@ -129,13 +45,15 @@ impl QuoteHandler for PostgresDB {
         let row = self
             .conn
             .query_one(
-                "SELECT name, asset_id, source_id, priority, currency FROM ticker WHERE id=$1;",
+                "SELECT name, asset_id, source, priority, currency FROM ticker WHERE id=$1;",
                 &[&(id as i32)],
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let name: String = row.get(0);
         let asset: i32 = row.get(1);
-        let source: i32 = row.get(2);
+        let source: String = row.get(2);
+        let source =
+            MarketDataSource::from_str(&source).map_err(|e| DataError::NotFound(e.to_string()))?;
         let currency: String = row.get(4);
         let currency =
             Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
@@ -143,18 +61,21 @@ impl QuoteHandler for PostgresDB {
             id: Some(id),
             name,
             asset: asset as usize,
-            source: source as usize,
+            source,
             priority: row.get(3),
             currency,
         })
     }
-    fn get_all_ticker_for_source(&mut self, source: usize) -> Result<Vec<Ticker>, DataError> {
+    fn get_all_ticker_for_source(
+        &mut self,
+        source: MarketDataSource,
+    ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in self
             .conn
             .query(
-                "SELECT id, name, asset_id, priority, currency FROM ticker WHERE source_id=$1;",
-                &[&(source as i32)],
+                "SELECT id, name, asset_id, priority, currency FROM ticker WHERE source=$1;",
+                &[&(source.to_string())],
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
@@ -184,13 +105,13 @@ impl QuoteHandler for PostgresDB {
         let id = ticker.id.unwrap() as i32;
         self.conn
             .execute(
-                "UPDATE ticker SET name=$2, asset_id=$3, source_id=$4, priority=$5, currency=$6
+                "UPDATE ticker SET name=$2, asset_id=$3, source=$4, priority=$5, currency=$6
                 WHERE id=$1",
                 &[
                     &id,
                     &ticker.name,
                     &(ticker.asset as i32),
-                    &(ticker.source as i32),
+                    &ticker.source.to_string(),
                     &ticker.priority,
                     &ticker.currency.to_string(),
                 ],

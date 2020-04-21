@@ -155,19 +155,12 @@ mod tests {
             })
             .unwrap();
 
-        let source_id = db
-            .insert_md_source(&MarketDataSource {
-                id: None,
-                name: "Test Provider".to_string(),
-            })
-            .unwrap();
-
         let mut ticker = Ticker {
             id: None,
             asset: asset_id,
             name: "TestTicker".to_string(),
             currency: Currency::from_str("EUR").unwrap(),
-            source: source_id,
+            source: MarketDataSource::Manual,
             priority: 1,
         };
         let ticker_id = db.insert_ticker(&ticker).unwrap();

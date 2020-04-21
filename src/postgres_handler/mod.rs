@@ -1,7 +1,6 @@
 ///! Implemenation of PostgreSQL data handler
 use postgres::{Client, NoTls};
 use tokio_postgres::error::Error;
-
 mod asset_handler;
 mod quote_handler;
 mod transaction_handler;
@@ -27,7 +26,7 @@ impl PostgresDB {
         self.conn.execute("DROP TABLE IF EXISTS quotes", &[])?;
         self.conn.execute("DROP TABLE IF EXISTS ticker", &[])?;
         self.conn
-            .execute("DROP TABLE IF EXISTS market_data_sources", &[])?;
+            .execute("DROP TYPE IF EXISTS market_data_source", &[])?;
         self.conn.execute("DROP TABLE IF EXISTS assets", &[])?;
         self.conn
             .execute("DROP TABLE IF EXISTS rounding_digits", &[])?;
@@ -63,20 +62,13 @@ impl PostgresDB {
             &[],
         )?;
         self.conn.execute(
-            "CREATE TABLE IF NOT EXISTS market_data_sources (
-                id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE );",
-            &[],
-        )?;
-        self.conn.execute(
             "CREATE TABLE IF NOT EXISTS ticker (
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
                 asset_id INTEGER NOT NULL,
-                source_id INTEGER NOT NULL,
+                source TEXT NOT NULL,
                 priority INTEGER NOT NULL,
                 currency TEXT NOT NULL,
-                FOREIGN KEY(source_id) REFERENCES market_data_sources(id),
                 FOREIGN KEY(asset_id) REFERENCES assets(id) 
             );",
             &[],

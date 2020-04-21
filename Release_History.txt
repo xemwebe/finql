@@ -1,3 +1,12 @@
+Version 0.7.0
+  * `MarketDataSource` is now en `enum` instead of a `struct`. In the database, it is no
+  longer stored in a separate table, but as `TEXT` field in `ticker`. The number of
+  supported market data sources will hopefully increase over time. On the other hand, 
+  the method how to fetch quotes differs for each market data source. Therefore, it is
+  in the responsibility of the application to maintain the supported market data sources, 
+  i.e. a market data source is not just data, but requires appropriate implementations
+  of specific functionality.
+
 Version 0.6.2
  * Support for eodhistoricaldata as third market data provider added
 

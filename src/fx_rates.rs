@@ -41,19 +41,14 @@ pub fn insert_fx_quote(
             note: None,
         })
         .unwrap();
-    let market_id = quotes
-        .insert_md_source(&MarketDataSource {
-            id: None,
-            name: "manual".to_string(),
-        })
-        .unwrap();
+    let market_data_source = MarketDataSource::Manual;
     let currency_pair = format!("{}/{}", foreign, base);
     let ticker_id = quotes
         .insert_ticker(&Ticker {
             id: None,
             name: currency_pair,
             asset: foreign_id,
-            source: market_id,
+            source: market_data_source,
             priority: 10,
             currency: base,
         })
@@ -81,7 +76,7 @@ pub fn insert_fx_quote(
             id: None,
             name: currency_pair,
             asset: base_id,
-            source: market_id,
+            source: market_data_source,
             priority: 10,
             currency: foreign,
         })

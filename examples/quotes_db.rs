@@ -48,48 +48,7 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
         .unwrap();
 
     // Create some market data sources
-    let yahoo = MarketDataSource {
-        id: None,
-        name: "yahoo!".to_string(),
-    };
-    let guru_focus = MarketDataSource {
-        id: None,
-        name: "gurufocus".to_string(),
-    };
-    let mut alpha_vantage = MarketDataSource {
-        id: None,
-        name: "alpha_vantage".to_string(),
-    };
-
-    // Store market data sources
-    log("Insert new market data source...");
-    let yahoo_id = db.insert_md_source(&yahoo).unwrap();
-    println!("ok");
-
-    // get back source
-    log("Reading market data source from db...");
-    db.get_md_source_by_id(yahoo_id).unwrap();
-    let gf_id = db.insert_md_source(&guru_focus).unwrap();
-    let av_id = db.insert_md_source(&alpha_vantage).unwrap();
-    println!("ok");
-    // update source
-    log("Updating market data source...");
-    alpha_vantage.id = Some(av_id);
-    alpha_vantage.name = "AlphaVantage".to_string();
-    db.update_md_source(&alpha_vantage).unwrap();
-    println!("ok");
-    // delete source
-    log("Deleting market data source...");
-    db.delete_md_source(gf_id).unwrap();
-    println!("ok");
-    // Get all sources
-    log("Get list of all market data sources...");
-    let sources = db.get_all_md_sources().unwrap();
-    if sources.len() == 2 {
-        println!("ok");
-    } else {
-        println!("failed");
-    }
+    let yahoo = MarketDataSource::Yahoo;
 
     // Dealing with ticker data
     let eur = Currency::from_str("EUR").unwrap();
@@ -102,7 +61,7 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
         asset: basf_id,
         currency: eur,
         priority: 10,
-        source: yahoo_id,
+        source: yahoo,
     };
     let basf_id = db.insert_ticker(&basf).unwrap();
     // Get ticker back
@@ -114,7 +73,7 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
         asset: siemens_id,
         priority: 10,
         currency: eur,
-        source: yahoo_id,
+        source: yahoo,
     };
     let siemens_id = db.insert_ticker(&siemens).unwrap();
     // Insert another ticker, with other source
@@ -124,7 +83,7 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
         asset: bhp_id,
         priority: 10,
         currency: eur,
-        source: av_id,
+        source: MarketDataSource::Manual,
     };
     let bhp_id = db.insert_ticker(&bhp).unwrap();
     println!("ok");
@@ -136,8 +95,8 @@ fn quote_tests<DB: QuoteHandler>(db: &mut DB) {
     db.update_ticker(&bhp).unwrap();
     println!("ok");
     log("Get all ticker by source...");
-    db.get_all_ticker_for_source(yahoo_id).unwrap();
-    if sources.len() == 2 {
+    let tickers = db.get_all_ticker_for_source(yahoo).unwrap();
+    if tickers.len() == 2 {
         println!("ok");
     } else {
         println!("failed");

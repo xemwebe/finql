@@ -49,6 +49,7 @@ impl MarketQuoteProvider for Yahoo {
 mod tests {
     use super::*;
     use crate::currency::Currency;
+    use crate::quote::MarketDataSource;
     use chrono::offset::TimeZone;
     use std::str::FromStr;
 
@@ -60,7 +61,7 @@ mod tests {
             asset: 1,
             name: "AAPL".to_string(),
             currency: Currency::from_str("EUR").unwrap(),
-            source: 1,
+            source: MarketDataSource::Yahoo,
             priority: 1,
         };
         let quote = yahoo.fetch_latest_quote(&ticker).unwrap();
@@ -75,7 +76,7 @@ mod tests {
             asset: 1,
             name: "AAPL".to_string(),
             currency: Currency::from_str("EUR").unwrap(),
-            source: 1,
+            source: MarketDataSource::Yahoo,
             priority: 1,
         };
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);

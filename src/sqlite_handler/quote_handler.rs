@@ -11,112 +11,14 @@ use std::str::FromStr;
 /// Sqlite implementation of quote handler
 impl QuoteHandler for SqliteDB {
     // insert, get, update and delete for market data sources
-    fn insert_md_source(&mut self, source: &MarketDataSource) -> Result<usize, DataError> {
-        self.conn
-            .execute(
-                "INSERT INTO market_data_sources (name) VALUES (?1)",
-                params![source.name],
-            )
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id = self
-            .conn
-            .query_row(
-                "SELECT id FROM market_data_sources
-        WHERE name=?;",
-                params![source.name],
-                |row| {
-                    let id: i64 = row.get(0)?;
-                    Ok(id as usize)
-                },
-            )
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        Ok(id)
-    }
-
-    fn get_md_source_id(&mut self, source: &str) -> Option<usize> {
-        let get_id = |row: &Row| -> rusqlite::Result<i64> { row.get(0) };
-        let id = self.conn.query_row(
-            "SELECT id FROM market_data_sources WHERE name=?",
-            params![source],
-            get_id,
-        );
-        match id {
-            Ok(id) => Some(id as usize),
-            _ => None,
-        }
-    }
-
-    fn get_md_source_by_id(&mut self, id: usize) -> Result<MarketDataSource, DataError> {
-        let source = self
-            .conn
-            .query_row(
-                "SELECT name FROM market_data_sources WHERE id=?",
-                params![id as i64],
-                |row| {
-                    Ok(MarketDataSource {
-                        id: Some(id),
-                        name: row.get(0)?,
-                    })
-                },
-            )
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        Ok(source)
-    }
-    fn get_all_md_sources(&mut self) -> Result<Vec<MarketDataSource>, DataError> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, name FROM market_data_sources")
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let sources_map = stmt
-            .query_map(NO_PARAMS, |row| {
-                let id: i64 = row.get(0)?;
-                let id = Some(id as usize);
-                Ok(MarketDataSource {
-                    id,
-                    name: row.get(1)?,
-                })
-            })
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let mut sources = Vec::new();
-        for source in sources_map {
-            sources.push(source.unwrap());
-        }
-        Ok(sources)
-    }
-    fn update_md_source(&mut self, source: &MarketDataSource) -> Result<(), DataError> {
-        if source.id.is_none() {
-            return Err(DataError::NotFound(
-                "not yet stored to database".to_string(),
-            ));
-        }
-        let id = source.id.unwrap() as i64;
-        self.conn
-            .execute(
-                "UPDATE market_data_sources SET name=?2 WHERE id=?1",
-                params![id, source.name],
-            )
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        Ok(())
-    }
-    fn delete_md_source(&mut self, id: usize) -> Result<(), DataError> {
-        self.conn
-            .execute(
-                "DELETE FROM market_data_sources WHERE id=?1;",
-                params![id as i64],
-            )
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        Ok(())
-    }
-
-    // insert, get, update and delete for market data sources
     fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
         self.conn
             .execute(
-                "INSERT INTO ticker (name, asset_id, source_id, priority, currency) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO ticker (name, asset_id, source, priority, currency) VALUES (?, ?, ?, ?, ?)",
                 params![
                     ticker.name,
                     ticker.asset as i64,
-                    ticker.source as i64,
+                    ticker.source.to_string(),
                     ticker.priority,
                     ticker.currency.to_string()
                 ],
@@ -126,8 +28,8 @@ impl QuoteHandler for SqliteDB {
             .conn
             .query_row(
                 "SELECT id FROM ticker
-        WHERE name=? AND source_id=?;",
-                params![ticker.name, ticker.source as i64],
+        WHERE name=? AND source=?;",
+                params![ticker.name, ticker.source.to_string()],
                 |row| {
                     let id: i64 = row.get(0)?;
                     Ok(id as usize)
@@ -154,36 +56,41 @@ impl QuoteHandler for SqliteDB {
         let (name, asset, source, priority, currency) = self
             .conn
             .query_row(
-                "SELECT name, asset_id, source_id, priority, currency FROM ticker WHERE id=?;",
+                "SELECT name, asset_id, source, priority, currency FROM ticker WHERE id=?;",
                 params![id as i64],
                 |row| {
                     let name: String = row.get(0)?;
                     let asset: i64 = row.get(1)?;
-                    let source: i64 = row.get(2)?;
+                    let source: String = row.get(2)?;
                     let priority: i32 = row.get(3)?;
                     let currency: String = row.get(4)?;
                     Ok((name, asset, source, priority, currency))
                 },
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
+        let source =
+            MarketDataSource::from_str(&source).map_err(|e| DataError::NotFound(e.to_string()))?;
         let currency =
             Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(Ticker {
             id: Some(id),
             name,
             asset: asset as usize,
-            source: source as usize,
+            source,
             priority,
             currency,
         })
     }
-    fn get_all_ticker_for_source(&mut self, source: usize) -> Result<Vec<Ticker>, DataError> {
+    fn get_all_ticker_for_source(
+        &mut self,
+        source: MarketDataSource,
+    ) -> Result<Vec<Ticker>, DataError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, name, asset_id, priority, currency FROM ticker WHERE source_id=?;")
+            .prepare("SELECT id, name, asset_id, priority, currency FROM ticker WHERE source=?;")
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let ticker_map = stmt
-            .query_map(params![source as i64], |row| {
+            .query_map(params![source.to_string()], |row| {
                 let id: i64 = row.get(0)?;
                 let name: String = row.get(1)?;
                 let asset: i64 = row.get(2)?;
@@ -217,13 +124,13 @@ impl QuoteHandler for SqliteDB {
         let id = ticker.id.unwrap() as i64;
         self.conn
             .execute(
-                "UPDATE ticker SET name=?2, asset_id=?3, source_id=?4, priority=?5, currency=?6
+                "UPDATE ticker SET name=?2, asset_id=?3, source=?4, priority=?5, currency=?6
                 WHERE id=?1",
                 params![
                     id,
                     ticker.name,
                     ticker.asset as i64,
-                    ticker.source as i64,
+                    ticker.source.to_string(),
                     ticker.priority,
                     ticker.currency.to_string()
                 ],
