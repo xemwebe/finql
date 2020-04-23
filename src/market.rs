@@ -22,6 +22,7 @@ pub enum MarketError {
     CalendarNotFound,
     MarketQuoteError(market_quotes::MarketQuoteError),
     DBError(data_handler::DataError),
+    MissingProviderToken,
 }
 
 impl fmt::Display for MarketError {
@@ -30,6 +31,7 @@ impl fmt::Display for MarketError {
             Self::CalendarNotFound => write!(f, "unknown calendar"),
             Self::MarketQuoteError(_) => write!(f, "market quote error"),
             Self::DBError(_) => write!(f, "database error"),
+            Self::MissingProviderToken => write!(f, "missing market data provider token"),
         }
     }
 }
