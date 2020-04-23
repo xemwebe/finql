@@ -52,13 +52,19 @@ impl MarketQuoteProvider for EODHistData {
         let mut quotes = Vec::new();
         for quote in &eod_quotes {
             let time = date_time_from_str_standard(&quote.date, 18)?;
-            quotes.push(Quote {
-                id: None,
-                ticker: ticker.id.unwrap(),
-                price: quote.close,
-                time,
-                volume: Some(quote.volume as f64),
-            })
+            let volume = match quote.volume {
+                Some(vol) => Some(vol as f64),
+                None => None,
+            };
+            if let Some(price) = quote.close {
+                quotes.push(Quote {
+                    id: None,
+                    ticker: ticker.id.unwrap(),
+                    price,
+                    time,
+                    volume,
+                })    
+            }
         }
         Ok(quotes)
     }
