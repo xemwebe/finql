@@ -1,6 +1,5 @@
-use super::{
-    naive_date_string_to_time_english, unix_to_date_time, MarketQuoteError, MarketQuoteProvider,
-};
+use super::{MarketQuoteError, MarketQuoteProvider};
+use crate::date_time_helper::{date_time_from_str_american, unix_to_date_time};
 use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use gurufocus_api;
@@ -54,7 +53,7 @@ impl MarketQuoteProvider for GuruFocus {
 
         let mut quotes = Vec::new();
         for (timestamp, price) in &gf_quotes {
-            let time = naive_date_string_to_time_english(timestamp)?;
+            let time = date_time_from_str_american(timestamp, 18)?;
             if time < start || time > end {
                 continue;
             }
@@ -87,9 +86,10 @@ mod tests {
             id: Some(1),
             asset: 1,
             name: "AAPL".to_string(),
-            currency: Currency::from_str("EUR").unwrap(),
+            currency: Currency::from_str("USD").unwrap(),
             source: MarketDataSource::GuruFocus,
             priority: 1,
+            factor: 1.0,
         };
         let quote = gf.fetch_latest_quote(&ticker).unwrap();
         assert!(quote.price != 0.0);
@@ -103,9 +103,10 @@ mod tests {
             id: Some(1),
             asset: 1,
             name: "AAPL".to_string(),
-            currency: Currency::from_str("EUR").unwrap(),
+            currency: Currency::from_str("USD").unwrap(),
             source: MarketDataSource::GuruFocus,
             priority: 1,
+            factor: 1.0,
         };
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);

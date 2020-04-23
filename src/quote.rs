@@ -14,6 +14,7 @@ pub enum MarketDataSource {
     Yahoo,
     GuruFocus,
     EodHistData,
+    AlphaVantage,
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +35,7 @@ impl FromStr for MarketDataSource {
             "yahoo" => Ok(Self::Yahoo),
             "gurufocus" => Ok(Self::GuruFocus),
             "eodhistdata" => Ok(Self::EodHistData),
+            "alpha_vantage" => Ok(Self::AlphaVantage),
             _ => Err(ParseMarketDataSourceError {}),
         }
     }
@@ -46,17 +48,26 @@ impl fmt::Display for MarketDataSource {
             Self::Yahoo => write!(f, "yahoo"),
             Self::GuruFocus => write!(f, "gurufocus"),
             Self::EodHistData => write!(f, "eodhistdata"),
+            Self::AlphaVantage => write!(f, "alpha_vantage"),
         }
     }
 }
 
 impl MarketDataSource {
-    pub fn get_provider(&self, token: String) -> Option<Box<dyn market_quotes::MarketQuoteProvider>> {
+    pub fn get_provider(
+        &self,
+        token: String,
+    ) -> Option<Box<dyn market_quotes::MarketQuoteProvider>> {
         match self {
-            Self::Yahoo => Some(Box::new(market_quotes::yahoo::Yahoo{})),
+            Self::Yahoo => Some(Box::new(market_quotes::yahoo::Yahoo {})),
             Self::GuruFocus => Some(Box::new(market_quotes::guru_focus::GuruFocus::new(token))),
-            Self::EodHistData => Some(Box::new(market_quotes::eod_historical_data::EODHistData::new(token))),
-            _ => None, 
+            Self::EodHistData => Some(Box::new(
+                market_quotes::eod_historical_data::EODHistData::new(token),
+            )),
+            Self::AlphaVantage => Some(Box::new(market_quotes::alpha_vantage::AlphaVantage::new(
+                token,
+            ))),
+            _ => None,
         }
     }
 }

@@ -81,7 +81,8 @@ impl QuoteHandler for PostgresDB {
             let id: i32 = row.get(0);
             let asset: i32 = row.get(2);
             let source: String = row.get(4);
-            let source = MarketDataSource::from_str(&source).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let source = MarketDataSource::from_str(&source)
+                .map_err(|e| DataError::NotFound(e.to_string()))?;
             let currency: String = row.get(5);
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
@@ -140,7 +141,7 @@ impl QuoteHandler for PostgresDB {
         let id = ticker.id.unwrap() as i32;
         self.conn
             .execute(
-                "UPDATE ticker SET name=$2, asset_id=$3, source=$4, priority=$5, currency=$6, factor=$7,
+                "UPDATE ticker SET name=$2, asset_id=$3, source=$4, priority=$5, currency=$6, factor=$7
                 WHERE id=$1",
                 &[
                     &id,

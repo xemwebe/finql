@@ -24,3 +24,4 @@ yahoo-finance = { version = "0.3", path = "../yahoo-finance-rs" }
 gurufocus_api = { version = "0.3.2", path = "../gurufocus_api" }
 rand = "0.7"
 eodhistoricaldata_api =  {version = "0.1", path = "../eodhistoricaldata_api"}
+alpha_vantage = "0.4"

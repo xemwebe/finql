@@ -85,8 +85,7 @@ impl QuoteHandler for SqliteDB {
         })
     }
 
-    fn get_all_ticker(
-        &mut self) -> Result<Vec<Ticker>, DataError> {
+    fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError> {
         let mut stmt = self
             .conn
             .prepare("SELECT id, name, asset_id, priority, source, currency, factor FROM ticker;")
@@ -106,8 +105,8 @@ impl QuoteHandler for SqliteDB {
         let mut all_ticker = Vec::new();
         for ticker in ticker_map {
             let (id, name, asset, priority, source, currency, factor) = ticker.unwrap();
-            let source =
-                MarketDataSource::from_str(&source).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let source = MarketDataSource::from_str(&source)
+                .map_err(|e| DataError::NotFound(e.to_string()))?;
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
             all_ticker.push(Ticker {
@@ -129,7 +128,9 @@ impl QuoteHandler for SqliteDB {
     ) -> Result<Vec<Ticker>, DataError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=?;")
+            .prepare(
+                "SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=?;",
+            )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let ticker_map = stmt
             .query_map(params![source.to_string()], |row| {

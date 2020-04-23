@@ -221,6 +221,7 @@ impl FixedIncome for Bond {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sqlite_handler::SqliteDB;
     use std::str::FromStr;
 
     #[test]
@@ -242,7 +243,7 @@ mod tests {
             "denomination": 1000
         }"#;
         let bond: Bond = serde_json::from_str(&data).unwrap();
-        let market = Market::new();
+        let market = Market::new(Box::new(SqliteDB::create(":memory:").unwrap()));
         let cash_flows = bond.rollout_cash_flows(1., &market).unwrap();
         assert_eq!(cash_flows.len(), 5);
         let curr = Currency::from_str("EUR").unwrap();
@@ -296,7 +297,7 @@ mod tests {
             "denomination": 1000
         }"#;
         let bond: Bond = serde_json::from_str(&data).unwrap();
-        let market = Market::new();
+        let market = Market::new(Box::new(SqliteDB::create(":memory:").unwrap()));
         let cash_flows = bond.rollout_cash_flows(1., &market).unwrap();
         assert_eq!(cash_flows.len(), 5);
         let curr = Currency::from_str("EUR").unwrap();

@@ -1,4 +1,5 @@
-use super::{MarketQuoteError, MarketQuoteProvider, unix_to_date_time};
+use super::{MarketQuoteError, MarketQuoteProvider};
+use crate::date_time_helper::unix_to_date_time;
 use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use yahoo_finance;
@@ -73,6 +74,7 @@ mod tests {
             currency: Currency::from_str("EUR").unwrap(),
             source: MarketDataSource::Yahoo,
             priority: 1,
+            factor: 1.0,
         };
         let quote = yahoo.fetch_latest_quote(&ticker).unwrap();
         assert!(quote.price != 0.0);
@@ -88,6 +90,7 @@ mod tests {
             currency: Currency::from_str("EUR").unwrap(),
             source: MarketDataSource::Yahoo,
             priority: 1,
+            factor: 1.0,
         };
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);

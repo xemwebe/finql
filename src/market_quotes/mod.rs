@@ -1,18 +1,27 @@
 use crate::data_handler::QuoteHandler;
 use crate::quote::{Quote, Ticker};
-use chrono::{DateTime, Datelike, NaiveDate, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use std::fmt;
-use std::time::{Duration, UNIX_EPOCH};
 
 #[derive(Debug)]
 pub enum MarketQuoteError {
     StoringFailed(String),
     FetchFailed(String),
+    ParseDateFailed(chrono::format::ParseError),
 }
 
 impl std::error::Error for MarketQuoteError {
     fn cause(&self) -> Option<&dyn std::error::Error> {
-        Some(self)
+        match self {
+            Self::ParseDateFailed(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+impl std::convert::From<chrono::format::ParseError> for MarketQuoteError {
+    fn from(error: chrono::format::ParseError) -> Self {
+        Self::ParseDateFailed(error)
     }
 }
 
@@ -21,6 +30,7 @@ impl fmt::Display for MarketQuoteError {
         match self {
             Self::StoringFailed(err) => write!(f, "storing quote in database failed: {}", err),
             Self::FetchFailed(err) => write!(f, "fetching quote(s) from provider failed: {}", err),
+            Self::ParseDateFailed(_) => write!(f, "parsing a quote date failed"),
         }
     }
 }
@@ -66,34 +76,10 @@ pub fn update_ticker_history(
     Ok(())
 }
 
+pub mod alpha_vantage;
 pub mod eod_historical_data;
 pub mod guru_focus;
 pub mod yahoo;
-
-fn unix_to_date_time(seconds: u64) -> DateTime<Utc> {
-    // Creates a new SystemTime from the specified number of whole seconds
-    let d = UNIX_EPOCH + Duration::from_secs(seconds);
-    // Create DateTime from SystemTime
-    DateTime::<Utc>::from(d)
-}
-
-// Create UTC time from NaiveDate string, assume UTC 6pm (close of business) time
-fn naive_date_string_to_time(date_string: &str) -> Result<DateTime<Utc>, MarketQuoteError> {
-    let date = NaiveDate::parse_from_str(date_string, "%Y-%m-%d")
-        .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
-    Ok(Utc
-        .ymd(date.year(), date.month(), date.day())
-        .and_hms_milli(18, 0, 0, 0))
-}
-
-// Create UTC time from NaiveDate string, assume UTC 6pm (close of business) time (English convention)
-fn naive_date_string_to_time_english(date_string: &str) -> Result<DateTime<Utc>, MarketQuoteError> {
-    let date = NaiveDate::parse_from_str(date_string, "%m-%d-%Y")
-        .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
-    Ok(Utc
-        .ymd(date.year(), date.month(), date.day())
-        .and_hms_milli(18, 0, 0, 0))
-}
 
 #[cfg(test)]
 mod tests {
@@ -164,6 +150,7 @@ mod tests {
             currency: Currency::from_str("EUR").unwrap(),
             source: MarketDataSource::Manual,
             priority: 1,
+            factor: 1.0,
         };
         let ticker_id = db.insert_ticker(&ticker).unwrap();
         ticker.id = Some(ticker_id);
@@ -192,26 +179,5 @@ mod tests {
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).unwrap();
         assert_eq!(quotes.len(), 31);
         assert_eq!(quotes[0].price, 1.23);
-    }
-
-    #[test]
-    fn test_unix_to_date_time() {
-        let date = unix_to_date_time(1587099600);
-        let date_string = date.format("%Y-%m-%d %H:%M:%S").to_string();
-        assert_eq!("2020-04-17 05:00:00", &date_string);
-    }
-
-    #[test]
-    fn test_naive_date_string_to_time_english() {
-        let date = naive_date_string_to_time_english("02-10-2020").unwrap();
-        let date_string = date.format("%Y-%m-%d %H:%M:%S").to_string();
-        assert_eq!("2020-02-10 18:00:00", &date_string);
-    }
-
-    #[test]
-    fn test_naive_date_string_to_time() {
-        let date = naive_date_string_to_time("2020-02-10").unwrap();
-        let date_string = date.format("%Y-%m-%d %H:%M:%S").to_string();
-        assert_eq!("2020-02-10 18:00:00", &date_string);
     }
 }

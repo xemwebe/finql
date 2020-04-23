@@ -3,6 +3,7 @@ use finql::bond::Bond;
 use finql::currency::Currency;
 use finql::fixed_income::{get_cash_flows_after, CashFlow, FixedIncome};
 use finql::market::Market;
+use finql::sqlite_handler::SqliteDB;
 use serde_json;
 use std::fs::File;
 use std::io::Read;
@@ -15,7 +16,7 @@ fn main() {
 
     let today = NaiveDate::from_ymd(2019, 12, 11);
     let bond1: Bond = serde_json::from_str(&data).unwrap();
-    let market = Market::new();
+    let market = Market::new(Box::new(SqliteDB::create(":memory:").unwrap()));
     let cfs1 = bond1.rollout_cash_flows(1., &market).unwrap();
     let cfs1 = get_cash_flows_after(&cfs1, today);
 

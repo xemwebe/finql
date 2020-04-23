@@ -4,10 +4,10 @@ use finql::asset::Asset;
 use finql::currency::Currency;
 use finql::fx_rates::{get_fx_rate, insert_fx_quote};
 use finql::helpers::make_time;
+use finql::market::Market;
 use finql::postgres_handler::PostgresDB;
 use finql::quote::{MarketDataSource, Quote, Ticker};
 use finql::sqlite_handler::SqliteDB;
-use finql::market::Market;
 use std::fs;
 use std::io::{stdout, Write};
 use std::str::FromStr;
@@ -19,7 +19,8 @@ fn log(s: &str) {
 
 fn quote_tests(market: &mut Market) {
     // We need some assets the quotess are related
-    let basf_id = market.db()
+    let basf_id = market
+        .db()
         .insert_asset(&Asset {
             id: None,
             name: "BASF AG".to_string(),
@@ -28,7 +29,8 @@ fn quote_tests(market: &mut Market) {
             note: None,
         })
         .unwrap();
-    let siemens_id = market.db()
+    let siemens_id = market
+        .db()
         .insert_asset(&Asset {
             id: None,
             name: "Siemens AG".to_string(),
@@ -37,7 +39,8 @@ fn quote_tests(market: &mut Market) {
             note: None,
         })
         .unwrap();
-    let bhp_id = market.db()
+    let bhp_id = market
+        .db()
         .insert_asset(&Asset {
             id: None,
             name: "BHP Inc.".to_string(),
@@ -62,6 +65,7 @@ fn quote_tests(market: &mut Market) {
         currency: eur,
         priority: 10,
         source: yahoo,
+        factor: 1.0,
     };
     let basf_id = market.db().insert_ticker(&basf).unwrap();
     // Get ticker back
@@ -74,6 +78,7 @@ fn quote_tests(market: &mut Market) {
         priority: 10,
         currency: eur,
         source: yahoo,
+        factor: 1.0,
     };
     let siemens_id = market.db().insert_ticker(&siemens).unwrap();
     // Insert another ticker, with other source
@@ -84,6 +89,7 @@ fn quote_tests(market: &mut Market) {
         priority: 10,
         currency: eur,
         source: MarketDataSource::Manual,
+        factor: 1.0,
     };
     let bhp_id = market.db().insert_ticker(&bhp).unwrap();
     println!("ok");
@@ -227,7 +233,10 @@ fn quote_tests(market: &mut Market) {
     }
 
     log("Check update of quotes...");
-    market.add_provider(yahoo.to_string(), yahoo.get_provider(String::new()).unwrap());
+    market.add_provider(
+        yahoo.to_string(),
+        yahoo.get_provider(String::new()).unwrap(),
+    );
     market.update_quotes().unwrap();
     println!("ok");
     println!("\nDone.");

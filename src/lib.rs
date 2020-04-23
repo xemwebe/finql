@@ -35,6 +35,7 @@ pub mod calendar;
 pub mod coupon_date;
 pub mod currency;
 pub mod data_handler;
+pub mod date_time_helper;
 pub mod day_adjust;
 pub mod day_count_conv;
 pub mod fixed_income;

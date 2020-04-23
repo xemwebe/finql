@@ -61,6 +61,7 @@ impl SqliteDB {
                 source TEXT NOT NULL,
                 priority INTEGER NOT NULL,
                 currency TEXT NOT NULL,
+                factor REAL NOT NULL DEFAULT 1.0,
                 FOREIGN KEY(asset_id) REFERENCES assets(id) 
             );",
             NO_PARAMS,

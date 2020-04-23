@@ -1,36 +1,35 @@
 use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::date_time_helper::{date_time_from_str_standard, unix_to_date_time};
+use crate::date_time_helper::date_time_from_str_standard;
 use crate::quote::{Quote, Ticker};
+use alpha_vantage as alpha;
 use chrono::{DateTime, Utc};
-use eodhistoricaldata_api as eod_api;
 
-pub struct EODHistData {
-    connector: eod_api::EodHistConnector,
+pub struct AlphaVantage {
+    connector: alpha::user::APIKey,
 }
 
-impl EODHistData {
-    pub fn new(token: String) -> EODHistData {
-        EODHistData {
-            connector: eod_api::EodHistConnector::new(token),
+impl AlphaVantage {
+    pub fn new(token: String) -> AlphaVantage {
+        AlphaVantage {
+            connector: alpha::set_api(&token),
         }
     }
 }
 
-impl MarketQuoteProvider for EODHistData {
+impl MarketQuoteProvider for AlphaVantage {
     /// Fetch latest quote
     fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
-        let eod_quote = self
+        let alpha_quote = self
             .connector
-            .get_latest_quote(&ticker.name)
+            .quote(&ticker.name)
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
-
-        let time = unix_to_date_time(eod_quote.timestamp as u64);
+        let time = date_time_from_str_standard(alpha_quote.last_trading(), 0)?;
         Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
-            price: eod_quote.close,
+            price: alpha_quote.price(),
             time,
-            volume: Some(eod_quote.volume as f64),
+            volume: Some(alpha_quote.volume()),
         })
     }
     /// Fetch historic quotes between start and end date
@@ -40,25 +39,28 @@ impl MarketQuoteProvider for EODHistData {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
-        let eod_quotes = self
+        let alpha_quotes = self
             .connector
-            .get_quote_history(
+            .stock_time(
+                alpha::util::StockFunction::Daily,
                 &ticker.name,
-                start.naive_utc().date(),
-                end.naive_utc().date(),
+                alpha::util::TimeSeriesInterval::None,
+                alpha::util::OutputSize::None,
             )
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
 
         let mut quotes = Vec::new();
-        for quote in &eod_quotes {
-            let time = date_time_from_str_standard(&quote.date, 18)?;
-            quotes.push(Quote {
-                id: None,
-                ticker: ticker.id.unwrap(),
-                price: quote.close,
-                time,
-                volume: Some(quote.volume as f64),
-            })
+        for quote in alpha_quotes.entry() {
+            let time = date_time_from_str_standard(quote.time(), 18)?;
+            if time >= start && time <= end {
+                quotes.push(Quote {
+                    id: None,
+                    ticker: ticker.id.unwrap(),
+                    price: quote.close(),
+                    time,
+                    volume: Some(quote.volume()),
+                })
+            }
         }
         Ok(quotes)
     }
@@ -73,38 +75,38 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    fn test_eod_fetch_quote() {
-        let token = "OeAFFmMliFG5orCUuwAKQ8l4WWFQ67YX".to_string();
-        let eod = EODHistData::new(token);
+    fn test_alpha_fetch_quote() {
+        let token = "demo".to_string();
+        let alpha = AlphaVantage::new(token);
         let ticker = Ticker {
             id: Some(1),
             asset: 1,
-            name: "AAPL".to_string(),
+            name: "IBM".to_string(),
             currency: Currency::from_str("USD").unwrap(),
-            source: MarketDataSource::EodHistData,
+            source: MarketDataSource::AlphaVantage,
             priority: 1,
             factor: 1.0,
         };
-        let quote = eod.fetch_latest_quote(&ticker).unwrap();
+        let quote = alpha.fetch_latest_quote(&ticker).unwrap();
         assert!(quote.price != 0.0);
     }
 
     #[test]
-    fn test_eod_fetch_history() {
-        let token = "OeAFFmMliFG5orCUuwAKQ8l4WWFQ67YX".to_string();
-        let eod = EODHistData::new(token.to_string());
+    fn test_alpha_fetch_history() {
+        let token = "demo".to_string();
+        let alpha = AlphaVantage::new(token);
         let ticker = Ticker {
             id: Some(1),
             asset: 1,
-            name: "AAPL".to_string(),
+            name: "IBM".to_string(),
             currency: Currency::from_str("USD").unwrap(),
-            source: MarketDataSource::EodHistData,
+            source: MarketDataSource::AlphaVantage,
             priority: 1,
             factor: 1.0,
         };
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        let quotes = eod.fetch_quote_history(&ticker, start, end).unwrap();
+        let quotes = alpha.fetch_quote_history(&ticker, start, end).unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);
     }

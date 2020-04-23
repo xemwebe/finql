@@ -69,6 +69,7 @@ impl PostgresDB {
                 source TEXT NOT NULL,
                 priority INTEGER NOT NULL,
                 currency TEXT NOT NULL,
+                factor FLOAT8 NOT NULL DEFAULT 1.0,
                 FOREIGN KEY(asset_id) REFERENCES assets(id) 
             );",
             &[],
