@@ -10,7 +10,7 @@ use crate::data_handler;
 use crate::market_quotes::MarketQuoteProvider;
 use crate::market_quotes;
 
-use chrono::{NaiveDate, Weekday};
+use chrono::{NaiveDate, Weekday, DateTime, Utc};
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
@@ -102,6 +102,17 @@ impl Market {
             if provider.is_some()  {
                 market_quotes::update_ticker(provider.unwrap().deref(), &ticker, self.db.deref_mut())?;
             }
+        }
+        Ok(())
+    }
+
+    /// Fetch latest quotes for all active ticker
+    pub fn update_quote_history(&mut self, ticker_id: usize, start: DateTime<Utc>, end: DateTime<Utc>) -> Result<(), MarketError> {
+        let ticker = self.db.get_ticker_by_id(ticker_id)?;
+        let source = ticker.source;
+        let provider = self.provider.get(&source.to_string());
+        if provider.is_some() {
+            market_quotes::update_ticker_history(provider.unwrap().deref(), &ticker, self.db.deref_mut(), start, end)?;
         }
         Ok(())
     }

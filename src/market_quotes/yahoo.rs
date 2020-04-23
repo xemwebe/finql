@@ -1,4 +1,4 @@
-use super::{MarketQuoteError, MarketQuoteProvider};
+use super::{MarketQuoteError, MarketQuoteProvider, unix_to_date_time};
 use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use yahoo_finance;
@@ -14,12 +14,17 @@ impl MarketQuoteProvider for Yahoo {
         let bar = data.last().ok_or(MarketQuoteError::FetchFailed(
             "received empty response from yahoo".to_string(),
         ))?;
+        let volume = match bar.volume {
+            Some(vol) => Some(vol as f64),
+            None => None,
+        };
+        let time = unix_to_date_time(bar.timestamp);
         Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
             price: bar.close,
-            time: bar.timestamp,
-            volume: Some(bar.volume as f64),
+            time,
+            volume,
         })
     }
     /// Fetch historic quotes between start and end date
@@ -33,12 +38,17 @@ impl MarketQuoteProvider for Yahoo {
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
         let mut quotes = Vec::new();
         for bar in &data {
+            let volume = match bar.volume {
+                Some(vol) => Some(vol as f64),
+                None => None,
+            };
+            let time = unix_to_date_time(bar.timestamp);
             quotes.push(Quote {
                 id: None,
                 ticker: ticker.id.unwrap(),
                 price: bar.close,
-                time: bar.timestamp,
-                volume: Some(bar.volume as f64),
+                time,
+                volume,
             })
         }
         Ok(quotes)

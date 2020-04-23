@@ -43,7 +43,8 @@ pub fn update_ticker(
     ticker: &Ticker,
     db: &mut dyn QuoteHandler,
 ) -> Result<(), MarketQuoteError> {
-    let quote = provider.fetch_latest_quote(ticker)?;
+    let mut quote = provider.fetch_latest_quote(ticker)?;
+    quote.price *= ticker.factor;
     db.insert_quote(&quote)
         .map_err(|e| MarketQuoteError::StoringFailed(e.to_string()))?;
     Ok(())
@@ -56,8 +57,9 @@ pub fn update_ticker_history(
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 ) -> Result<(), MarketQuoteError> {
-    let quotes = provider.fetch_quote_history(ticker, start, end)?;
-    for quote in quotes {
+    let mut quotes = provider.fetch_quote_history(ticker, start, end)?;
+    for mut quote in &mut quotes {
+        quote.price *= ticker.factor;
         db.insert_quote(&quote)
             .map_err(|e| MarketQuoteError::StoringFailed(e.to_string()))?;
     }

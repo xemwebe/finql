@@ -13,14 +13,15 @@ impl QuoteHandler for PostgresDB {
         let row = self
             .conn
             .query_one(
-                "INSERT INTO ticker (name, asset_id, source, priority, currency) 
-                VALUES ($1, $2, $3, $4, $5) RETURNING id",
+                "INSERT INTO ticker (name, asset_id, source, priority, currency, factor) 
+                VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
                 &[
                     &ticker.name,
                     &(ticker.asset as i32),
                     &(ticker.source.to_string()),
                     &ticker.priority,
                     &(ticker.currency.to_string()),
+                    &ticker.factor,
                 ],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
@@ -45,7 +46,7 @@ impl QuoteHandler for PostgresDB {
         let row = self
             .conn
             .query_one(
-                "SELECT name, asset_id, source, priority, currency FROM ticker WHERE id=$1;",
+                "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=$1;",
                 &[&(id as i32)],
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
@@ -64,6 +65,7 @@ impl QuoteHandler for PostgresDB {
             source,
             priority: row.get(3),
             currency,
+            factor: row.get(5),
         })
     }
     fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError> {
@@ -71,7 +73,7 @@ impl QuoteHandler for PostgresDB {
         for row in self
             .conn
             .query(
-                "SELECT id, name, asset_id, priority, source, currency FROM ticker",
+                "SELECT id, name, asset_id, priority, source, currency, factor FROM ticker",
                 &[],
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?
@@ -83,6 +85,7 @@ impl QuoteHandler for PostgresDB {
             let currency: String = row.get(5);
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let factor: f64 = row.get(6);
             all_ticker.push(Ticker {
                 id: Some(id as usize),
                 name: row.get(1),
@@ -90,6 +93,7 @@ impl QuoteHandler for PostgresDB {
                 source,
                 priority: row.get(3),
                 currency,
+                factor,
             });
         }
         Ok(all_ticker)
@@ -103,7 +107,7 @@ impl QuoteHandler for PostgresDB {
         for row in self
             .conn
             .query(
-                "SELECT id, name, asset_id, priority, currency FROM ticker WHERE source=$1;",
+                "SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=$1;",
                 &[&(source.to_string())],
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?
@@ -113,6 +117,7 @@ impl QuoteHandler for PostgresDB {
             let currency: String = row.get(4);
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let factor: f64 = row.get(5);
             all_ticker.push(Ticker {
                 id: Some(id as usize),
                 name: row.get(1),
@@ -120,6 +125,7 @@ impl QuoteHandler for PostgresDB {
                 source,
                 priority: row.get(3),
                 currency,
+                factor,
             });
         }
         Ok(all_ticker)
@@ -134,7 +140,7 @@ impl QuoteHandler for PostgresDB {
         let id = ticker.id.unwrap() as i32;
         self.conn
             .execute(
-                "UPDATE ticker SET name=$2, asset_id=$3, source=$4, priority=$5, currency=$6
+                "UPDATE ticker SET name=$2, asset_id=$3, source=$4, priority=$5, currency=$6, factor=$7,
                 WHERE id=$1",
                 &[
                     &id,
@@ -143,6 +149,7 @@ impl QuoteHandler for PostgresDB {
                     &ticker.source.to_string(),
                     &ticker.priority,
                     &ticker.currency.to_string(),
+                    &ticker.factor,
                 ],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;

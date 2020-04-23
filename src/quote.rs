@@ -69,6 +69,7 @@ pub struct Ticker {
     pub currency: Currency,
     pub source: MarketDataSource,
     pub priority: i32,
+    pub factor: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

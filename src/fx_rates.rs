@@ -51,6 +51,7 @@ pub fn insert_fx_quote(
             source: market_data_source,
             priority: 10,
             currency: base,
+            factor: 1.0,
         })
         .unwrap();
     let _ = quotes.insert_quote(&Quote {
@@ -79,6 +80,7 @@ pub fn insert_fx_quote(
             source: market_data_source,
             priority: 10,
             currency: foreign,
+            factor: 1.0,
         })
         .unwrap();
     let _ = quotes.insert_quote(&Quote {

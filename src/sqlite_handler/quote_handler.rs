@@ -14,13 +14,14 @@ impl QuoteHandler for SqliteDB {
     fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
         self.conn
             .execute(
-                "INSERT INTO ticker (name, asset_id, source, priority, currency) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO ticker (name, asset_id, source, priority, currency, factor) VALUES (?, ?, ?, ?, ?, ?)",
                 params![
                     ticker.name,
                     ticker.asset as i64,
                     ticker.source.to_string(),
                     ticker.priority,
-                    ticker.currency.to_string()
+                    ticker.currency.to_string(),
+                    ticker.factor,
                 ],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
@@ -53,10 +54,10 @@ impl QuoteHandler for SqliteDB {
     }
 
     fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
-        let (name, asset, source, priority, currency) = self
+        let (name, asset, source, priority, currency, factor) = self
             .conn
             .query_row(
-                "SELECT name, asset_id, source, priority, currency FROM ticker WHERE id=?;",
+                "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=?;",
                 params![id as i64],
                 |row| {
                     let name: String = row.get(0)?;
@@ -64,7 +65,8 @@ impl QuoteHandler for SqliteDB {
                     let source: String = row.get(2)?;
                     let priority: i32 = row.get(3)?;
                     let currency: String = row.get(4)?;
-                    Ok((name, asset, source, priority, currency))
+                    let factor: f64 = row.get(5)?;
+                    Ok((name, asset, source, priority, currency, factor))
                 },
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
@@ -79,6 +81,7 @@ impl QuoteHandler for SqliteDB {
             source,
             priority,
             currency,
+            factor,
         })
     }
 
@@ -86,7 +89,7 @@ impl QuoteHandler for SqliteDB {
         &mut self) -> Result<Vec<Ticker>, DataError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, name, asset_id, priority, source, currency FROM ticker;")
+            .prepare("SELECT id, name, asset_id, priority, source, currency, factor FROM ticker;")
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let ticker_map = stmt
             .query_map(NO_PARAMS, |row| {
@@ -96,12 +99,13 @@ impl QuoteHandler for SqliteDB {
                 let priority: i32 = row.get(3)?;
                 let source: String = row.get(4)?;
                 let currency: String = row.get(5)?;
-                Ok((id, name, asset, priority, source, currency))
+                let factor: f64 = row.get(6)?;
+                Ok((id, name, asset, priority, source, currency, factor))
             })
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let mut all_ticker = Vec::new();
         for ticker in ticker_map {
-            let (id, name, asset, priority, source, currency) = ticker.unwrap();
+            let (id, name, asset, priority, source, currency, factor) = ticker.unwrap();
             let source =
                 MarketDataSource::from_str(&source).map_err(|e| DataError::NotFound(e.to_string()))?;
             let currency =
@@ -113,6 +117,7 @@ impl QuoteHandler for SqliteDB {
                 source,
                 priority,
                 currency,
+                factor,
             });
         }
         Ok(all_ticker)
@@ -124,7 +129,7 @@ impl QuoteHandler for SqliteDB {
     ) -> Result<Vec<Ticker>, DataError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, name, asset_id, priority, currency FROM ticker WHERE source=?;")
+            .prepare("SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=?;")
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let ticker_map = stmt
             .query_map(params![source.to_string()], |row| {
@@ -133,12 +138,13 @@ impl QuoteHandler for SqliteDB {
                 let asset: i64 = row.get(2)?;
                 let priority: i32 = row.get(3)?;
                 let currency: String = row.get(4)?;
-                Ok((id, name, asset, priority, currency))
+                let factor: f64 = row.get(5)?;
+                Ok((id, name, asset, priority, currency, factor))
             })
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let mut all_ticker = Vec::new();
         for ticker in ticker_map {
-            let (id, name, asset, priority, currency) = ticker.unwrap();
+            let (id, name, asset, priority, currency, factor) = ticker.unwrap();
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
             all_ticker.push(Ticker {
@@ -148,6 +154,7 @@ impl QuoteHandler for SqliteDB {
                 source,
                 priority,
                 currency,
+                factor,
             });
         }
         Ok(all_ticker)
@@ -161,7 +168,7 @@ impl QuoteHandler for SqliteDB {
         let id = ticker.id.unwrap() as i64;
         self.conn
             .execute(
-                "UPDATE ticker SET name=?2, asset_id=?3, source=?4, priority=?5, currency=?6
+                "UPDATE ticker SET name=?2, asset_id=?3, source=?4, priority=?5, currency=?6, factor=?7
                 WHERE id=?1",
                 params![
                     id,
@@ -169,7 +176,8 @@ impl QuoteHandler for SqliteDB {
                     ticker.asset as i64,
                     ticker.source.to_string(),
                     ticker.priority,
-                    ticker.currency.to_string()
+                    ticker.currency.to_string(),
+                    ticker.factor,
                 ],
             )
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
