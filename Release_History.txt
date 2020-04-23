@@ -1,3 +1,11 @@
+Version 0.7.2
+  * Support for alpha vantage as additional market data provider
+  * `Ticker` has been extend by a `factor` for scaling quotes (e.g. 
+    scale quotes in British pence to British pounds)
+  * Utility functions for converting various date formats into DateTime<Utc> has
+    been moved to a separate crates
+  * Updated unit tests and examples.
+  
 Version 0.7.1
   * `Market` holds now a market quote data base (implementing trait QuoteHandler)
   * `Market` holds now list of support market data quote providers
