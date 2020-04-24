@@ -5,6 +5,8 @@ Version 0.7.2
   * Utility functions for converting various date formats into DateTime<Utc> has
     been moved to a separate crates
   * Updated unit tests and examples.
+  * Replacement dependency on `yahoo-finance` by `yahoo_finance_api`, since the 
+    latter does not panic.
   
 Version 0.7.1
   * `Market` holds now a market quote data base (implementing trait QuoteHandler)
