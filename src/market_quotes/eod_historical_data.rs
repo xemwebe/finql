@@ -63,7 +63,7 @@ impl MarketQuoteProvider for EODHistData {
                     price,
                     time,
                     volume,
-                })    
+                })
             }
         }
         Ok(quotes)

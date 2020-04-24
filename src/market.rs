@@ -96,20 +96,26 @@ impl Market {
     }
 
     /// Fetch latest quotes for all active ticker
-    pub fn update_quotes(&mut self) -> Result<(), MarketError> {
+    /// Returns a list of ticker for which the update failed.
+    pub fn update_quotes(&mut self) -> Result<Vec<usize>, MarketError> {
         let tickers = self.db.deref_mut().get_all_ticker()?;
+        let mut failed_ticker = Vec::new();
         for ticker in tickers {
             let source = ticker.source;
             let provider = self.provider.get(&source.to_string());
             if provider.is_some() {
-                market_quotes::update_ticker(
+                if market_quotes::update_ticker(
                     provider.unwrap().deref(),
                     &ticker,
                     self.db.deref_mut(),
-                )?;
+                )
+                .is_err()
+                {
+                    failed_ticker.push(ticker.id.unwrap());
+                }
             }
         }
-        Ok(())
+        Ok(failed_ticker)
     }
 
     /// Fetch latest quotes for all active ticker

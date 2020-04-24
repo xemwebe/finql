@@ -23,12 +23,12 @@
 //! defining data handler traits for various data categories, with concrete implementations supporting
 //! storage in memory or in a databases (supporting `sqlite3` and `postgreSQL`).
 //!
-//! Market data quotes can be fetched automatically from various vendors and stored into a database. 
-//! Fetching the (realtime) quote or a quote history is implemented for the vendors 
+//! Market data quotes can be fetched automatically from various vendors and stored into a database.
+//! Fetching the (realtime) quote or a quote history is implemented for the vendors
 //! [yahoo! finance](https://finance.yahoo.com/),
-//! [alpha vantage](https://www.alphavantage.co/), 
-//! [gurufocus](https://www.gurufocus.com/new_index/) and 
-//! [eodhistoricaldata](https://eodhistoricaldata.com/). Please note that all except yahoo! finance 
+//! [alpha vantage](https://www.alphavantage.co/),
+//! [gurufocus](https://www.gurufocus.com/new_index/) and
+//! [eodhistoricaldata](https://eodhistoricaldata.com/). Please note that all except yahoo! finance
 //! require a user token that is only provided after registration with the service. For gurufocus,
 //! this required a paid license.
 //!

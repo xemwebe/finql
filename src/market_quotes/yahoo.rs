@@ -2,30 +2,26 @@ use super::{MarketQuoteError, MarketQuoteProvider};
 use crate::date_time_helper::unix_to_date_time;
 use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
-use yahoo_finance;
+use yahoo_finance_api as yahoo;
 
 pub struct Yahoo {}
 
 impl MarketQuoteProvider for Yahoo {
     /// Fetch latest quote
     fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
-        let data =
-            yahoo_finance::history::retrieve_interval(&ticker.name, yahoo_finance::Interval::_1d)
-                .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
-        let bar = data.last().ok_or(MarketQuoteError::FetchFailed(
-            "received empty response from yahoo".to_string(),
-        ))?;
-        let volume = match bar.volume {
-            Some(vol) => Some(vol as f64),
-            None => None,
-        };
-        let time = unix_to_date_time(bar.timestamp);
+        let yahoo = yahoo::YahooConnector::new();
+        let response = yahoo
+            .get_latest_quotes(&ticker.name, "1m")
+            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+        let quote = response
+            .last_quote()
+            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
         Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
-            price: bar.close,
-            time,
-            volume,
+            price: quote.close,
+            time: unix_to_date_time(quote.timestamp),
+            volume: Some(quote.volume as f64),
         })
     }
     /// Fetch historic quotes between start and end date
@@ -35,19 +31,21 @@ impl MarketQuoteProvider for Yahoo {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
-        let data = yahoo_finance::history::retrieve_range(&ticker.name, start, Some(end))
+        let yahoo = yahoo::YahooConnector::new();
+        let response = yahoo
+            .get_quote_history(&ticker.name, start, end)
+            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+        let yahoo_quotes = response
+            .quotes()
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
         let mut quotes = Vec::new();
-        for bar in &data {
-            let volume = match bar.volume {
-                Some(vol) => Some(vol as f64),
-                None => None,
-            };
-            let time = unix_to_date_time(bar.timestamp);
+        for quote in &yahoo_quotes {
+            let volume = Some(quote.volume as f64);
+            let time = unix_to_date_time(quote.timestamp);
             quotes.push(Quote {
                 id: None,
                 ticker: ticker.id.unwrap(),
-                price: bar.close,
+                price: quote.close,
                 time,
                 volume,
             })
