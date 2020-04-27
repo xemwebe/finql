@@ -117,9 +117,12 @@ impl Comdirect {
                 let date_time_str = record
                     .get(0)
                     .ok_or(MarketQuoteError::FetchFailed("empty field".to_string()))?;
-                let date = date_time_from_str(date_time_str, "%d.%m.%Y", 18)?;
+                let date = date_time_from_str(date_time_str, "%d.%m.%Y", 18);
+                if date.is_err() {
+                    continue;
+                }
                 quotes.push(ComdirectQuote {
-                    date,
+                    date: date.unwrap(),
                     high: Self::num_opt(record.get(1)),
                     low: Self::num_opt(record.get(2)),
                     close: close.unwrap(),
