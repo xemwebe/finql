@@ -25,3 +25,6 @@ gurufocus_api = { version = "0.3.2", path = "../gurufocus_api" }
 rand = "0.7"
 eodhistoricaldata_api =  {version = "0.2", path = "../eodhistoricaldata_api"}
 alpha_vantage = "0.4"
+reqwest = "0.9"
+scraper = "0.11"
+csv = "1.1"

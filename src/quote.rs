@@ -15,6 +15,7 @@ pub enum MarketDataSource {
     GuruFocus,
     EodHistData,
     AlphaVantage,
+    Comdirect,
 }
 
 #[derive(Debug, Clone)]
@@ -36,6 +37,7 @@ impl FromStr for MarketDataSource {
             "gurufocus" => Ok(Self::GuruFocus),
             "eodhistdata" => Ok(Self::EodHistData),
             "alpha_vantage" => Ok(Self::AlphaVantage),
+            "comdirect" => Ok(Self::Comdirect),
             _ => Err(ParseMarketDataSourceError {}),
         }
     }
@@ -49,6 +51,7 @@ impl fmt::Display for MarketDataSource {
             Self::GuruFocus => write!(f, "gurufocus"),
             Self::EodHistData => write!(f, "eodhistdata"),
             Self::AlphaVantage => write!(f, "alpha_vantage"),
+            Self::Comdirect => write!(f, "comdirect"),
         }
     }
 }
@@ -67,6 +70,7 @@ impl MarketDataSource {
             Self::AlphaVantage => Some(Box::new(market_quotes::alpha_vantage::AlphaVantage::new(
                 token,
             ))),
+            Self::Comdirect => Some(Box::new(market_quotes::comdirect::Comdirect::new())),
             _ => None,
         }
     }

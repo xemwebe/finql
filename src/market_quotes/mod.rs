@@ -77,6 +77,7 @@ pub fn update_ticker_history(
 }
 
 pub mod alpha_vantage;
+pub mod comdirect;
 pub mod eod_historical_data;
 pub mod guru_focus;
 pub mod yahoo;
