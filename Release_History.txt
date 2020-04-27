@@ -1,3 +1,6 @@
+Version 0.7.3
+  * New market data source: comdirect (via scraping hte web pages)
+  
 Version 0.7.2
   * Support for alpha vantage as additional market data provider
   * `Ticker` has been extend by a `factor` for scaling quotes (e.g. 
