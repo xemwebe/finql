@@ -102,12 +102,19 @@ impl Comdirect {
             .delimiter(b';')
             .flexible(true)
             .from_reader(text.as_bytes());
-        let mut line = 0;
+        let mut skip_line = true;
         let mut quotes = Vec::new();
         for record in reader.records() {
             if let Ok(record) = record {
-                line += 1;
-                if line < 3 || record.len() != 6 {
+                if skip_line {
+                    if record.len() >= 1 {
+                        if let Some(first_field) = record.get(0) {
+                            // start with next line
+                            if first_field == "Datum" {
+                                skip_line = false;
+                            }
+                        }
+                    }
                     continue;
                 }
                 let close = Self::num_opt(record.get(3));
@@ -226,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_parse_codi_csv() {
-        let input = r#""Some skipped asset info""
+        let input = r#""Some skipped asset info"
 
 "Datum";"Er�ffnung";"Hoch";"Tief";"Schluss";"Volumen"
 "24.04.2020";"48,204";"48,80";"48,13";"48,80";"341,00"
@@ -236,6 +243,7 @@ mod tests {
 "20.04.2020";"49,124";"49,152";"48,219";"48,219";"10.023,00""#;
 
         let quotes = Comdirect::parse_csv(input).unwrap();
+        println!("{:#?}", quotes);
         assert_eq!(quotes.len(), 5);
         assert_eq!(quotes[4].close, 48.219);
     }
