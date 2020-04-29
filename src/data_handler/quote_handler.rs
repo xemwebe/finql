@@ -25,11 +25,20 @@ pub trait QuoteHandler: AssetHandler {
     fn update_ticker(&mut self, ticker: &Ticker) -> Result<(), DataError>;
     fn delete_ticker(&mut self, id: usize) -> Result<(), DataError>;
 
-    // insert, get, update and delete for market data sources
+    /// Insert, get, update and delete for market data sources
     fn insert_quote(&mut self, quote: &Quote) -> Result<usize, DataError>;
+
+    /// Get the last quote in database for a specific asset name on or before the given time
     fn get_last_quote_before(
         &mut self,
         asset_name: &str,
+        time: DateTime<Utc>,
+    ) -> Result<(Quote, Currency), DataError>;
+
+    /// Get the last quote in database for a specific asset id on or before the given time
+    fn get_last_quote_before_by_id(
+        &mut self,
+        asset_id: usize,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError>;
 
