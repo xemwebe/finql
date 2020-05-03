@@ -8,6 +8,7 @@ use finql::market::Market;
 use finql::postgres_handler::PostgresDB;
 use finql::quote::{MarketDataSource, Quote, Ticker};
 use finql::sqlite_handler::SqliteDB;
+use rusqlite::Connection;
 use std::fs;
 use std::io::{stdout, Write};
 use std::str::FromStr;
@@ -256,7 +257,10 @@ fn main() {
     );
     match args[1].as_str() {
         "memory" => {
-            let mut market = Market::new(Box::new(SqliteDB::create(":memory:").unwrap()));
+            let mut conn = Connection::open(":memory:").unwrap();
+            let mut db = SqliteDB{ conn: &mut conn };
+            db.init().unwrap();
+            let mut market = Market::new(&mut db);
             quote_tests(&mut market);
         }
         "sqlite" => {
@@ -268,7 +272,10 @@ fn main() {
                     eprintln!("Apparently there exists already a file with this path.");
                     eprintln!("Please provide another path or remove the file, since a new database will be created.");
                 } else {
-                    let mut market = Market::new(Box::new(SqliteDB::create(path).unwrap()));
+                    let mut conn = Connection::open(path).unwrap();
+                    let mut db = SqliteDB{ conn: &mut conn };
+                    db.init().unwrap();
+                    let mut market = Market::new(&mut db);            
                     quote_tests(&mut market);
                     println!("You may have a look at the database for further inspection.");
                 }
@@ -282,9 +289,10 @@ fn main() {
                 eprintln!("'host=127.0.0.1 user=<username> password=<password> dbname=<database name> sslmode=disable'");
             } else {
                 let connect_str = &args[2];
-                let mut db = PostgresDB::connect(connect_str).unwrap();
+                let mut conn = postgres::Client::connect(connect_str, postgres::NoTls).unwrap();
+                let mut db = PostgresDB{ conn: &mut conn };
                 db.clean().unwrap();
-                let mut market = Market::new(Box::new(db));
+                let mut market = Market::new(&mut db);
                 quote_tests(&mut market);
                 println!("You may have a look at the database for further inspection.");
             }

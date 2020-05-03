@@ -1,5 +1,5 @@
 ///! Implemenation of PostgreSQL data handler
-use postgres::{Client, NoTls};
+use postgres::Client;
 use tokio_postgres::error::Error;
 mod asset_handler;
 mod quote_handler;
@@ -8,17 +8,12 @@ mod transaction_handler;
 pub use transaction_handler::RawTransaction;
 
 /// Struct to handle connections to sqlite3 databases
-pub struct PostgresDB {
+pub struct PostgresDB<'a> {
     /// conn is made public to allow extending this struct outside of the library
-    pub conn: Client,
+    pub conn: &'a mut Client,
 }
 
-impl PostgresDB {
-    pub fn connect(conn_str: &str) -> Result<PostgresDB, Error> {
-        let conn = Client::connect(conn_str, NoTls)?;
-        Ok(PostgresDB { conn })
-    }
-
+impl PostgresDB<'_> {
     /// Clean database by dropping all tables and than run init
     pub fn clean(&mut self) -> Result<(), Error> {
         self.conn

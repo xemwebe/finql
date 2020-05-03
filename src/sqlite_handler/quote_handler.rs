@@ -9,7 +9,7 @@ use rusqlite::{params, Row, NO_PARAMS};
 use std::str::FromStr;
 
 /// Sqlite implementation of quote handler
-impl QuoteHandler for SqliteDB {
+impl QuoteHandler for SqliteDB<'_> {
     // insert, get, update and delete for market data sources
     fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
         self.conn

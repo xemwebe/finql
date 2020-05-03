@@ -101,6 +101,7 @@ mod tests {
     use chrono::offset::TimeZone;
     use chrono::Utc;
     use std::str::FromStr;
+    use rusqlite::Connection;
 
     fn prepare_db(db: &mut dyn QuoteHandler) {
         let time = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);
@@ -111,7 +112,9 @@ mod tests {
 
     #[test]
     fn test_get_fx_rate() {
-        let mut db = SqliteDB::create(":memory:").unwrap();
+        let mut conn = Connection::open(":memory:").unwrap();
+        let mut db = SqliteDB{ conn: &mut conn };
+        db.init().unwrap();
         prepare_db(&mut db);
         let tol = 1.0e-8;
         let eur = Currency::from_str("EUR").unwrap();

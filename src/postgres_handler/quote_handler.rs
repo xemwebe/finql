@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use std::str::FromStr;
 
 /// Sqlite implementation of quote handler
-impl QuoteHandler for PostgresDB {
+impl QuoteHandler for PostgresDB<'_> {
     // insert, get, update and delete for market data sources
     fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
         let row = self

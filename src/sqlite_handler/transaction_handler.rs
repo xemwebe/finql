@@ -7,7 +7,7 @@ use super::raw_transaction::RawTransaction;
 use super::SqliteDB;
 
 /// Handler for globally available data
-impl TransactionHandler for SqliteDB {
+impl TransactionHandler for SqliteDB<'_> {
     // insert, get, update and delete for transactions
     fn insert_transaction(&mut self, transaction: &Transaction) -> Result<usize, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);

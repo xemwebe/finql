@@ -3,7 +3,7 @@ use crate::asset::Asset;
 use crate::data_handler::{AssetHandler, DataError};
 
 /// Handler for globally available data
-impl AssetHandler for PostgresDB {
+impl AssetHandler for PostgresDB<'_> {
     fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {
         let row = self
             .conn

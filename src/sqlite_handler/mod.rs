@@ -1,5 +1,5 @@
 ///! Implemenation of sqlite3 data handler
-use rusqlite::{Connection, OpenFlags, NO_PARAMS};
+use rusqlite::{Connection,NO_PARAMS};
 
 mod asset_handler;
 mod quote_handler;
@@ -7,26 +7,23 @@ mod raw_transaction;
 mod transaction_handler;
 
 /// Struct to handle connections to sqlite3 databases
-pub struct SqliteDB {
+pub struct SqliteDB<'a> {
     /// conn is made public to allow extending this struct outside of the library
-    pub conn: Connection,
+    pub conn: &'a Connection,
 }
 
-impl SqliteDB {
-    pub fn connect(file_path: &str) -> rusqlite::Result<SqliteDB> {
-        let conn = Connection::open_with_flags(file_path, OpenFlags::SQLITE_OPEN_READ_WRITE)?;
-        Ok(SqliteDB { conn })
-    }
+impl SqliteDB<'_> {
+//        let conn = Connection::open_with_flags(file_path, OpenFlags::SQLITE_OPEN_READ_WRITE)?;
 
-    pub fn create(file_path: &str) -> rusqlite::Result<SqliteDB> {
-        let conn = Connection::open(file_path)?;
-        let db = SqliteDB { conn };
-        db.init()?;
-        Ok(db)
-    }
+    // pub fn create(file_path: &str) -> rusqlite::Result<SqliteDB> {
+    //     let conn = Connection::open(file_path)?;
+    //     let db = SqliteDB { conn };
+    //     db.init()?;
+    //     Ok(db)
+    // }
 
     /// Initialize new database by creating table, fill
-    fn init(&self) -> rusqlite::Result<()> {
+    pub fn init(&self) -> rusqlite::Result<()> {
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS assets (
                 id INTEGER PRIMARY KEY,

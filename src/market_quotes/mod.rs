@@ -94,6 +94,7 @@ mod tests {
     use chrono::{Duration, Utc};
     use rand::Rng;
     use std::str::FromStr;
+    use rusqlite::Connection;
 
     struct DummyProvider {}
 
@@ -160,7 +161,9 @@ mod tests {
 
     #[test]
     fn test_fetch_latest_quote() {
-        let mut db = SqliteDB::create(":memory:").unwrap();
+        let mut conn = Connection::open(":memory:").unwrap();
+        let mut db = SqliteDB{ conn: &mut conn };
+        db.init().unwrap();
         let ticker = prepare_db(&mut db);
         let provider = DummyProvider {};
         update_ticker(&provider, &ticker, &mut db).unwrap();
@@ -171,7 +174,9 @@ mod tests {
 
     #[test]
     fn test_fetch_quote_history() {
-        let mut db = SqliteDB::create(":memory:").unwrap();
+        let mut conn = Connection::open(":memory:").unwrap();
+        let mut db = SqliteDB{ conn: &mut conn };
+        db.init().unwrap();
         let ticker = prepare_db(&mut db);
         let provider = DummyProvider {};
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);

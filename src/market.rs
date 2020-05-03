@@ -57,17 +57,17 @@ impl From<data_handler::DataError> for MarketError {
     }
 }
 /// Container or adaptor to market data
-pub struct Market {
+pub struct Market<'a> {
     calendars: BTreeMap<String, Calendar>,
     /// collection of market data quotes provider
     provider: BTreeMap<String, Box<dyn MarketQuoteProvider>>,
     /// Quotes database
-    db: Box<dyn QuoteHandler>,
+    db: &'a mut dyn QuoteHandler,
 }
 
-impl Market {
+impl<'a> Market<'a> {
     /// For now, market data statically generated and stored in memory
-    pub fn new(db: Box<dyn QuoteHandler>) -> Market {
+    pub fn new(db: &'a mut dyn QuoteHandler) -> Market {
         Market {
             // Set of default calendars
             calendars: generate_calendars(),

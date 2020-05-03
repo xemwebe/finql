@@ -123,7 +123,7 @@ impl RawTransaction {
 }
 
 /// Handler for globally available data
-impl TransactionHandler for PostgresDB {
+impl TransactionHandler for PostgresDB<'_> {
     // insert, get, update and delete for transactions
     fn insert_transaction(&mut self, transaction: &Transaction) -> Result<usize, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);

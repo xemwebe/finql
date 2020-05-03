@@ -316,6 +316,7 @@ mod tests {
     use crate::sqlite_handler::SqliteDB;
     use chrono::{TimeZone, Utc};
     use std::str::FromStr;
+    use rusqlite::Connection;
 
     #[test]
     fn yield_to_maturity() {
@@ -338,7 +339,9 @@ mod tests {
 
         let fx_rate = 81.2345;
         // temporary storage for fx rates
-        let mut fx_db = SqliteDB::create(":memory:").unwrap();
+        let mut conn = Connection::open(":memory:").unwrap();
+        let mut fx_db = SqliteDB{ conn: &mut conn };
+        fx_db.init().unwrap();
         insert_fx_quote(fx_rate, eur, jpy, time, &mut fx_db).unwrap();
         fx_db.set_rounding_digits(jpy, 0).unwrap();
 

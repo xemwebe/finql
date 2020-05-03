@@ -4,7 +4,7 @@ use crate::asset::Asset;
 use crate::data_handler::{AssetHandler, DataError};
 use rusqlite::{params, Row, NO_PARAMS};
 
-impl AssetHandler for SqliteDB {
+impl AssetHandler for SqliteDB<'_> {
     fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {
         self.conn
             .execute(
