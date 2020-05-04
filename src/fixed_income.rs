@@ -266,6 +266,7 @@ struct FlatRateDiscounter<'a> {
 
 impl<'a> ArgminOp for FlatRateDiscounter<'a> {
     // one dimensional problem, no vector needed
+    type Float = f64;
     type Param = f64;
     type Output = f64;
     type Hessian = ();

@@ -12,15 +12,7 @@ pub struct SqliteDB<'a> {
     pub conn: &'a Connection,
 }
 
-impl SqliteDB<'_> {
-//        let conn = Connection::open_with_flags(file_path, OpenFlags::SQLITE_OPEN_READ_WRITE)?;
-
-    // pub fn create(file_path: &str) -> rusqlite::Result<SqliteDB> {
-    //     let conn = Connection::open(file_path)?;
-    //     let db = SqliteDB { conn };
-    //     db.init()?;
-    //     Ok(db)
-    // }
+impl<'a> SqliteDB<'_> {
 
     /// Initialize new database by creating table, fill
     pub fn init(&self) -> rusqlite::Result<()> {
