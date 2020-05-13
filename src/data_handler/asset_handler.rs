@@ -1,5 +1,6 @@
 use super::DataError;
 use crate::asset::Asset;
+use crate::currency::Currency;
 
 /// Handler for globally available data of transactions and related data
 pub trait AssetHandler {
@@ -37,4 +38,6 @@ pub trait AssetHandler {
     fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError>;
     fn update_asset(&mut self, asset: &Asset) -> Result<(), DataError>;
     fn delete_asset(&mut self, id: usize) -> Result<(), DataError>;
+    /// We assume here that a currency is an Asset with a three letter name and no ISIN nor WKN
+    fn get_all_currencies(&mut self) -> Result<Vec<Currency>, DataError>;
 }

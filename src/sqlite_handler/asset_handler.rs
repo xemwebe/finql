@@ -3,6 +3,8 @@ use super::SqliteDB;
 use crate::asset::Asset;
 use crate::data_handler::{AssetHandler, DataError};
 use rusqlite::{params, Row, NO_PARAMS};
+use crate::currency::Currency;
+use std::str::FromStr;
 
 impl AssetHandler for SqliteDB<'_> {
     fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {
@@ -134,5 +136,26 @@ impl AssetHandler for SqliteDB<'_> {
             .execute("DELETE FROM assets WHERE id=?1;", params![id as i64])
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
+    }
+
+    /// We assume here that a currency is an Asset with a three letter name and no ISIN nor WKN
+    fn get_all_currencies(&mut self) -> Result<Vec<Currency>, DataError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT name FROM assets WHERE isin IS NULL AND wkn IS NULL AND length(name)=3;")
+            .map_err(|e| DataError::NotFound(e.to_string()))?;
+        let currency_map = stmt
+            .query_map(NO_PARAMS, |row| {
+                let currency: String = row.get(0)?;
+                Ok(currency)
+            })
+            .map_err(|e| DataError::NotFound(e.to_string()))?;
+        let mut currencies = Vec::new();
+        for curr in currency_map {
+            let currency =
+                Currency::from_str(&curr.unwrap()).map_err(|e| DataError::NotFound(e.to_string()))?;
+            currencies.push(currency);
+        }
+        Ok(currencies)
     }
 }

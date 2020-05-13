@@ -1,6 +1,8 @@
 use super::PostgresDB;
 use crate::asset::Asset;
 use crate::data_handler::{AssetHandler, DataError};
+use crate::currency::Currency;
+use std::str::FromStr;
 
 /// Handler for globally available data
 impl AssetHandler for PostgresDB<'_> {
@@ -113,5 +115,20 @@ impl AssetHandler for PostgresDB<'_> {
             .execute("DELETE FROM assets WHERE id=$1;", &[&(id as i32)])
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
+    }
+
+    fn get_all_currencies(&mut self) -> Result<Vec<Currency>, DataError> {
+        let mut currencies = Vec::new();
+        for row in self
+            .conn
+            .query("SELECT name FROM assets WHERE isin IS NULL AND wkn IS NULL AND length(name)=3", &[])
+            .map_err(|e| DataError::NotFound(e.to_string()))?
+        {
+            let currency: String = row.get(0);
+            let currency =
+                Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            currencies.push(currency);
+        }
+        Ok(currencies)
     }
 }
