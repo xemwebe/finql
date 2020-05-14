@@ -111,7 +111,7 @@ impl TransactionHandler for SqliteDB<'_> {
                 "UPDATE transactions SET 
                 trans_type=?2, 
                 asset_id=?3, 
-                cash_value=?4, 
+                cash_amount=?4, 
                 cash_currency=?5,
                 cash_date=?6,
                 related_trans=?7,
