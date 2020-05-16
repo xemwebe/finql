@@ -1,3 +1,9 @@
+Version 0.7.4
+  * In database handlers, store reference to database connections instead of owning
+    the connection to allow (external) database pooling
+  * extensions of AssetHandler and TransactionHandler traits by additional methods
+  * bug fix in Transaction update query
+  
 Version 0.7.3
   * New market data source: comdirect (via scraping hte web pages)
   
