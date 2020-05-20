@@ -16,7 +16,7 @@ pub fn get_fx_rate(
         return Ok(1.0);
     } else {
         let (fx_quote, quote_currency) =
-            quotes.get_last_quote_before(&format!("{}", foreign), time)?;
+            quotes.get_last_price_before(&format!("{}", foreign), time)?;
         if quote_currency == base {
             return Ok(fx_quote.price);
         }

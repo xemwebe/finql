@@ -213,7 +213,7 @@ impl QuoteHandler for SqliteDB<'_> {
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(id)
     }
-    fn get_last_quote_before(
+    fn get_last_price_before(
         &mut self,
         asset_name: &str,
         time: DateTime<Utc>,
@@ -222,7 +222,7 @@ impl QuoteHandler for SqliteDB<'_> {
         let row = self
             .conn
             .query_row(
-                "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
+                "SELECT q.id, q.ticker_id, t.factor*q.price, q.time, q.volume, t.currency, t.priority
                 FROM quotes q, ticker t, assets a 
                 WHERE a.name=? AND t.asset_id=a.id AND t.id=q.ticker_id AND q.time<= ?
                 ORDER BY q.time, t.priority DESC LIMIT 1",
@@ -253,7 +253,7 @@ impl QuoteHandler for SqliteDB<'_> {
             currency,
         ))
     }
-    fn get_last_quote_before_by_id(
+    fn get_last_price_before_by_id(
         &mut self,
         asset_id: usize,
         time: DateTime<Utc>,
@@ -262,7 +262,7 @@ impl QuoteHandler for SqliteDB<'_> {
         let row = self
             .conn
             .query_row(
-                "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
+                "SELECT q.id, q.ticker_id, t.factor*q.price, q.time, q.volume, t.currency, t.priority
                 FROM quotes q, ticker t 
                 WHERE t.asset_id=? AND t.id=q.ticker_id AND q.time<= ?
                 ORDER BY q.time, t.priority DESC LIMIT 1",

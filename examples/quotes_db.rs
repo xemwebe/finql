@@ -173,7 +173,7 @@ fn quote_tests(market: &mut Market) {
     println!("ok");
     let time = make_time(2020, 1, 4, 0, 0, 0).unwrap();
     log("get last quote...");
-    let (quote, currency) = market.db().get_last_quote_before("BASF AG", time).unwrap();
+    let (quote, currency) = market.db().get_last_price_before("BASF AG", time).unwrap();
     if currency == eur && (quote.price - 67.27) < 1e-10 {
         println!("ok");
     } else {

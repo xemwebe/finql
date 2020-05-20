@@ -183,7 +183,7 @@ impl QuoteHandler for PostgresDB<'_> {
         Ok(id as usize)
     }
 
-    fn get_last_quote_before(
+    fn get_last_price_before(
         &mut self,
         asset_name: &str,
         time: DateTime<Utc>,
@@ -219,7 +219,7 @@ impl QuoteHandler for PostgresDB<'_> {
         ))
     }
 
-    fn get_last_quote_before_by_id(
+    fn get_last_price_before_by_id(
         &mut self,
         asset_id: usize,
         time: DateTime<Utc>,

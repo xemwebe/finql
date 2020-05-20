@@ -29,14 +29,16 @@ pub trait QuoteHandler: AssetHandler {
     fn insert_quote(&mut self, quote: &Quote) -> Result<usize, DataError>;
 
     /// Get the last quote in database for a specific asset name on or before the given time
-    fn get_last_quote_before(
+    /// The price differs from a quote in that it is adjusted by the factor defined in the ticker
+    fn get_last_price_before(
         &mut self,
         asset_name: &str,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError>;
 
     /// Get the last quote in database for a specific asset id on or before the given time
-    fn get_last_quote_before_by_id(
+    /// The price differs from a quote in that it is adjusted by the factor defined in the ticker
+    fn get_last_price_before_by_id(
         &mut self,
         asset_id: usize,
         time: DateTime<Utc>,
