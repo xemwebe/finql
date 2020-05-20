@@ -183,7 +183,7 @@ impl QuoteHandler for PostgresDB<'_> {
         Ok(id as usize)
     }
 
-    fn get_last_price_before(
+    fn get_last_quote_before(
         &mut self,
         asset_name: &str,
         time: DateTime<Utc>,
@@ -191,7 +191,7 @@ impl QuoteHandler for PostgresDB<'_> {
         let row = self
             .conn
             .query_one(
-                "SELECT q.id, q.ticker_id, t.factor*q.price, q.time, q.volume, t.currency, t.priority
+                "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
                 FROM quotes q, ticker t, assets a 
                 WHERE a.name=$1 AND t.asset_id=a.id AND t.id=q.ticker_id AND q.time<= $2
                 ORDER BY q.time DESC, t.priority ASC LIMIT 1",
@@ -219,7 +219,7 @@ impl QuoteHandler for PostgresDB<'_> {
         ))
     }
 
-    fn get_last_price_before_by_id(
+    fn get_last_quote_before_by_id(
         &mut self,
         asset_id: usize,
         time: DateTime<Utc>,
@@ -227,7 +227,7 @@ impl QuoteHandler for PostgresDB<'_> {
         let row = self
             .conn
             .query_one(
-                "SELECT q.id, q.ticker_id, t.factor*q.price, q.time, q.volume, t.currency, t.priority
+                "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
                 FROM quotes q, ticker t
                 WHERE t.asset_id=$1 AND t.id=q.ticker_id AND q.time<= $2
                 ORDER BY q.time DESC, t.priority ASC LIMIT 1",

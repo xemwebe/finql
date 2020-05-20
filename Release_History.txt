@@ -1,7 +1,6 @@
-Version 0.7.6 and 0.7.5
-  * The QuoteHandlers methods `...quote_before...` are meant for getting the valid price
-    of an asset. Therefore, `quote` has been replaced by `price` and the returned value
-    includes the scaling factor in the ticker definition.
+Version 0.7.5-0.7.7
+  * In total: no change (I was just to fast with publishing and later reverted all changes
+  after I realized my fatal error, sorry)
   
 Version 0.7.4
   * In database handlers, store reference to database connections instead of owning
