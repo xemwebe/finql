@@ -132,6 +132,41 @@ impl QuoteHandler for PostgresDB<'_> {
         Ok(all_ticker)
     }
 
+    fn get_all_ticker_for_asset(
+        &mut self,
+        asset_id: usize,
+    ) -> Result<Vec<Ticker>, DataError> {
+        let mut all_ticker = Vec::new();
+        for row in self
+            .conn
+            .query(
+                "SELECT id, name, source, priority, currency, factor FROM ticker WHERE asset_id=$1;",
+                &[&(asset_id as i32)],
+            )
+            .map_err(|e| DataError::NotFound(e.to_string()))?
+        {
+            let id: i32 = row.get(0);
+            let source: String = row.get(2);
+            let source = MarketDataSource::from_str(&source)
+                .map_err(|e| DataError::NotFound(e.to_string()))?;
+            let currency: String = row.get(4);
+            let currency =
+                Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let factor: f64 = row.get(5);
+            all_ticker.push(Ticker {
+                id: Some(id as usize),
+                name: row.get(1),
+                asset: asset_id,
+                source,
+                priority: row.get(3),
+                currency,
+                factor,
+            });
+        }
+        Ok(all_ticker)
+    }
+
+
     fn update_ticker(&mut self, ticker: &Ticker) -> Result<(), DataError> {
         if ticker.id.is_none() {
             return Err(DataError::NotFound(

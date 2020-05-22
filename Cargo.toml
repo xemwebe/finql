@@ -1,6 +1,6 @@
 [package]
 name = "finql"
-version = "0.7.7"
+version = "0.7.8"
 authors = ["Mark Beinker <mwb@quantlink.de>"]
 edition = "2018"
 description = "A quantitative finance toolbox"

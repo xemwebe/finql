@@ -160,6 +160,45 @@ impl QuoteHandler for SqliteDB<'_> {
         }
         Ok(all_ticker)
     }
+    fn get_all_ticker_for_asset(
+        &mut self,
+        asset_id: usize,
+    ) -> Result<Vec<Ticker>, DataError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, name, priority, source, currency, factor FROM ticker WHERE asset_id=?;")
+            .map_err(|e| DataError::NotFound(e.to_string()))?;
+        let ticker_map = stmt
+            .query_map(params![asset_id as i32], |row| {
+                let id: i64 = row.get(0)?;
+                let name: String = row.get(1)?;
+                let priority: i32 = row.get(2)?;
+                let source: String = row.get(3)?;
+                let currency: String = row.get(4)?;
+                let factor: f64 = row.get(5)?;
+                Ok((id, name, priority, source, currency, factor))
+            })
+            .map_err(|e| DataError::NotFound(e.to_string()))?;
+        let mut all_ticker = Vec::new();
+        for ticker in ticker_map {
+            let (id, name, priority, source, currency, factor) = ticker.unwrap();
+            let source = MarketDataSource::from_str(&source)
+                .map_err(|e| DataError::NotFound(e.to_string()))?;
+            let currency =
+                Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            all_ticker.push(Ticker {
+                id: Some(id as usize),
+                name,
+                asset: asset_id,
+                source,
+                priority,
+                currency,
+                factor,
+            });
+        }
+        Ok(all_ticker)
+    }
+
     fn update_ticker(&mut self, ticker: &Ticker) -> Result<(), DataError> {
         if ticker.id.is_none() {
             return Err(DataError::NotFound(

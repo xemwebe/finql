@@ -22,6 +22,13 @@ pub trait QuoteHandler: AssetHandler {
         &mut self,
         source: MarketDataSource,
     ) -> Result<Vec<Ticker>, DataError>;
+
+    /// Get all ticker that belong to a given asset specified by its asset ID
+    fn get_all_ticker_for_asset(
+        &mut self,
+        asset_id: usize,
+    ) -> Result<Vec<Ticker>, DataError>;
+
     fn update_ticker(&mut self, ticker: &Ticker) -> Result<(), DataError>;
     fn delete_ticker(&mut self, id: usize) -> Result<(), DataError>;
 
