@@ -92,7 +92,7 @@ impl AssetHandler for SqliteDB<'_> {
     fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, name, wkn, isin, note FROM assets;")
+            .prepare("SELECT id, name, wkn, isin, note FROM assets ORDER BY name;")
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let asset_map = stmt
             .query_map(NO_PARAMS, |row| {

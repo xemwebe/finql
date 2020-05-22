@@ -77,7 +77,7 @@ impl AssetHandler for PostgresDB<'_> {
         let mut assets = Vec::new();
         for row in self
             .conn
-            .query("SELECT id, name, wkn, isin, note FROM assets", &[])
+            .query("SELECT id, name, wkn, isin, note FROM assets ORDER BY name", &[])
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
             let id: i32 = row.get(0);
