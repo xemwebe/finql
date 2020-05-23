@@ -20,10 +20,10 @@ argmin = "0.3"
 rusqlite = "0.23"
 postgres = { version = "0.17", features = ["with-chrono-0_4"] }
 tokio-postgres = "0.5"
-yahoo_finance_api = { version = "0.2", path = "../yahoo_finance_api" }
-gurufocus_api = { version = "0.3.2", path = "../gurufocus_api" }
+yahoo_finance_api = { version = "0.2" }
+gurufocus_api = { version = "0.3.2" }
 rand = "0.7"
-eodhistoricaldata_api =  {version = "0.2", path = "../eodhistoricaldata_api"}
+eodhistoricaldata_api =  {version = "0.2"}
 alpha_vantage = "0.4"
 reqwest = "0.9"
 scraper = "0.11"
