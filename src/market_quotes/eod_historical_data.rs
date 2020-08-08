@@ -3,6 +3,7 @@ use crate::date_time_helper::{date_time_from_str_standard, unix_to_date_time};
 use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use eodhistoricaldata_api as eod_api;
+use async_trait::async_trait;
 
 pub struct EODHistData {
     connector: eod_api::EodHistConnector,
@@ -16,12 +17,14 @@ impl EODHistData {
     }
 }
 
+#[async_trait]
 impl MarketQuoteProvider for EODHistData {
     /// Fetch latest quote
-    fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
+    async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let eod_quote = self
             .connector
             .get_latest_quote(&ticker.name)
+            .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
 
         let time = unix_to_date_time(eod_quote.timestamp as u64);
@@ -33,8 +36,9 @@ impl MarketQuoteProvider for EODHistData {
             volume: Some(eod_quote.volume as f64),
         })
     }
+
     /// Fetch historic quotes between start and end date
-    fn fetch_quote_history(
+    async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
         start: DateTime<Utc>,
@@ -47,6 +51,7 @@ impl MarketQuoteProvider for EODHistData {
                 start.naive_utc().date(),
                 end.naive_utc().date(),
             )
+            .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
 
         let mut quotes = Vec::new();

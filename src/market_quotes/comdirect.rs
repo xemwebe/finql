@@ -4,6 +4,7 @@ use crate::date_time_helper::date_time_from_str;
 use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use scraper::{Html, Selector};
+use async_trait::async_trait;
 
 #[derive(Debug)]
 pub struct ComdirectQuote {
@@ -31,8 +32,8 @@ impl Comdirect {
         }
     }
 
-    pub fn get_latest_quote(&self, id: &str) -> Result<f64, MarketQuoteError> {
-        let mut resp = reqwest::get(&format!("{}{}", self.url, id))
+    pub async fn get_latest_quote(&self, id: &str) -> Result<f64, MarketQuoteError> {
+        let resp = reqwest::get(&format!("{}{}", self.url, id)).await
             .map_err(|_| MarketQuoteError::FetchFailed("request failed".to_string()))?;
         if !resp.status().is_success() {
             return Err(MarketQuoteError::FetchFailed(
@@ -42,7 +43,8 @@ impl Comdirect {
 
         let body = resp
             .text()
-            .map_err(|_| MarketQuoteError::FetchFailed("couln't extract body".to_string()))?;
+            .await
+            .map_err(|_| MarketQuoteError::FetchFailed("couldn't extract body".to_string()))?;
         // parses string of HTML as a document
         let fragment = Html::parse_document(&body);
         // parses based on a CSS selector
@@ -66,7 +68,7 @@ impl Comdirect {
     }
 
     // Get history as quote list formatted list
-    pub fn get_quote_history(
+    pub async fn get_quote_history(
         &self,
         id: &str,
         start: DateTime<Utc>,
@@ -81,7 +83,7 @@ impl Comdirect {
             self.hurl3,
             id
         );
-        let mut resp = reqwest::get(&url)
+        let resp = reqwest::get(&url).await
             .map_err(|_| MarketQuoteError::FetchFailed("request failed".to_string()))?;
         if !resp.status().is_success() {
             return Err(MarketQuoteError::FetchFailed(
@@ -91,6 +93,7 @@ impl Comdirect {
 
         let body = resp
             .text()
+            .await
             .map_err(|_| MarketQuoteError::FetchFailed("couln't extract body".to_string()))?;
 
         Self::parse_csv(&body)
@@ -148,11 +151,12 @@ impl Comdirect {
     }
 }
 
+#[async_trait]
 impl MarketQuoteProvider for Comdirect {
     /// Fetch latest quote
-    fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
+    async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let codi = Comdirect::new();
-        let price = codi.get_latest_quote(&ticker.name)?;
+        let price = codi.get_latest_quote(&ticker.name).await?;
         let time = Utc::now();
         Ok(Quote {
             id: None,
@@ -163,14 +167,14 @@ impl MarketQuoteProvider for Comdirect {
         })
     }
     /// Fetch historic quotes between start and end date
-    fn fetch_quote_history(
+    async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let codi = Comdirect::new();
-        let codi_quotes = codi.get_quote_history(&ticker.name, start, end)?;
+        let codi_quotes = codi.get_quote_history(&ticker.name, start, end).await?;
         let mut quotes = Vec::new();
         let ticker = ticker.id.unwrap();
         for quote in &codi_quotes {

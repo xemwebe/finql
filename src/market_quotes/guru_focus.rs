@@ -3,6 +3,7 @@ use crate::date_time_helper::{date_time_from_str_american, unix_to_date_time};
 use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use gurufocus_api;
+use async_trait::async_trait;
 
 pub struct GuruFocus {
     connector: gurufocus_api::GuruFocusConnector,
@@ -16,12 +17,14 @@ impl GuruFocus {
     }
 }
 
+#[async_trait]
 impl MarketQuoteProvider for GuruFocus {
     /// Fetch latest quote
-    fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
+    async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let prices = self
             .connector
             .get_quotes(&[&ticker.name])
+            .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
 
         let quote: gurufocus_api::Quote = serde_json::from_value(prices)
@@ -37,7 +40,7 @@ impl MarketQuoteProvider for GuruFocus {
         })
     }
     /// Fetch historic quotes between start and end date
-    fn fetch_quote_history(
+    async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
         start: DateTime<Utc>,
@@ -46,6 +49,7 @@ impl MarketQuoteProvider for GuruFocus {
         let gf_quotes = self
             .connector
             .get_price_hist(&ticker.name)
+            .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
 
         let gf_quotes: Vec<(String, f64)> = serde_json::from_value(gf_quotes)

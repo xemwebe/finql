@@ -2,6 +2,7 @@ use crate::data_handler::QuoteHandler;
 use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use std::fmt;
+use async_trait::async_trait;
 
 #[derive(Debug)]
 pub enum MarketQuoteError {
@@ -36,11 +37,12 @@ impl fmt::Display for MarketQuoteError {
 }
 
 /// General interface for market data quotes provider
+#[async_trait]
 pub trait MarketQuoteProvider {
     /// Fetch latest quote
-    fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError>;
+    async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError>;
     /// Fetch historic quotes between start and end date
-    fn fetch_quote_history(
+    async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
         start: DateTime<Utc>,
@@ -48,26 +50,26 @@ pub trait MarketQuoteProvider {
     ) -> Result<Vec<Quote>, MarketQuoteError>;
 }
 
-pub fn update_ticker(
+pub async fn update_ticker(
     provider: &dyn MarketQuoteProvider,
     ticker: &Ticker,
     db: &mut dyn QuoteHandler,
 ) -> Result<(), MarketQuoteError> {
-    let mut quote = provider.fetch_latest_quote(ticker)?;
+    let mut quote = provider.fetch_latest_quote(ticker).await?;
     quote.price *= ticker.factor;
     db.insert_quote(&quote)
         .map_err(|e| MarketQuoteError::StoringFailed(e.to_string()))?;
     Ok(())
 }
 
-pub fn update_ticker_history(
+pub async fn update_ticker_history(
     provider: &dyn MarketQuoteProvider,
     ticker: &Ticker,
     db: &mut dyn QuoteHandler,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 ) -> Result<(), MarketQuoteError> {
-    let mut quotes = provider.fetch_quote_history(ticker, start, end)?;
+    let mut quotes = provider.fetch_quote_history(ticker, start, end).await?;
     for mut quote in &mut quotes {
         quote.price *= ticker.factor;
         db.insert_quote(&quote)

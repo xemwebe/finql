@@ -3,6 +3,7 @@ use crate::date_time_helper::date_time_from_str_standard;
 use crate::quote::{Quote, Ticker};
 use alpha_vantage as alpha;
 use chrono::{DateTime, Utc};
+use async_trait::async_trait;
 
 pub struct AlphaVantage {
     connector: alpha::user::APIKey,
@@ -16,12 +17,14 @@ impl AlphaVantage {
     }
 }
 
+#[async_trait]
 impl MarketQuoteProvider for AlphaVantage {
     /// Fetch latest quote
-    fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
+    async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let alpha_quote = self
             .connector
             .quote(&ticker.name)
+            .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
         let time = date_time_from_str_standard(alpha_quote.last_trading(), 0)?;
         Ok(Quote {
@@ -29,11 +32,11 @@ impl MarketQuoteProvider for AlphaVantage {
             ticker: ticker.id.unwrap(),
             price: alpha_quote.price(),
             time,
-            volume: Some(alpha_quote.volume()),
+            volume: Some(alpha_quote.volume() as f64),
         })
     }
     /// Fetch historic quotes between start and end date
-    fn fetch_quote_history(
+    async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
         start: DateTime<Utc>,
@@ -47,6 +50,7 @@ impl MarketQuoteProvider for AlphaVantage {
                 alpha::util::TimeSeriesInterval::None,
                 alpha::util::OutputSize::None,
             )
+            .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
 
         let mut quotes = Vec::new();
@@ -58,7 +62,7 @@ impl MarketQuoteProvider for AlphaVantage {
                     ticker: ticker.id.unwrap(),
                     price: quote.close(),
                     time,
-                    volume: Some(quote.volume()),
+                    volume: Some(quote.volume() as f64),
                 })
             }
         }

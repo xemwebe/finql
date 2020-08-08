@@ -1,6 +1,6 @@
 [package]
 name = "finql"
-version = "0.7.8"
+version = "0.8.0-dev"
 authors = ["Mark Beinker <mwb@quantlink.de>"]
 edition = "2018"
 description = "A quantitative finance toolbox"
@@ -20,11 +20,12 @@ argmin = "0.3"
 rusqlite = "0.23"
 postgres = { version = "0.17", features = ["with-chrono-0_4"] }
 tokio-postgres = "0.5"
-yahoo_finance_api = { version = "0.2" }
-gurufocus_api = { version = "0.3.2" }
+yahoo_finance_api = "0.3"
+gurufocus_api = "0.4"
 rand = "0.7"
-eodhistoricaldata_api =  {version = "0.2"}
-alpha_vantage = "0.4"
-reqwest = "0.9"
-scraper = "0.11"
+eodhistoricaldata_api =  "0.3"
+alpha_vantage = "0.5"
+reqwest = "0.10"
+scraper = "0.12"
 csv = "1.1"
+async-trait = "0.1"

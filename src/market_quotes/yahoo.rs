@@ -3,15 +3,18 @@ use crate::date_time_helper::unix_to_date_time;
 use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use yahoo_finance_api as yahoo;
+use async_trait::async_trait;
 
 pub struct Yahoo {}
 
+#[async_trait]
 impl MarketQuoteProvider for Yahoo {
     /// Fetch latest quote
-    fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
+    async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new();
         let response = yahoo
             .get_latest_quotes(&ticker.name, "1m")
+            .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
         let quote = response
             .last_quote()
@@ -25,7 +28,7 @@ impl MarketQuoteProvider for Yahoo {
         })
     }
     /// Fetch historic quotes between start and end date
-    fn fetch_quote_history(
+    async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
         start: DateTime<Utc>,
@@ -34,6 +37,7 @@ impl MarketQuoteProvider for Yahoo {
         let yahoo = yahoo::YahooConnector::new();
         let response = yahoo
             .get_quote_history(&ticker.name, start, end)
+            .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
         let yahoo_quotes = response
             .quotes()
