@@ -97,11 +97,13 @@ mod tests {
     use rand::Rng;
     use std::str::FromStr;
     use rusqlite::Connection;
+    use tokio_test::block_on;
 
     struct DummyProvider {}
 
+    #[async_trait]
     impl MarketQuoteProvider for DummyProvider {
-        fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
+        async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
             Ok(Quote {
                 id: None,
                 ticker: ticker.id.unwrap(),
@@ -111,7 +113,7 @@ mod tests {
             })
         }
 
-        fn fetch_quote_history(
+        async fn fetch_quote_history(
             &self,
             ticker: &Ticker,
             start: DateTime<Utc>,
@@ -168,7 +170,7 @@ mod tests {
         db.init().unwrap();
         let ticker = prepare_db(&mut db);
         let provider = DummyProvider {};
-        update_ticker(&provider, &ticker, &mut db).unwrap();
+        block_on(update_ticker(&provider, &ticker, &mut db)).unwrap();
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).unwrap();
         assert_eq!(quotes.len(), 1);
         assert_eq!(quotes[0].price, 1.23);
@@ -183,7 +185,7 @@ mod tests {
         let provider = DummyProvider {};
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        update_ticker_history(&provider, &ticker, &mut db, start, end).unwrap();
+        block_on(update_ticker_history(&provider, &ticker, &mut db, start, end)).unwrap();
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).unwrap();
         assert_eq!(quotes.len(), 31);
         assert_eq!(quotes[0].price, 1.23);

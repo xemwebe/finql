@@ -82,6 +82,7 @@ mod tests {
     use crate::quote::MarketDataSource;
     use chrono::offset::TimeZone;
     use std::str::FromStr;
+    use tokio_test::block_on;
 
     #[test]
     fn test_eod_fetch_quote() {
@@ -96,7 +97,7 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let quote = eod.fetch_latest_quote(&ticker).unwrap();
+        let quote = block_on(eod.fetch_latest_quote(&ticker)).unwrap();
         assert!(quote.price != 0.0);
     }
 
@@ -115,7 +116,7 @@ mod tests {
         };
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        let quotes = eod.fetch_quote_history(&ticker, start, end).unwrap();
+        let quotes = block_on(eod.fetch_quote_history(&ticker, start, end)).unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);
     }

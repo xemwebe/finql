@@ -2,7 +2,7 @@ use super::{MarketQuoteError, MarketQuoteProvider};
 use crate::date_time_helper::date_time_from_str_standard;
 use crate::quote::{Quote, Ticker};
 use alpha_vantage as alpha;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Duration};
 use async_trait::async_trait;
 
 pub struct AlphaVantage {
@@ -42,13 +42,21 @@ impl MarketQuoteProvider for AlphaVantage {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
+        let now = Utc::now();
+        // This estimate is conservative, since we expect less business days than calendar
+        // days, but to be on the conservative side, we use calendar days
+        let output_size = if now.signed_duration_since(start) > Duration::days(100) {
+            alpha::util::OutputSize::Full
+        } else {
+            alpha::util::OutputSize::Compact
+        };
         let alpha_quotes = self
             .connector
             .stock_time(
                 alpha::util::StockFunction::Daily,
                 &ticker.name,
                 alpha::util::TimeSeriesInterval::None,
-                alpha::util::OutputSize::None,
+                output_size,
             )
             .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
@@ -77,6 +85,7 @@ mod tests {
     use crate::quote::MarketDataSource;
     use chrono::offset::TimeZone;
     use std::str::FromStr;
+    use tokio_test::block_on;
 
     #[test]
     fn test_alpha_fetch_quote() {
@@ -91,7 +100,7 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let quote = alpha.fetch_latest_quote(&ticker).unwrap();
+        let quote = block_on(alpha.fetch_latest_quote(&ticker)).unwrap();
         assert!(quote.price != 0.0);
     }
 
@@ -110,7 +119,7 @@ mod tests {
         };
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        let quotes = alpha.fetch_quote_history(&ticker, start, end).unwrap();
+        let quotes = block_on(alpha.fetch_quote_history(&ticker, start, end)).unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);
     }

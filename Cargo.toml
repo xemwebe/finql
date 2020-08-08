@@ -29,3 +29,6 @@ reqwest = "0.10"
 scraper = "0.12"
 csv = "1.1"
 async-trait = "0.1"
+
+[dev-dependencies]
+tokio-test = "0.2"

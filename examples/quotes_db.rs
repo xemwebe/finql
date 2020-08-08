@@ -12,6 +12,7 @@ use rusqlite::Connection;
 use std::fs;
 use std::io::{stdout, Write};
 use std::str::FromStr;
+use tokio_test::block_on;
 
 fn log(s: &str) {
     print!("{}", s);
@@ -238,7 +239,7 @@ fn quote_tests(market: &mut Market) {
         yahoo.to_string(),
         yahoo.get_provider(String::new()).unwrap(),
     );
-    market.update_quotes().unwrap();
+    block_on(market.update_quotes()).unwrap();
     println!("ok");
     println!("\nDone.");
 }
