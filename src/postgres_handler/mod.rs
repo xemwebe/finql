@@ -1,6 +1,5 @@
-///! Implemenation of PostgreSQL data handler
-use postgres::Client;
-use tokio_postgres::error::Error;
+///! Implementation of PostgreSQL data handler
+use postgres::{Client,error::Error};
 mod asset_handler;
 mod quote_handler;
 mod transaction_handler;

@@ -5,6 +5,7 @@ use crate::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use scraper::{Html, Selector};
 use async_trait::async_trait;
+use tokio_compat_02::FutureExt;
 
 #[derive(Debug)]
 pub struct ComdirectQuote {
@@ -33,7 +34,7 @@ impl Comdirect {
     }
 
     pub async fn get_latest_quote(&self, id: &str) -> Result<f64, MarketQuoteError> {
-        let resp = reqwest::get(&format!("{}{}", self.url, id)).await
+        let resp = reqwest::get(&format!("{}{}", self.url, id)).compat().await
             .map_err(|_| MarketQuoteError::FetchFailed("request failed".to_string()))?;
         if !resp.status().is_success() {
             return Err(MarketQuoteError::FetchFailed(
@@ -83,7 +84,7 @@ impl Comdirect {
             self.hurl3,
             id
         );
-        let resp = reqwest::get(&url).await
+        let resp = reqwest::get(&url).compat().await
             .map_err(|_| MarketQuoteError::FetchFailed("request failed".to_string()))?;
         if !resp.status().is_success() {
             return Err(MarketQuoteError::FetchFailed(

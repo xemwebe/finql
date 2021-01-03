@@ -4,6 +4,7 @@ use crate::quote::{Quote, Ticker};
 use alpha_vantage as alpha;
 use chrono::{DateTime, Utc, Duration};
 use async_trait::async_trait;
+use tokio_compat_02::FutureExt;
 
 pub struct AlphaVantage {
     connector: alpha::user::APIKey,
@@ -24,6 +25,7 @@ impl MarketQuoteProvider for AlphaVantage {
         let alpha_quote = self
             .connector
             .quote(&ticker.name)
+            .compat()
             .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
         let time = date_time_from_str_standard(alpha_quote.last_trading(), 0)?;
@@ -58,6 +60,7 @@ impl MarketQuoteProvider for AlphaVantage {
                 alpha::util::TimeSeriesInterval::None,
                 output_size,
             )
+            .compat()
             .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
 
