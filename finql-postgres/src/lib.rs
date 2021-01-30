@@ -1,10 +1,10 @@
 ///! Implementation of PostgreSQL data handler
+
 use postgres::{Client,error::Error};
+
 mod asset_handler;
 mod quote_handler;
 mod transaction_handler;
-
-pub use transaction_handler::RawTransaction;
 
 /// Struct to handle connections to sqlite3 databases
 pub struct PostgresDB<'a> {

@@ -1,8 +1,10 @@
-use super::PostgresDB;
-use crate::asset::Asset;
-use crate::data_handler::{AssetHandler, DataError};
-use crate::currency::Currency;
 use std::str::FromStr;
+
+use finql_data::asset::Asset;
+use finql_data::{AssetHandler, DataError};
+use finql_data::currency::Currency;
+
+use super::PostgresDB;
 
 /// Handler for globally available data
 impl AssetHandler for PostgresDB<'_> {

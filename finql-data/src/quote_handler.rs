@@ -22,7 +22,7 @@ pub trait QuoteHandler: AssetHandler {
     fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError>;
     fn get_all_ticker_for_source(
         &mut self,
-        source: String,
+        source: &str,
     ) -> Result<Vec<Ticker>, DataError>;
 
     /// Get all ticker that belong to a given asset specified by its asset ID

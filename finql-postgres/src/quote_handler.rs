@@ -1,10 +1,12 @@
 ///! Implementation for quote handler with Sqlite3 database as backend
-use super::PostgresDB;
-use crate::currency::Currency;
-use crate::data_handler::{DataError, QuoteHandler};
-use crate::quote::{MarketDataSource, Quote, Ticker};
-use chrono::{DateTime, Utc};
 use std::str::FromStr;
+use chrono::{DateTime, Utc};
+
+use finql_data::currency::Currency;
+use finql_data::{DataError, QuoteHandler};
+use finql_data::quote::{Quote, Ticker};
+
+use super::PostgresDB;
 
 /// Sqlite implementation of quote handler
 impl QuoteHandler for PostgresDB<'_> {
@@ -53,8 +55,6 @@ impl QuoteHandler for PostgresDB<'_> {
         let name: String = row.get(0);
         let asset: i32 = row.get(1);
         let source: String = row.get(2);
-        let source =
-            MarketDataSource::from_str(&source).map_err(|e| DataError::NotFound(e.to_string()))?;
         let currency: String = row.get(4);
         let currency =
             Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
@@ -81,8 +81,6 @@ impl QuoteHandler for PostgresDB<'_> {
             let id: i32 = row.get(0);
             let asset: i32 = row.get(2);
             let source: String = row.get(4);
-            let source = MarketDataSource::from_str(&source)
-                .map_err(|e| DataError::NotFound(e.to_string()))?;
             let currency: String = row.get(5);
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
@@ -102,7 +100,7 @@ impl QuoteHandler for PostgresDB<'_> {
 
     fn get_all_ticker_for_source(
         &mut self,
-        source: MarketDataSource,
+        source: &str,
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in self
@@ -123,7 +121,7 @@ impl QuoteHandler for PostgresDB<'_> {
                 id: Some(id as usize),
                 name: row.get(1),
                 asset: asset as usize,
-                source,
+                source: source.to_string(),
                 priority: row.get(3),
                 currency,
                 factor,
@@ -147,8 +145,6 @@ impl QuoteHandler for PostgresDB<'_> {
         {
             let id: i32 = row.get(0);
             let source: String = row.get(2);
-            let source = MarketDataSource::from_str(&source)
-                .map_err(|e| DataError::NotFound(e.to_string()))?;
             let currency: String = row.get(4);
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;

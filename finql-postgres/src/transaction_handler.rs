@@ -1,11 +1,13 @@
-use super::PostgresDB;
-use crate::currency::Currency;
-use crate::data_handler::{DataError, TransactionHandler};
-use crate::fixed_income::{CashAmount, CashFlow};
-use crate::helpers::{i32_to_usize, usize_to_i32};
-use crate::transaction::{Transaction, TransactionType};
-use chrono::NaiveDate;
 use std::str::FromStr;
+use chrono::NaiveDate;
+
+use finql_data::currency::Currency;
+use finql_data::{DataError, TransactionHandler};
+use finql_data::cash_flow::{CashAmount, CashFlow};
+use finql_data::transaction::{Transaction, TransactionType};
+
+use super::PostgresDB;
+
 
 pub struct RawTransaction {
     pub id: Option<i32>,
@@ -31,7 +33,7 @@ impl RawTransaction {
     pub fn to_transaction(&self) -> Result<Transaction, DataError> {
         let currency = Currency::from_str(&self.cash_currency)
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id = i32_to_usize(self.id);
+        let id = self.id.map(|x| x as usize);
         let cash_flow = CashFlow {
             amount: CashAmount {
                 amount: self.cash_amount,
@@ -61,10 +63,10 @@ impl RawTransaction {
                 ))? as usize,
             },
             TAX => TransactionType::Tax {
-                transaction_ref: i32_to_usize(self.related_trans),
+                transaction_ref: self.related_trans.map(|x| x as usize),
             },
             FEE => TransactionType::Fee {
-                transaction_ref: i32_to_usize(self.related_trans),
+                transaction_ref: self.related_trans.map(|x| x as usize),
             },
             unknown => {
                 return Err(DataError::InvalidTransaction(unknown.to_string()));
@@ -79,7 +81,7 @@ impl RawTransaction {
     }
 
     pub fn from_transaction(transaction: &Transaction) -> RawTransaction {
-        let id = usize_to_i32(transaction.id);
+        let id = transaction.id.map(|x| x as i32);
         let cash_amount = transaction.cash_flow.amount.amount;
         let cash_currency = transaction.cash_flow.amount.currency.to_string();
         let note = transaction.note.clone();
@@ -111,11 +113,11 @@ impl RawTransaction {
             }
             TransactionType::Tax { transaction_ref } => {
                 raw_transaction.trans_type = TAX.to_string();
-                raw_transaction.related_trans = usize_to_i32(transaction_ref);
+                raw_transaction.related_trans = transaction_ref.map(|x| x as i32);
             }
             TransactionType::Fee { transaction_ref } => {
                 raw_transaction.trans_type = FEE.to_string();
-                raw_transaction.related_trans = usize_to_i32(transaction_ref);
+                raw_transaction.related_trans = transaction_ref.map(|x| x as i32);
             }
         };
         raw_transaction
