@@ -1,10 +1,12 @@
-use super::SqliteDB;
-///! Implemenation of sqlite3 data handler
-use crate::asset::Asset;
-use crate::data_handler::{AssetHandler, DataError};
-use rusqlite::{params, Row, NO_PARAMS};
-use crate::currency::Currency;
+///! Implementation of sqlite3 data handler
+
 use std::str::FromStr;
+use rusqlite::{params, Row, NO_PARAMS};
+
+use super::SqliteDB;
+use finql_data::asset::Asset;
+use finql_data::{AssetHandler, DataError};
+use finql_data::currency::Currency;
 
 impl AssetHandler for SqliteDB<'_> {
     fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {

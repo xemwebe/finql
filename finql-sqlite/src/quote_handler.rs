@@ -1,12 +1,15 @@
 ///! Implementation for quote handler with Sqlite3 database as backend
+
+use std::str::FromStr;
+
+use chrono::{DateTime, Utc};
+use rusqlite::{params, Row, NO_PARAMS};
+
 use super::SqliteDB;
 use crate::currency::Currency;
 use crate::data_handler::{DataError, QuoteHandler};
 use crate::helpers::to_time;
 use crate::quote::{MarketDataSource, Quote, Ticker};
-use chrono::{DateTime, Utc};
-use rusqlite::{params, Row, NO_PARAMS};
-use std::str::FromStr;
 
 /// Sqlite implementation of quote handler
 impl QuoteHandler for SqliteDB<'_> {

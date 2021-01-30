@@ -1,7 +1,9 @@
 ///! Implementation of sqlite3 data handler
-use crate::data_handler::{DataError, TransactionHandler};
-use crate::transaction::Transaction;
+
 use rusqlite::{params, NO_PARAMS};
+
+use finql_data::{DataError, TransactionHandler};
+use finql_data::transaction::Transaction;
 
 use super::raw_transaction::RawTransaction;
 use super::SqliteDB;

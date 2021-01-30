@@ -1,10 +1,8 @@
-///! Implemenation of sqlite3 data handler
+///! Implementation of sqlite3 data handler
+
 use rusqlite::{Connection,NO_PARAMS};
 
-mod asset_handler;
-mod quote_handler;
 mod raw_transaction;
-mod transaction_handler;
 
 /// Struct to handle connections to sqlite3 databases
 pub struct SqliteDB<'a> {
