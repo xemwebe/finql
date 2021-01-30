@@ -1,7 +1,8 @@
-use crate::data_handler::{DataError, DataItem};
 ///! Implementation of basic transaction types
-use crate::fixed_income::CashFlow;
+
 use serde::{Deserialize, Serialize};
+use super::{DataError, DataItem};
+use crate::cash_flow::CashFlow;
 
 /// Type of transaction
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]

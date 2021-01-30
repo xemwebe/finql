@@ -4,6 +4,11 @@ use std::fmt;
 pub mod asset_handler;
 pub mod quote_handler;
 pub mod transaction_handler;
+pub mod asset;
+pub mod transaction;
+pub mod currency;
+pub mod cash_flow;
+pub mod quote;
 
 pub use asset_handler::AssetHandler;
 pub use quote_handler::QuoteHandler;

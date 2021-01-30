@@ -1,8 +1,11 @@
-use serde::de::{self, Visitor};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::error;
 use std::fmt;
 use std::str::FromStr;
+
+use serde::de::{self, Visitor};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use chrono::{DateTime, Utc};
+
 
 /// Error type related to the Currency
 #[derive(Debug, Clone, PartialEq)]
@@ -44,6 +47,7 @@ impl de::Error for CurrencyError {
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub struct Currency {
     iso_code: [char; 3],
+    rounding_digits: i32,
 }
 
 impl fmt::Display for Currency {
@@ -56,11 +60,20 @@ impl fmt::Display for Currency {
     }
 }
 
+fn default_rounding_digits(curr: &str) -> i32 {
+    match curr {
+        "JPY" | "TRL" => 0,
+        _ => 2
+    }
+}
+
 /// Transform a string into a Currency
 impl FromStr for Currency {
     type Err = CurrencyError;
+
     fn from_str(curr: &str) -> Result<Currency, CurrencyError> {
-        let mut currency = [' ', ' ', ' '];
+        let rounding_digits = default_rounding_digits(curr);
+        let mut iso_code = [' ', ' ', ' '];
         let mut idx = 0;
         for c in curr.chars() {
             if idx >= 3 {
@@ -68,7 +81,7 @@ impl FromStr for Currency {
             }
             let c = c.to_ascii_uppercase();
             if c.is_ascii_alphabetic() {
-                currency[idx] = c.to_ascii_uppercase();
+                iso_code[idx] = c.to_ascii_uppercase();
                 idx += 1;
             } else {
                 return Err(CurrencyError::InvalidCharacter);
@@ -77,7 +90,7 @@ impl FromStr for Currency {
         if idx != 3 {
             return Err(CurrencyError::InvalidLength);
         } else {
-            Ok(Currency { iso_code: currency })
+            Ok(Currency{iso_code, rounding_digits} )
         }
     }
 }
@@ -118,6 +131,18 @@ impl<'de> Deserialize<'de> for Currency {
     {
         deserializer.deserialize_str(CurrencyVisitor)
     }
+}
+
+impl Currency {
+    pub fn rounding_digits(&self) -> i32 {
+        self.rounding_digits
+    }
+}
+
+/// Trait for calculating FX rates for currency conversion
+pub trait CurrencyConverter {
+    /// returns the price of 1 unit of foreign currency in terms of domestic currency
+    fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError>;
 }
 
 #[cfg(test)]

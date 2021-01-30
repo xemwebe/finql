@@ -1,4 +1,4 @@
-use crate::data_handler::{DataError, DataItem};
+use super::{DataError, DataItem};
 ///! Implementation of a container for basic asset data
 use serde::{Deserialize, Serialize};
 

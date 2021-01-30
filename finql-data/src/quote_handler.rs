@@ -1,9 +1,11 @@
-use super::AssetHandler;
 ///! Data handler trait for market quotes
+
+use chrono::{DateTime, Utc};
+
+use super::AssetHandler;
 use super::DataError;
 use crate::currency::Currency;
-use crate::quote::{MarketDataSource, Quote, Ticker};
-use chrono::{DateTime, Utc};
+use crate::quote::{Quote, Ticker};
 
 /// Handler for globally available market quotes data
 pub trait QuoteHandler: AssetHandler {
@@ -20,7 +22,7 @@ pub trait QuoteHandler: AssetHandler {
     fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError>;
     fn get_all_ticker_for_source(
         &mut self,
-        source: MarketDataSource,
+        source: String,
     ) -> Result<Vec<Ticker>, DataError>;
 
     /// Get all ticker that belong to a given asset specified by its asset ID

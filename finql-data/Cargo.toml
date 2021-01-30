@@ -1,11 +1,12 @@
 [package]
-name = "finql"
-version = "0.8.0-dev"
+name = "finql-data"
+version = "0.1.0"
 authors = ["Mark Beinker <mwb@quantlink.de>"]
 edition = "2018"
-description = "A quantitative finance toolbox"
+description = "Internal crate used by finql implementing an async database abstraction layer"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/xemwebe/finql"
-readme = "README.md"
-keywords = ["finance", "calendar", "bond", "period", "pricing"]
-categories = ["date-and-time","mathematics"]
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0.*", features = ["derive"] }
