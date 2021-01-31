@@ -3,6 +3,9 @@
 use rusqlite::{Connection,NO_PARAMS};
 
 mod raw_transaction;
+pub mod asset_handler;
+pub mod quote_handler;
+pub mod transaction_handler;
 
 /// Struct to handle connections to sqlite3 databases
 pub struct SqliteDB<'a> {

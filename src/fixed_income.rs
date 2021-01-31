@@ -1,17 +1,17 @@
 
-use crate::day_count_conv::DayCountConv;
-use crate::fx_rates::get_fx_rate;
-use crate::market::Market;
-use crate::rates::{Compounding, DiscountError, Discounter, FlatRate};
+use std::f64;
+
 use argmin::prelude::*;
 use argmin::solver::brent::Brent;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::NaiveDate;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::BTreeMap;
-use std::f64;
-use std::fmt;
-use std::fmt::{Display, Formatter};
-use std::ops::Neg;
+
+use finql_data::CashFlow;
+
+use crate::day_count_conv::DayCountConv;
+use crate::market::Market;
+use crate::rates::{Compounding, DiscountError, Discounter, FlatRate};
+
 
 /// Get all future cash flows with respect to a given date
 pub fn get_cash_flows_after(cash_flows: &Vec<CashFlow>, date: NaiveDate) -> Vec<CashFlow> {
@@ -135,14 +135,18 @@ impl<'de> Deserialize<'de> for FlatRateDiscounter<'de> {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::fx_rates::insert_fx_quote;
-    use crate::sqlite_handler::SqliteDB;
-    use chrono::{TimeZone, Utc};
     use std::str::FromStr;
     use rusqlite::Connection;
+    use chrono::{TimeZone, Utc};
+
+    use finql_sqlite::SqliteDB;
+    use finql_data::{Currency, CashAmount, CashFlow, QuoteHandler};
+
+    use super::*;
+    use crate::fx_rates::insert_fx_quote;
 
     #[test]
     fn yield_to_maturity() {

@@ -1,9 +1,9 @@
-use crate::asset::Asset;
 ///! Calculation of fx rates based on currency quotes
-use crate::currency::Currency;
-use crate::data_handler::{DataError, QuoteHandler};
-use crate::quote::{MarketDataSource, Quote, Ticker};
+
+use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+
+use finql_data::{Asset, Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, Quote, Ticker};
 
 /// Calculate foreign exchange rates by reading data from quotes table
 pub fn get_fx_rate(
@@ -41,14 +41,13 @@ pub fn insert_fx_quote(
             note: None,
         })
         .unwrap();
-    let market_data_source = MarketDataSource::Manual;
     let currency_pair = format!("{}/{}", foreign, base);
     let ticker_id = quotes
         .insert_ticker(&Ticker {
             id: None,
             name: currency_pair,
             asset: foreign_id,
-            source: market_data_source,
+            source: "manual".to_string(),
             priority: 10,
             currency: base,
             factor: 1.0,
@@ -77,7 +76,7 @@ pub fn insert_fx_quote(
             id: None,
             name: currency_pair,
             asset: base_id,
-            source: market_data_source,
+            source: "manual".to_string(),
             priority: 10,
             currency: foreign,
             factor: 1.0,
@@ -93,11 +92,50 @@ pub fn insert_fx_quote(
     Ok(())
 }
 
+
+/// Currency converter based of stored list of exchange rates, ignoring dates
+pub struct SimpleCurrencyConverter {
+    fx_rates: HashMap<String,HashMap<String,f64>>,
+}
+
+impl CurrencyConverter for SimpleCurrencyConverter {
+    fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, _time: DateTime<Utc>) -> Result<f64, CurrencyError> {
+        Ok(self.fx_rates[&foreign_currency.to_string()][&domestic_currency.to_string()])
+    }
+}
+
+impl SimpleCurrencyConverter {
+    /// Create new container
+    pub fn new() -> SimpleCurrencyConverter {
+        SimpleCurrencyConverter{ fx_rates: HashMap::new() }
+    }
+
+    /// Insert or update the price of 1 unit of foreign currency in terms of domestic currency
+    fn insert_fx_rate_one(&mut self, foreign_currency: Currency, domestic_currency: Currency, fx_rate: f64) {
+        let for_key = foreign_currency.to_string();
+        let dom_key = domestic_currency.to_string();
+        match self.fx_rates.get_mut(&for_key) {
+            Some(fx) => { fx.insert(dom_key, fx_rate); },
+            None => {
+                let mut new_map = HashMap::new();
+                new_map.insert(dom_key, fx_rate);
+                self.fx_rates.insert(for_key, new_map);
+            }
+        }
+    }
+
+    /// Insert or update the price of 1 unit of foreign currency in terms of domestic currency and its inverse rate
+    pub fn insert_fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, fx_rate: f64) {
+        self.insert_fx_rate_one(foreign_currency, domestic_currency, fx_rate);
+        self.insert_fx_rate_one(domestic_currency, foreign_currency, 1./fx_rate);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::data_handler::QuoteHandler;
-    use crate::sqlite_handler::SqliteDB;
+    use finql_data::quote_handler::QuoteHandler;
+    use finql_sqlite::SqliteDB;
     use chrono::offset::TimeZone;
     use chrono::Utc;
     use std::str::FromStr;

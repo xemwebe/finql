@@ -13,6 +13,7 @@ pub enum CurrencyError {
     InvalidLength,
     InvalidCharacter,
     DeserializationFailed,
+    ConversionFailed,
 }
 
 impl fmt::Display for CurrencyError {
@@ -26,6 +27,7 @@ impl fmt::Display for CurrencyError {
                 "currency codes must contain only alphabetic ASCII characters"
             ),
             CurrencyError::DeserializationFailed => write!(f, "currency deserialization failed"),
+            CurrencyError::ConversionFailed => write!(f, "currency conversion failed"),
         }
     }
 }
@@ -88,7 +90,7 @@ impl FromStr for Currency {
             }
         }
         if idx != 3 {
-            return Err(CurrencyError::InvalidLength);
+            Err(CurrencyError::InvalidLength)
         } else {
             Ok(Currency{iso_code, rounding_digits} )
         }

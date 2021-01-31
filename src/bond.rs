@@ -2,17 +2,21 @@
 //! and functionality to rollout cashflows and calculate basic
 //! valuation figures
 
-use crate::currency::Currency;
-use crate::day_adjust::DayAdjust;
-use crate::day_count_conv::{DayCountConv, DayCountConvError};
-use crate::fixed_income::{CashFlow, FixedIncome};
-use crate::market::{Market, MarketError};
-use crate::rates::DiscountError;
-use crate::time_period::TimePeriod;
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt;
+
+use finql_data::currency::Currency;
+use finql_data::cash_flow::CashFlow;
+
+use crate::day_adjust::DayAdjust;
+use crate::day_count_conv::{DayCountConv, DayCountConvError};
+use crate::fixed_income::FixedIncome;
+use crate::market::{Market, MarketError};
+use crate::rates::DiscountError;
+use crate::time_period::TimePeriod;
+
 
 /// Error related to bonds
 #[derive(Debug)]
@@ -220,10 +224,11 @@ impl FixedIncome for Bond {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::sqlite_handler::SqliteDB;
     use std::str::FromStr;
     use rusqlite::{Connection};
+
+    use finql_sqlite::SqliteDB;
+    use super::*;
 
     #[test]
     fn cash_flow_rollout_unadjusted() {

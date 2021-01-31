@@ -1,8 +1,10 @@
-use crate::currency::Currency;
-use crate::day_count_conv::DayCountConv;
-use crate::fixed_income::{CashAmount, CashFlow};
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
+
+use finql_data::currency::Currency;
+use finql_data::cash_flow::{CashAmount, CashFlow};
+
+use crate::day_count_conv::DayCountConv;
 
 /// Methods for compounding interest rates
 #[derive(Deserialize, Serialize, Clone, Copy, Debug)]

@@ -1,6 +1,6 @@
 use super::{MarketQuoteError, MarketQuoteProvider};
 use crate::date_time_helper::{date_time_from_str_standard, unix_to_date_time};
-use crate::quote::{Quote, Ticker};
+use finql_data::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use eodhistoricaldata_api as eod_api;
 use async_trait::async_trait;
@@ -78,9 +78,8 @@ impl MarketQuoteProvider for EODHistData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::currency::Currency;
-    use crate::quote::MarketDataSource;
-    use chrono::offset::TimeZone;
+    use finql_data::Currency;
+    use chrono::TimeZone;
     use std::str::FromStr;
     use tokio_test::block_on;
 

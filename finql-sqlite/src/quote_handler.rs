@@ -2,14 +2,42 @@
 
 use std::str::FromStr;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc, Local, TimeZone};
 use rusqlite::{params, Row, NO_PARAMS};
 
+use finql_data::Currency;
+use finql_data::{DataError, QuoteHandler};
+use finql_data::{Quote, Ticker};
+
 use super::SqliteDB;
-use crate::currency::Currency;
-use crate::data_handler::{DataError, QuoteHandler};
-use crate::helpers::to_time;
-use crate::quote::{MarketDataSource, Quote, Ticker};
+
+
+/// Convert string to DateTime<Utc>
+pub fn to_time(time: &str) -> Result<DateTime<Utc>, DataError> {
+    let time =
+        DateTime::parse_from_rfc3339(time).map_err(|e| DataError::NotFound(e.to_string()))?;
+    let time: DateTime<Utc> = DateTime::from(time);
+    Ok(time)
+}
+
+/// Given a date and time construct a UTC DateTime, assuming that
+/// the date belongs to local time zone
+pub fn make_time(
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
+) -> Option<DateTime<Utc>> {
+    let time: NaiveDateTime = NaiveDate::from_ymd(year, month, day).and_hms(hour, minute, second);
+    let time = Local.from_local_datetime(&time).single();
+    match time {
+        Some(time) => Some(DateTime::from(time)),
+        None => None,
+    }
+}
+
 
 /// Sqlite implementation of quote handler
 impl QuoteHandler for SqliteDB<'_> {
@@ -73,8 +101,6 @@ impl QuoteHandler for SqliteDB<'_> {
                 },
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let source =
-            MarketDataSource::from_str(&source).map_err(|e| DataError::NotFound(e.to_string()))?;
         let currency =
             Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(Ticker {
@@ -108,8 +134,6 @@ impl QuoteHandler for SqliteDB<'_> {
         let mut all_ticker = Vec::new();
         for ticker in ticker_map {
             let (id, name, asset, priority, source, currency, factor) = ticker.unwrap();
-            let source = MarketDataSource::from_str(&source)
-                .map_err(|e| DataError::NotFound(e.to_string()))?;
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
             all_ticker.push(Ticker {
@@ -127,7 +151,7 @@ impl QuoteHandler for SqliteDB<'_> {
 
     fn get_all_ticker_for_source(
         &mut self,
-        source: MarketDataSource,
+        source: &str,
     ) -> Result<Vec<Ticker>, DataError> {
         let mut stmt = self
             .conn
@@ -155,7 +179,7 @@ impl QuoteHandler for SqliteDB<'_> {
                 id: Some(id as usize),
                 name,
                 asset: asset as usize,
-                source,
+                source: source.to_string(),
                 priority,
                 currency,
                 factor,
@@ -185,8 +209,6 @@ impl QuoteHandler for SqliteDB<'_> {
         let mut all_ticker = Vec::new();
         for ticker in ticker_map {
             let (id, name, priority, source, currency, factor) = ticker.unwrap();
-            let source = MarketDataSource::from_str(&source)
-                .map_err(|e| DataError::NotFound(e.to_string()))?;
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
             all_ticker.push(Ticker {

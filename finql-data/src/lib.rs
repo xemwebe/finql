@@ -10,9 +10,14 @@ pub mod currency;
 pub mod cash_flow;
 pub mod quote;
 
+pub use asset::Asset;
 pub use asset_handler::AssetHandler;
+pub use quote::{Quote, Ticker};
 pub use quote_handler::QuoteHandler;
+pub use transaction::Transaction;
 pub use transaction_handler::TransactionHandler;
+pub use currency::{Currency, CurrencyConverter, CurrencyError};
+pub use cash_flow::{CashAmount, CashFlow};
 
 #[derive(Debug)]
 pub enum DataError {

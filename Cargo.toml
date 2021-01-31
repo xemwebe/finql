@@ -17,8 +17,6 @@ computus = "1.0"
 serde = { version = "1.0.*", features = ["derive"] }
 serde_json = "1.0"
 argmin = "0.3"
-rusqlite = "0.24"
-postgres = { version = "0.19", features = ["with-chrono-0_4"] }
 #tokio-postgres = "0.7"
 yahoo_finance_api = "1.1"
 gurufocus_api = "0.4"
@@ -30,6 +28,10 @@ scraper = "0.12"
 csv = "1.1"
 async-trait = "0.1"
 tokio-compat-02 = "0.1"
+finql-data = { path="finql-data" }
 
 [dev-dependencies]
 tokio-test = "0.4"
+rusqlite = "0.24"
+finql-sqlite = { path = "finql-sqlite" }
+

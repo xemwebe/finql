@@ -1,7 +1,7 @@
 /// A tool to fetch prices by parsing comdirect web page
 use super::{MarketQuoteError, MarketQuoteProvider};
 use crate::date_time_helper::date_time_from_str;
-use crate::quote::{Quote, Ticker};
+use finql_data::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use scraper::{Html, Selector};
 use async_trait::async_trait;
@@ -194,8 +194,8 @@ impl MarketQuoteProvider for Comdirect {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::currency::Currency;
-    use crate::quote::MarketDataSource;
+    use finql_data::Currency;
+    use crate::market_data_source::MarketDataSource;
     use chrono::offset::TimeZone;
     use std::str::FromStr;
     use tokio_test::block_on;

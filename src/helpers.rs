@@ -1,10 +1,9 @@
-use crate::currency::Currency;
-use crate::data_handler::DataError;
-use crate::fixed_income::CashFlow;
 ///! Useful helper functions that do not belong to any other module
+
 use chrono::offset::TimeZone;
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Utc};
-use std::str::FromStr;
+
+use finql_data::DataError;
 
 /// Returns true if some optional String argument is not None and  the value equals a given str reference
 pub fn some_equal(opt: &Option<String>, s: &str) -> bool {
@@ -14,14 +13,6 @@ pub fn some_equal(opt: &Option<String>, s: &str) -> bool {
     }
 }
 
-
-/// Construct cash flow from raw strings
-pub fn raw_to_cash_flow(amount: f64, currency: &str, date: &str) -> Result<CashFlow, DataError> {
-    let currency = Currency::from_str(currency).map_err(|e| DataError::NotFound(e.to_string()))?;
-    let date = NaiveDate::parse_from_str(date, "%Y-%m-%d")
-        .map_err(|e| DataError::NotFound(e.to_string()))?;
-    Ok(CashFlow::new(amount, currency, date))
-}
 
 /// Convert string to DateTime<Utc>
 pub fn to_time(time: &str) -> Result<DateTime<Utc>, DataError> {

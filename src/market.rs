@@ -3,12 +3,6 @@
 /// source, e.g a database, files, or REST service.
 /// Market data consist of non-static data, like interest rates,
 /// asset prices, or foreign exchange rates.
-/// Currently, this is only a stub implementation.
-use crate::calendar::{Calendar, Holiday, NthWeek};
-use crate::data_handler;
-use crate::data_handler::QuoteHandler;
-use crate::market_quotes;
-use crate::market_quotes::MarketQuoteProvider;
 
 use chrono::{DateTime, NaiveDate, Utc, Weekday};
 use std::collections::BTreeMap;
@@ -16,12 +10,21 @@ use std::error::Error;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
+use finql_data::{DataError};
+use finql_data::QuoteHandler;
+
+use crate::calendar::{Calendar, Holiday, NthWeek};
+use crate::market_quotes;
+use crate::market_quotes::MarketQuoteProvider;
+
+
+
 /// Error related to market data object
 #[derive(Debug)]
 pub enum MarketError {
     CalendarNotFound,
     MarketQuoteError(market_quotes::MarketQuoteError),
-    DBError(data_handler::DataError),
+    DBError(DataError),
     MissingProviderToken,
 }
 
@@ -51,8 +54,8 @@ impl From<market_quotes::MarketQuoteError> for MarketError {
         Self::MarketQuoteError(error)
     }
 }
-impl From<data_handler::DataError> for MarketError {
-    fn from(error: data_handler::DataError) -> Self {
+impl From<DataError> for MarketError {
+    fn from(error: DataError) -> Self {
         Self::DBError(error)
     }
 }
@@ -101,8 +104,7 @@ impl<'a> Market<'a> {
         let tickers = self.db.deref_mut().get_all_ticker()?;
         let mut failed_ticker = Vec::new();
         for ticker in tickers {
-            let source = ticker.source;
-            let provider = self.provider.get(&source.to_string());
+            let provider = self.provider.get(&ticker.source);
             if provider.is_some() {
                 if market_quotes::update_ticker(
                     provider.unwrap().deref(),
@@ -125,8 +127,7 @@ impl<'a> Market<'a> {
         end: DateTime<Utc>,
     ) -> Result<(), MarketError> {
         let ticker = self.db.get_ticker_by_id(ticker_id)?;
-        let source = ticker.source;
-        let provider = self.provider.get(&source.to_string());
+        let provider = self.provider.get(&ticker.source);
         if provider.is_some() {
             market_quotes::update_ticker_history(
                 provider.unwrap().deref(),

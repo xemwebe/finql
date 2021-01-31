@@ -2,9 +2,9 @@
 
 use postgres::{Client,error::Error};
 
-mod asset_handler;
-mod quote_handler;
-mod transaction_handler;
+pub mod asset_handler;
+pub mod quote_handler;
+pub mod transaction_handler;
 
 /// Struct to handle connections to sqlite3 databases
 pub struct PostgresDB<'a> {

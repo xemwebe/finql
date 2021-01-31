@@ -1,10 +1,13 @@
-use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::date_time_helper::date_time_from_str_standard;
-use crate::quote::{Quote, Ticker};
-use alpha_vantage as alpha;
 use chrono::{DateTime, Utc, Duration};
 use async_trait::async_trait;
 use tokio_compat_02::FutureExt;
+
+use alpha_vantage as alpha;
+
+use finql_data::{Quote, Ticker};
+
+use super::{MarketQuoteError, MarketQuoteProvider};
+use crate::date_time_helper::date_time_from_str_standard;
 
 pub struct AlphaVantage {
     connector: alpha::user::APIKey,
@@ -83,12 +86,14 @@ impl MarketQuoteProvider for AlphaVantage {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::currency::Currency;
-    use crate::quote::MarketDataSource;
-    use chrono::offset::TimeZone;
     use std::str::FromStr;
+    use chrono::offset::TimeZone;
     use tokio_test::block_on;
+
+    use finql_data::Currency;
+
+    use super::*;
+    use crate::market_data_source::MarketDataSource;
 
     #[test]
     fn test_alpha_fetch_quote() {
@@ -99,7 +104,7 @@ mod tests {
             asset: 1,
             name: "IBM".to_string(),
             currency: Currency::from_str("USD").unwrap(),
-            source: MarketDataSource::AlphaVantage,
+            source: "alphavantage".to_string(),
             priority: 1,
             factor: 1.0,
         };

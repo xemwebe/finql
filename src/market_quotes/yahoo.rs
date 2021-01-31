@@ -1,6 +1,6 @@
 use super::{MarketQuoteError, MarketQuoteProvider};
 use crate::date_time_helper::unix_to_date_time;
-use crate::quote::{Quote, Ticker};
+use finql_data::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use yahoo_finance_api as yahoo;
 use async_trait::async_trait;
@@ -61,8 +61,7 @@ impl MarketQuoteProvider for Yahoo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::currency::Currency;
-    use crate::quote::MarketDataSource;
+    use finql_data::{Currency, MarketDataSource};
     use chrono::offset::TimeZone;
     use std::str::FromStr;
     use tokio_test::block_on;

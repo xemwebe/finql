@@ -140,9 +140,7 @@ impl CashFlow {
     }
     /// Check, whether cash flows could be aggregated
     pub fn aggregatable(&self, cf: &CashFlow) -> bool {
-        if self.amount.currency != cf.amount.currency {
-            false
-        } else if self.date != cf.date {
+        if self.amount.currency != cf.amount.currency || self.date != cf.date {
             false
         } else {
             true

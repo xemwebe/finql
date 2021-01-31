@@ -1,5 +1,5 @@
-use crate::data_handler::QuoteHandler;
-use crate::quote::{Quote, Ticker};
+use finql_data::QuoteHandler;
+use finql_data::quote::{Quote, Ticker};
 use chrono::{DateTime, Utc};
 use std::fmt;
 use async_trait::async_trait;
@@ -55,7 +55,7 @@ pub async fn update_ticker(
     ticker: &Ticker,
     db: &mut dyn QuoteHandler,
 ) -> Result<(), MarketQuoteError> {
-    let mut quote = provider.fetch_latest_quote(ticker).await?;
+    let mut quote = provider.fetch_latest_quote(&ticker).await?;
     quote.price *= ticker.factor;
     db.insert_quote(&quote)
         .map_err(|e| MarketQuoteError::StoringFailed(e.to_string()))?;
@@ -86,18 +86,20 @@ pub mod yahoo;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::asset::Asset;
-    use crate::currency::Currency;
-    use crate::data_handler::QuoteHandler;
-    use crate::quote::MarketDataSource;
-    use crate::sqlite_handler::SqliteDB;
-    use chrono::offset::TimeZone;
-    use chrono::{Duration, Utc};
-    use rand::Rng;
     use std::str::FromStr;
     use rusqlite::Connection;
     use tokio_test::block_on;
+    use chrono::offset::TimeZone;
+    use chrono::{Duration, Utc};
+    use rand::Rng;
+
+    use finql_data::asset::Asset;
+    use finql_data::currency::Currency;
+    use finql_data::quote_handler::QuoteHandler;
+    use finql_sqlite::SqliteDB;
+
+    use super::*;
+    use crate::market_data_source::MarketDataSource;
 
     struct DummyProvider {}
 
@@ -154,7 +156,7 @@ mod tests {
             asset: asset_id,
             name: "TestTicker".to_string(),
             currency: Currency::from_str("EUR").unwrap(),
-            source: MarketDataSource::Manual,
+            source: "manual".to_string(),
             priority: 1,
             factor: 1.0,
         };
