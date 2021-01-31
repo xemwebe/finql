@@ -57,12 +57,12 @@ impl AssetHandler for PostgresDB<'_> {
         })
     }
 
-    fn get_asset_by_isin(&mut self, isin: &String) -> Result<Asset, DataError> {
+    fn get_asset_by_isin(&mut self, isin: &str) -> Result<Asset, DataError> {
         let row = self
             .conn
             .query_one(
                 "SELECT id, name, wkn, note FROM assets WHERE isin=$1",
-                &[isin],
+                &[&isin.to_string()],
             )
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let id: i32 = row.get(0);
@@ -70,7 +70,7 @@ impl AssetHandler for PostgresDB<'_> {
             id: Some(id as usize),
             name: row.get(1),
             wkn: row.get(2),
-            isin: Some(isin.clone()),
+            isin: Some(isin.to_string()),
             note: row.get(3),
         })
     }

@@ -1,18 +1,37 @@
 ///! Demonstration of storing quotes and related data in Sqlite3, PostgreSQL or in-memory database
 ///! Please note: The postgres example will delete all existing content of the database
-use finql::asset::Asset;
-use finql::currency::Currency;
-use finql::fx_rates::{get_fx_rate, insert_fx_quote};
-use finql::helpers::make_time;
-use finql::market::Market;
-use finql::postgres_handler::PostgresDB;
-use finql::quote::{MarketDataSource, Quote, Ticker};
-use finql::sqlite_handler::SqliteDB;
-use rusqlite::Connection;
 use std::fs;
 use std::io::{stdout, Write};
 use std::str::FromStr;
+
+use rusqlite::Connection;
 use tokio_test::block_on;
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Local, Utc, TimeZone};
+
+use finql_data::{Asset, Currency, Quote, Ticker};
+use finql::fx_rates::{get_fx_rate, insert_fx_quote};
+use finql::market::Market;
+use finql::market_quotes::MarketDataSource;
+use finql_postgres::PostgresDB;
+use finql_sqlite::SqliteDB;
+
+/// Given a date and time construct a UTC DateTime, assuming that
+/// the date belongs to local time zone
+pub fn make_time(
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
+) -> Option<DateTime<Utc>> {
+    let time: NaiveDateTime = NaiveDate::from_ymd(year, month, day).and_hms(hour, minute, second);
+    let time = Local.from_local_datetime(&time).single();
+    match time {
+        Some(time) => Some(DateTime::from(time)),
+        None => None,
+    }
+}
 
 fn log(s: &str) {
     print!("{}", s);
@@ -66,7 +85,7 @@ fn quote_tests(market: &mut Market) {
         asset: basf_id,
         currency: eur,
         priority: 10,
-        source: yahoo,
+        source: yahoo.to_string(),
         factor: 1.0,
     };
     let basf_id = market.db().insert_ticker(&basf).unwrap();
@@ -79,7 +98,7 @@ fn quote_tests(market: &mut Market) {
         asset: siemens_id,
         priority: 10,
         currency: eur,
-        source: yahoo,
+        source: yahoo.to_string(),
         factor: 1.0,
     };
     let siemens_id = market.db().insert_ticker(&siemens).unwrap();
@@ -90,7 +109,7 @@ fn quote_tests(market: &mut Market) {
         asset: bhp_id,
         priority: 10,
         currency: eur,
-        source: MarketDataSource::Manual,
+        source: MarketDataSource::Manual.to_string(),
         factor: 1.0,
     };
     let bhp_id = market.db().insert_ticker(&bhp).unwrap();
@@ -103,7 +122,7 @@ fn quote_tests(market: &mut Market) {
     market.db().update_ticker(&bhp).unwrap();
     println!("ok");
     log("Get all ticker by source...");
-    let tickers = market.db().get_all_ticker_for_source(yahoo).unwrap();
+    let tickers = market.db().get_all_ticker_for_source(&yahoo.to_string()).unwrap();
     if tickers.len() == 2 {
         println!("ok");
     } else {

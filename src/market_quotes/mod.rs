@@ -1,8 +1,19 @@
+use std::fmt;
+use std::str::FromStr;
+
+use chrono::{DateTime, Utc};
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+
 use finql_data::QuoteHandler;
 use finql_data::quote::{Quote, Ticker};
-use chrono::{DateTime, Utc};
-use std::fmt;
-use async_trait::async_trait;
+
+
+pub mod alpha_vantage;
+pub mod comdirect;
+pub mod eod_historical_data;
+pub mod guru_focus;
+pub mod yahoo;
 
 #[derive(Debug)]
 pub enum MarketQuoteError {
@@ -78,11 +89,73 @@ pub async fn update_ticker_history(
     Ok(())
 }
 
-pub mod alpha_vantage;
-pub mod comdirect;
-pub mod eod_historical_data;
-pub mod guru_focus;
-pub mod yahoo;
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub enum MarketDataSource {
+    Manual,
+    Yahoo,
+    GuruFocus,
+    EodHistData,
+    AlphaVantage,
+    Comdirect,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParseMarketDataSourceError {}
+
+impl fmt::Display for ParseMarketDataSourceError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Parsing market data source failed")
+    }
+}
+
+impl FromStr for MarketDataSource {
+    type Err = ParseMarketDataSourceError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "manual" => Ok(Self::Manual),
+            "yahoo" => Ok(Self::Yahoo),
+            "gurufocus" => Ok(Self::GuruFocus),
+            "eodhistdata" => Ok(Self::EodHistData),
+            "alpha_vantage" => Ok(Self::AlphaVantage),
+            "comdirect" => Ok(Self::Comdirect),
+            _ => Err(ParseMarketDataSourceError {}),
+        }
+    }
+}
+
+impl fmt::Display for MarketDataSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Manual => write!(f, "manual"),
+            Self::Yahoo => write!(f, "yahoo"),
+            Self::GuruFocus => write!(f, "gurufocus"),
+            Self::EodHistData => write!(f, "eodhistdata"),
+            Self::AlphaVantage => write!(f, "alpha_vantage"),
+            Self::Comdirect => write!(f, "comdirect"),
+        }
+    }
+}
+
+impl MarketDataSource {
+    pub fn get_provider(
+        &self,
+        token: String,
+    ) -> Option<Box<dyn MarketQuoteProvider>> {
+        match self {
+            Self::Yahoo => Some(Box::new(yahoo::Yahoo {})),
+            Self::GuruFocus => Some(Box::new(guru_focus::GuruFocus::new(token))),
+            Self::EodHistData => Some(Box::new(
+                eod_historical_data::EODHistData::new(token))),
+            Self::AlphaVantage => Some(Box::new(
+                alpha_vantage::AlphaVantage::new(token))),
+            Self::Comdirect => Some(Box::new(comdirect::Comdirect::new())),
+            _ => None,
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -99,7 +172,6 @@ mod tests {
     use finql_sqlite::SqliteDB;
 
     use super::*;
-    use crate::market_data_source::MarketDataSource;
 
     struct DummyProvider {}
 

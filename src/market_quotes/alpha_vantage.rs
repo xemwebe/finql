@@ -93,7 +93,7 @@ mod tests {
     use finql_data::Currency;
 
     use super::*;
-    use crate::market_data_source::MarketDataSource;
+    use crate::market_quotes::MarketDataSource;
 
     #[test]
     fn test_alpha_fetch_quote() {
@@ -121,7 +121,7 @@ mod tests {
             asset: 1,
             name: "IBM".to_string(),
             currency: Currency::from_str("USD").unwrap(),
-            source: MarketDataSource::AlphaVantage,
+            source: MarketDataSource::AlphaVantage.to_string(),
             priority: 1,
             factor: 1.0,
         };

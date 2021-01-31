@@ -1,9 +1,8 @@
 use chrono::NaiveDate;
-use finql::bond::Bond;
-use finql::currency::Currency;
-use finql::fixed_income::{get_cash_flows_after, CashFlow, FixedIncome};
+use finql_data::{Currency, CashFlow};
+use finql::{fixed_income::{get_cash_flows_after, FixedIncome}, bond::Bond};
 use finql::market::Market;
-use finql::sqlite_handler::SqliteDB;
+use finql_sqlite::SqliteDB;
 use serde_json;
 use rusqlite::Connection;
 use std::fs::File;

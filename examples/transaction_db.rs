@@ -1,16 +1,14 @@
 ///! Demonstration of storing Assets in Sqlite3 database
-use chrono::NaiveDate;
-use finql::asset::Asset;
-use finql::currency::Currency;
-use finql::data_handler::TransactionHandler;
-use finql::fixed_income::CashFlow;
-use finql::postgres_handler::PostgresDB;
-use finql::sqlite_handler::SqliteDB;
-use finql::transaction::{Transaction, TransactionType};
-use rusqlite::Connection;
-use postgres;
+
 use std::fs;
 use std::str::FromStr;
+
+use rusqlite::Connection;
+use chrono::NaiveDate;
+
+use finql_data::{Asset, Currency, CashFlow, Transaction, TransactionHandler, TransactionType};
+use finql_postgres::PostgresDB;
+use finql_sqlite::SqliteDB;
 
 fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
     print!("Store asset...");

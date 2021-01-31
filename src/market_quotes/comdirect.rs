@@ -193,13 +193,13 @@ impl MarketQuoteProvider for Comdirect {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use finql_data::Currency;
-    use crate::market_data_source::MarketDataSource;
-    use chrono::offset::TimeZone;
     use std::str::FromStr;
+    use chrono::offset::TimeZone;
     use tokio_test::block_on;
-
+    use finql_data::Currency;
+    use super::*;
+    use crate::market_quotes::MarketDataSource;
+    
     #[test]
     fn test_comdirect_fetch_quote() {
         let codi = Comdirect::new();
@@ -209,7 +209,7 @@ mod tests {
             // comdirects id for AAPL quote at Nasdaq
             name: "253929".to_string(),
             currency: Currency::from_str("EUR").unwrap(),
-            source: MarketDataSource::Comdirect,
+            source: MarketDataSource::Comdirect.to_string(),
             priority: 1,
             factor: 1.0,
         };
@@ -226,7 +226,7 @@ mod tests {
             // comdirects id for AAPL quote at Nasdaq
             name: "253929".to_string(),
             currency: Currency::from_str("EUR").unwrap(),
-            source: MarketDataSource::Comdirect,
+            source: MarketDataSource::Comdirect.to_string(),
             priority: 1,
             factor: 1.0,
         };

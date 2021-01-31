@@ -188,7 +188,7 @@ mod tests {
     #[test]
     fn serialize_currency() {
         let curr = Currency {
-            iso_code: ['E', 'U', 'R'],
+            iso_code: ['E', 'U', 'R'], rounding_digits: 2
         };
         let json = serde_json::to_string(&curr).unwrap();
         assert_eq!(json, r#""EUR""#);

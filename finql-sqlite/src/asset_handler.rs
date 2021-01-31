@@ -69,7 +69,7 @@ impl AssetHandler for SqliteDB<'_> {
         Ok(asset)
     }
 
-    fn get_asset_by_isin(&mut self, isin: &String) -> Result<Asset, DataError> {
+    fn get_asset_by_isin(&mut self, isin: &str) -> Result<Asset, DataError> {
         let asset = self
             .conn
             .query_row(
@@ -82,7 +82,7 @@ impl AssetHandler for SqliteDB<'_> {
                         id: Some(id as usize),
                         name: row.get(1)?,
                         wkn: row.get(2)?,
-                        isin: Some(isin.clone()),
+                        isin: Some(isin.to_string()),
                         note: row.get(3)?,
                     })
                 },

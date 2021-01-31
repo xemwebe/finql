@@ -149,9 +149,8 @@ impl CashFlow {
 
     /// Compare to cash flows for equality within a given absolute tolerance
     pub fn fuzzy_cash_flows_cmp_eq(&self, cf: &CashFlow, tol: f64) -> bool {
-        if !self.aggregatable(cf) {
-            false
-        } else if self.amount.amount.is_nan()
+        if !self.aggregatable(cf) 
+            || self.amount.amount.is_nan()
             || cf.amount.amount.is_nan()
             || (self.amount.amount - cf.amount.amount).abs() > tol
         {

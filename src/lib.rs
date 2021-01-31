@@ -52,6 +52,5 @@ pub mod market_quotes;
 pub mod portfolio;
 pub mod rates;
 pub mod time_period;
-pub mod market_data_source;
 
 pub use market::Market;

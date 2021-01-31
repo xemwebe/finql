@@ -60,12 +60,15 @@ impl MarketQuoteProvider for Yahoo {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use finql_data::{Currency, MarketDataSource};
-    use chrono::offset::TimeZone;
     use std::str::FromStr;
+    use chrono::offset::TimeZone;
     use tokio_test::block_on;
-
+ 
+    use finql_data::Currency;
+    
+    use crate::market_quotes::MarketDataSource;
+    use super::*;
+ 
     #[test]
     fn test_yahoo_fetch_quote() {
         let yahoo = Yahoo {};
@@ -74,7 +77,7 @@ mod tests {
             asset: 1,
             name: "AAPL".to_string(),
             currency: Currency::from_str("EUR").unwrap(),
-            source: MarketDataSource::Yahoo,
+            source: MarketDataSource::Yahoo.to_string(),
             priority: 1,
             factor: 1.0,
         };
@@ -90,7 +93,7 @@ mod tests {
             asset: 1,
             name: "AAPL".to_string(),
             currency: Currency::from_str("EUR").unwrap(),
-            source: MarketDataSource::Yahoo,
+            source: MarketDataSource::Yahoo.to_string(),
             priority: 1,
             factor: 1.0,
         };

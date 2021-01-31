@@ -78,6 +78,7 @@ mod tests {
     use super::*;
     use finql_data::Currency;
     use chrono::offset::TimeZone;
+    use crate::market_quotes::MarketDataSource;
     use std::env;
     use std::str::FromStr;
     use tokio_test::block_on;
@@ -91,7 +92,7 @@ mod tests {
             asset: 1,
             name: "AAPL".to_string(),
             currency: Currency::from_str("USD").unwrap(),
-            source: MarketDataSource::GuruFocus,
+            source: MarketDataSource::GuruFocus.to_string(),
             priority: 1,
             factor: 1.0,
         };
@@ -108,7 +109,7 @@ mod tests {
             asset: 1,
             name: "AAPL".to_string(),
             currency: Currency::from_str("USD").unwrap(),
-            source: MarketDataSource::GuruFocus,
+            source: MarketDataSource::GuruFocus.to_string(),
             priority: 1,
             factor: 1.0,
         };

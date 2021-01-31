@@ -1,9 +1,10 @@
-use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::date_time_helper::{date_time_from_str_standard, unix_to_date_time};
-use finql_data::{Quote, Ticker};
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use eodhistoricaldata_api as eod_api;
-use async_trait::async_trait;
+use finql_data::{Quote, Ticker};
+
+use super::{MarketQuoteError, MarketQuoteProvider};
+use crate::date_time_helper::{date_time_from_str_standard, unix_to_date_time};
 
 pub struct EODHistData {
     connector: eod_api::EodHistConnector,
@@ -77,11 +78,15 @@ impl MarketQuoteProvider for EODHistData {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use finql_data::Currency;
-    use chrono::TimeZone;
     use std::str::FromStr;
+
     use tokio_test::block_on;
+    use chrono::TimeZone;
+
+    use finql_data::Currency;
+
+    use super::*;
+    use crate::market_quotes::MarketDataSource;
 
     #[test]
     fn test_eod_fetch_quote() {
@@ -92,7 +97,7 @@ mod tests {
             asset: 1,
             name: "AAPL".to_string(),
             currency: Currency::from_str("USD").unwrap(),
-            source: MarketDataSource::EodHistData,
+            source: MarketDataSource::EodHistData.to_string(),
             priority: 1,
             factor: 1.0,
         };
@@ -109,7 +114,7 @@ mod tests {
             asset: 1,
             name: "AAPL".to_string(),
             currency: Currency::from_str("USD").unwrap(),
-            source: MarketDataSource::EodHistData,
+            source: MarketDataSource::EodHistData.to_string(),
             priority: 1,
             factor: 1.0,
         };
