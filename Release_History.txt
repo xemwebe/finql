@@ -1,3 +1,14 @@
+Version 0.8
+  * major refactoring of data handler: data handler has been moved to separate sub crate,
+    same for sqlite and postgres adaptors. Therefore, it's up to the user if she wants to include
+    sqlite or postgres or both databases (or none, using a custom implementations of AssetHandler, 
+    TransactionHandler, etc.)
+  * New trait CurrencyConverter for calculating fx rates, e.g. while adding cash flows in different
+    currencies. The database adaptors implement this trait (so databases could still be used to 
+    get fx exchange rates), but there is also a SimpleCurrencyConverter which can be initialized by
+    a set of fixed fx rates, without the need to push some external fx rates in an adhoc database to 
+    use them for conversion
+
 Version 0.7.5-0.7.7
   * In total: no change (I was just to fast with publishing and later reverted all changes
   after I realized my fatal error, sorry)
