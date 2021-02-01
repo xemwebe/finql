@@ -9,5 +9,5 @@ repository = "https://github.com/xemwebe/finql"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
-finql-data = { path="../finql-data" }
+finql-data = {version = "0.1", path = "../finql-data" }
 postgres = { version = "0.19", features = ["with-chrono-0_4"] }
