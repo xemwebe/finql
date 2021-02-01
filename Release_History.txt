@@ -6,7 +6,7 @@ Version 0.8
   * New trait CurrencyConverter for calculating fx rates, e.g. while adding cash flows in different
     currencies. The database adaptors implement this trait (so databases could still be used to 
     get fx exchange rates), but there is also a SimpleCurrencyConverter which can be initialized by
-    a set of fixed fx rates, without the need to push some external fx rates in an adhoc database to 
+    a set of fixed fx rates, without the need to push some external fx rates in an ad hoc database to 
     use them for conversion
 
 Version 0.7.5-0.7.7

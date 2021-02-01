@@ -23,11 +23,11 @@ gurufocus_api = "0.4"
 rand = "0.8"
 eodhistoricaldata_api =  "0.3"
 alpha_vantage = "0.5"
-reqwest = "0.10"
+reqwest = "0.11"
 scraper = "0.12"
 csv = "1.1"
 async-trait = "0.1"
-tokio-compat-02 = "0.1"
+tokio-compat-02 = "0.2"
 finql-data = { path="finql-data" }
 
 [dev-dependencies]
