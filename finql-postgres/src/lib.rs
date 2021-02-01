@@ -1,45 +1,49 @@
 ///! Implementation of PostgreSQL data handler
 
-use postgres::{Client,error::Error};
+use sqlx::postgres::{Postgres, PgPoolOptions};
 
 pub mod asset_handler;
 pub mod quote_handler;
 pub mod transaction_handler;
 
-/// Struct to handle connections to sqlite3 databases
-pub struct PostgresDB<'a> {
-    /// conn is made public to allow extending this struct outside of the library
-    pub conn: &'a mut Client,
+/// Struct to handle connections to postgres databases
+pub struct PostgresDB {
+    /// pool is made public to allow extending this struct outside of the library
+    pub pool: sqlx::Pool<Postgres>,
 }
 
-impl PostgresDB<'_> {
+impl PostgresDB {
+    pub async fn new(connection_string: &str) -> Result<PostgresDB, sqlx::Error> {
+        let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(connection_string).await?;
+        Ok(PostgresDB{ pool })
+    }
+
     /// Clean database by dropping all tables and than run init
-    pub fn clean(&mut self) -> Result<(), Error> {
-        self.conn
-            .execute("DROP TABLE IF EXISTS transactions", &[])?;
-        self.conn.execute("DROP TABLE IF EXISTS quotes", &[])?;
-        self.conn.execute("DROP TABLE IF EXISTS ticker", &[])?;
-        self.conn
-            .execute("DROP TYPE IF EXISTS market_data_source", &[])?;
-        self.conn.execute("DROP TABLE IF EXISTS assets", &[])?;
-        self.conn
-            .execute("DROP TABLE IF EXISTS rounding_digits", &[])?;
-        self.init()
+    pub async fn clean(&mut self) -> Result<(), sqlx::Error> {
+        sqlx::query!("DROP TABLE IF EXISTS transactions").execute(&self.pool).await?;
+        sqlx::query!("DROP TABLE IF EXISTS transactions").execute(&self.pool).await?;
+        sqlx::query!("DROP TABLE IF EXISTS quotes").execute(&self.pool).await?;
+        sqlx::query!("DROP TABLE IF EXISTS ticker").execute(&self.pool).await?;
+        sqlx::query!("DROP TYPE IF EXISTS market_data_source").execute(&self.pool).await?;
+        sqlx::query!("DROP TABLE IF EXISTS assets").execute(&self.pool).await?;
+        sqlx::query!("DROP TABLE IF EXISTS rounding_digits").execute(&self.pool).await?;
+        self.init().await
     }
 
     /// Initialize new database by creating table
-    pub fn init(&mut self) -> Result<(), Error> {
-        self.conn.execute(
+    pub async fn init(&mut self) -> Result<(), sqlx::Error> {
+        sqlx::query!(
             "CREATE TABLE IF NOT EXISTS assets (
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL UNIQUE,
                 wkn TEXT UNIQUE,
                 isin TEXT UNIQUE,
                 note TEXT
-            )",
-            &[],
-        )?;
-        self.conn.execute(
+            )").execute(&self.pool).await?;
+            
+        sqlx::query!(
             "CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY,
                 trans_type TEXT NOT NULL,
@@ -52,10 +56,9 @@ impl PostgresDB<'_> {
                 note TEXT,
                 FOREIGN KEY(asset_id) REFERENCES assets(id),
                 FOREIGN KEY(related_trans) REFERENCES transactions(id)
-            );",
-            &[],
-        )?;
-        self.conn.execute(
+            )").execute(&self.pool).await?;
+
+        sqlx::query!(
             "CREATE TABLE IF NOT EXISTS ticker (
                 id SERIAL PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -65,26 +68,24 @@ impl PostgresDB<'_> {
                 currency TEXT NOT NULL,
                 factor FLOAT8 NOT NULL DEFAULT 1.0,
                 FOREIGN KEY(asset_id) REFERENCES assets(id) 
-            );",
-            &[],
-        )?;
-        self.conn.execute(
+            )").execute(&self.pool).await?;
+            
+        sqlx::query!(
             "CREATE TABLE IF NOT EXISTS quotes (
                 id SERIAL PRIMARY KEY,
                 ticker_id INTEGER NOT NULL,
                 price FLOAT8 NOT NULL,
                 time TIMESTAMP WITH TIME ZONE NOT NULL,
                 volume FLOAT8,
-                FOREIGN KEY(ticker_id) REFERENCES ticker(id) );",
-            &[],
-        )?;
-        self.conn.execute(
+                FOREIGN KEY(ticker_id) REFERENCES ticker(id) 
+            )").execute(&self.pool).await?;
+
+        sqlx::query!(
             "CREATE TABLE IF NOT EXISTS rounding_digits (
                 id SERIAL PRIMARY KEY,
                 currency TEXT NOT NULL UNIQUE,
-                digits INT NOT NULL);",
-            &[],
-        )?;
+                digits INT NOT NULL
+            )").execute(&self.pool).await?;
 
         Ok(())
     }
