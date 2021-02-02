@@ -36,3 +36,24 @@ Fetching the (realtime) quote or a quote history is implemented for the vendors
 [eodhistoricaldata](https://eodhistoricaldata.com/). Please note that all except yahoo! finance 
 require a user token that is only provided after registration with the service. For gurufocus,
 this required a paid license.
+
+With version 0.8.x onwards, we us the sqlx crate, which supports compile time checks of SQL
+queries. This, however, requires that the environment variable DATABASE_URL is set to the 
+appropriate connection string. For Postgres, using a unix socket connection the variable
+could be set to something like
+
+```bash
+export DATABASE_URL="postgresql:///<dbname>?user=<user>&password=<password>&ssl=false"
+```
+
+and for sqlite3 the string would look like
+
+```bash
+export DATABASE_URL="sqlite::memory"
+```
+
+or 
+
+```bash
+export DATABASE_URL="sqlite::///test.db"
+```

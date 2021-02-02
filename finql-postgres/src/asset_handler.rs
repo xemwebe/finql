@@ -7,64 +7,62 @@ use finql_data::currency::Currency;
 
 use super::PostgresDB;
 
+/// helper struct
+struct ID { id: i32, }
+
+
 /// Handler for globally available data
 #[async_trait]
 impl AssetHandler for PostgresDB {
     async fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {
         let row = sqlx::query!(
                 "INSERT INTO assets (name, wkn, isin, note) VALUES ($1, $2, $3, $4) RETURNING id",
-                &[&asset.name, &asset.wkn, &asset.isin, &asset.note],
+                asset.name, asset.wkn, asset.isin, asset.note,
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id: i32 = row.get(0);
+        let id = row.id;
         Ok(id as usize)
     }
-
+   
     async fn get_asset_id(&mut self, asset: &Asset) -> Option<usize> {
-        let row = if let Some(isin) = &asset.isin {
-            sqlx::query!("SELECT id FROM assets WHERE isin=$1", &[&isin]).fetch_one(&self.pool).await
+        let id = if let Some(isin) = &asset.isin {
+            sqlx::query_as!(ID, "SELECT id FROM assets WHERE isin=$1", isin).fetch_one(&self.pool).await.ok()
         } else if let Some(wkn) = &asset.wkn {
-            sqlx::query!("SELECT id FROM assets WHERE wkn=$1", &[&wkn]).fetch_one(&self.pool).await
+            sqlx::query_as!(ID, "SELECT id FROM assets WHERE wkn=$1", wkn).fetch_one(&self.pool).await.ok()
         } else {
-            sqlx::query!("SELECT id FROM assets WHERE name=$1", &[&asset.name]).fetch_one(&self.pool).await
+            sqlx::query_as!(ID, "SELECT id FROM assets WHERE name=$1", asset.name).fetch_one(&self.pool).await.ok()
         };
-        match row {
-            Ok(row) => {
-                let id: i32 = row.get(0);
-                Some(id as usize)
-            }
-            _ => None,
-        }
+        id.map(|x| x.id as usize)
     }
 
     async fn get_asset_by_id(&mut self, id: usize) -> Result<Asset, DataError> {
         let row = sqlx::query!(
                 "SELECT name, wkn, isin, note FROM assets WHERE id=$1",
-                &[&(id as i32)],
+                (id as i32),
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(Asset {
             id: Some(id),
-            name: row.get(0),
-            wkn: row.get(1),
-            isin: row.get(2),
-            note: row.get(3),
+            name: row.name,
+            wkn: row.wkn,
+            isin: row.isin,
+            note: row.note,
         })
     }
 
     async fn get_asset_by_isin(&mut self, isin: &str) -> Result<Asset, DataError> {
         let row = sqlx::query!(
                 "SELECT id, name, wkn, note FROM assets WHERE isin=$1",
-                &[&isin.to_string()],
+                isin.to_string(),
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let id: i32 = row.get(0);
+        let id: i32 = row.id;
         Ok(Asset {
             id: Some(id as usize),
-            name: row.get(1),
-            wkn: row.get(2),
+            name: row.name,
+            wkn: row.wkn,
             isin: Some(isin.to_string()),
-            note: row.get(3),
+            note: row.note,
         })
     }
 
@@ -74,14 +72,14 @@ impl AssetHandler for PostgresDB {
             .fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
-            let id: i32 = row.get(0);
+            let id: i32 = row.id;
             let id = Some(id as usize);
             assets.push(Asset {
                 id,
-                name: row.get(1),
-                wkn: row.get(2),
-                isin: row.get(3),
-                note: row.get(4),
+                name: row.name,
+                wkn: row.wkn,
+                isin: row.isin,
+                note: row.note,
             });
         }
         Ok(assets)
@@ -97,14 +95,14 @@ impl AssetHandler for PostgresDB {
         sqlx::query!(
                 "UPDATE assets SET name=$2, wkn=$3, isin=$4, note=$5 
                 WHERE id=$1;",
-                &[&id, &asset.name, &asset.wkn, &asset.isin, &asset.note],
+                id, asset.name, asset.wkn, asset.isin, asset.note,
             ).execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
 
     async fn delete_asset(&mut self, id: usize) -> Result<(), DataError> {
-        sqlx::query!("DELETE FROM assets WHERE id=$1;", &[&(id as i32)])
+        sqlx::query!("DELETE FROM assets WHERE id=$1;", (id as i32))
             .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
@@ -112,11 +110,11 @@ impl AssetHandler for PostgresDB {
 
     async fn get_all_currencies(&mut self) -> Result<Vec<Currency>, DataError> {
         let mut currencies = Vec::new();
-        for row in sqlx::query!("SELECT name FROM assets WHERE isin IS NULL AND wkn IS NULL AND length(name)=3", &[])
+        for row in sqlx::query!("SELECT name FROM assets WHERE isin IS NULL AND wkn IS NULL AND length(name)=3")
             .fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
-            let currency: String = row.get(0);
+            let currency = row.name;
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
             currencies.push(currency);

@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use chrono::NaiveDate;
+use async_trait::async_trait;
 
 use finql_data::currency::Currency;
 use finql_data::{DataError, TransactionHandler};
@@ -30,7 +31,7 @@ const TAX: &str = "t";
 const FEE: &str = "f";
 
 impl RawTransaction {
-    pub fn to_transaction(&self) -> Result<Transaction, DataError> {
+    pub async fn to_transaction(&self) -> Result<Transaction, DataError> {
         let currency = Currency::from_str(&self.cash_currency)
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id = self.id.map(|x| x as usize);
@@ -125,87 +126,78 @@ impl RawTransaction {
 }
 
 /// Handler for globally available data
-impl TransactionHandler for PostgresDB<'_> {
+#[async_trait]
+impl TransactionHandler for PostgresDB {
     // insert, get, update and delete for transactions
-    fn insert_transaction(&mut self, transaction: &Transaction) -> Result<usize, DataError> {
+    async fn insert_transaction(&mut self, transaction: &Transaction) -> Result<usize, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
-        let row = self
-            .conn
-            .query_one(
+        let row = sqlx::query!(
                 "INSERT INTO transactions (trans_type, asset_id, cash_amount, 
                 cash_currency, cash_date, related_trans, position,
                 note) 
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
-                &[
-                    &transaction.trans_type,
-                    &transaction.asset,
-                    &transaction.cash_amount,
-                    &transaction.cash_currency,
-                    &transaction.cash_date,
-                    &transaction.related_trans,
-                    &transaction.position,
-                    &transaction.note,
-                ],
-            )
+                transaction.trans_type,
+                transaction.asset,
+                transaction.cash_amount,
+                transaction.cash_currency,
+                transaction.cash_date,
+                transaction.related_trans,
+                transaction.position,
+                transaction.note,
+            ).fetch_one(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id: i32 = row.get(0);
+        let id= row.id;
         Ok(id as usize)
     }
 
-    fn get_transaction_by_id(&mut self, id: usize) -> Result<Transaction, DataError> {
-        let row = self
-            .conn
-            .query_one(
+    async fn get_transaction_by_id(&mut self, id: usize) -> Result<Transaction, DataError> {
+        let row = sqlx::query!(
                 "SELECT trans_type, asset_id, 
         cash_amount, cash_currency, cash_date, related_trans, position, note 
         FROM transactions
-        WHERE id=$1",
-                &[&(id as i32)],
-            )
+        WHERE id=$1", (id as i32),
+            ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let transaction = RawTransaction {
             id: Some(id as i32),
-            trans_type: row.get(0),
-            asset: row.get(1),
-            cash_amount: row.get(2),
-            cash_currency: row.get(3),
-            cash_date: row.get(4),
-            related_trans: row.get(5),
-            position: row.get(6),
-            note: row.get(7),
+            trans_type: row.trans_type,
+            asset: row.asset_id,
+            cash_amount: row.cash_amount,
+            cash_currency: row.cash_currency,
+            cash_date: row.cash_date,
+            related_trans: row.related_trans,
+            position: row.position,
+            note: row.note,
         };
-        Ok(transaction.to_transaction()?)
+        Ok(transaction.to_transaction().await?)
     }
 
-    fn get_all_transactions(&mut self) -> Result<Vec<Transaction>, DataError> {
+    async fn get_all_transactions(&mut self) -> Result<Vec<Transaction>, DataError> {
         let mut transactions = Vec::new();
-        for row in self
-            .conn
-            .query(
+        for row in sqlx::query!(
                 "SELECT id, trans_type, asset_id, 
         cash_amount, cash_currency, cash_date, related_trans, position, note 
         FROM transactions",
-                &[],
-            )
+            ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
             let transaction = RawTransaction {
-                id: row.get(0),
-                trans_type: row.get(1),
-                asset: row.get(2),
-                cash_amount: row.get(3),
-                cash_currency: row.get(4),
-                cash_date: row.get(5),
-                related_trans: row.get(6),
-                position: row.get(7),
-                note: row.get(8),
+                id: Some(row.id),
+                trans_type: row.trans_type,
+                asset: row.asset_id,
+                cash_amount: row.cash_amount,
+                cash_currency: row.cash_currency,
+                cash_date: row.cash_date,
+                related_trans: row.related_trans,
+                position: row.position,
+                note: row.note,
             };
-            transactions.push(transaction.to_transaction()?);
+            transactions.push(transaction.to_transaction().await?);
         }
         Ok(transactions)
     }
 
-    fn update_transaction(&mut self, transaction: &Transaction) -> Result<(), DataError> {
+    async fn update_transaction(&mut self, transaction: &Transaction) -> Result<(), DataError> {
         if transaction.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -213,8 +205,7 @@ impl TransactionHandler for PostgresDB<'_> {
         }
         let id = transaction.id.unwrap() as i32;
         let transaction = RawTransaction::from_transaction(transaction);
-        self.conn
-            .execute(
+        sqlx::query!(
                 "UPDATE transactions SET 
                 trans_type=$2, 
                 asset_id=$3, 
@@ -225,25 +216,23 @@ impl TransactionHandler for PostgresDB<'_> {
                 position=$8,
                 note=$9
             WHERE id=$1",
-                &[
-                    &id,
-                    &transaction.trans_type,
-                    &transaction.asset,
-                    &transaction.cash_amount,
-                    &transaction.cash_currency,
-                    &transaction.cash_date,
-                    &transaction.related_trans,
-                    &transaction.position,
-                    &transaction.note,
-                ],
-            )
+                id,
+                transaction.trans_type,
+                transaction.asset,
+                transaction.cash_amount,
+                transaction.cash_currency,
+                transaction.cash_date,
+                transaction.related_trans,
+                transaction.position,
+                transaction.note,
+            ).execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
 
-    fn delete_transaction(&mut self, id: usize) -> Result<(), DataError> {
-        self.conn
-            .execute("DELETE FROM transactions WHERE id=$1;", &[&(id as i32)])
+    async fn delete_transaction(&mut self, id: usize) -> Result<(), DataError> {
+        sqlx::query!("DELETE FROM transactions WHERE id=$1;", (id as i32))
+            .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
