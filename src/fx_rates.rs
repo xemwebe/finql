@@ -134,13 +134,12 @@ impl SimpleCurrencyConverter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use finql_data::quote_handler::QuoteHandler;
-    use finql_sqlite::SqliteDB;
     use chrono::offset::TimeZone;
     use chrono::Utc;
     use std::str::FromStr;
-    use rusqlite::Connection;
-
+    use finql_data::quote_handler::QuoteHandler;
+    use finql_sqlite::SqliteDB;
+    
     fn prepare_db(db: &mut dyn QuoteHandler) {
         let time = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);
         let eur = Currency::from_str("EUR").unwrap();

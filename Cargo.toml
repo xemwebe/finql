@@ -27,12 +27,11 @@ scraper = "0.12"
 csv = "1.1"
 async-trait = "0.1"
 tokio-compat-02 = "0.2"
-finql-data = { path="finql-data" }
+finql-data = { version="0.1", path="finql-data" }
 
 [dev-dependencies]
+tokio = { version = "1.2", features =  ["macros"] }
 tokio-test = "0.4"
 rusqlite = "0.24"
-finql-sqlite = { path = "finql-sqlite" }
-postgres = { version = "0.19", features = ["with-chrono-0_4"] }
-finql-postgres = { path = "finql-postgres"}
-
+finql-sqlite = { version="0.2", path = "finql-sqlite" }
+sqlx = { path = "../sqlx1", default-features = false, features = [ "runtime-tokio", "migrate", "postgres", "sqlite" ] }

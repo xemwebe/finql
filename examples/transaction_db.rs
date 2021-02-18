@@ -7,10 +7,10 @@ use rusqlite::Connection;
 use chrono::NaiveDate;
 
 use finql_data::{Asset, Currency, CashFlow, Transaction, TransactionHandler, TransactionType};
-use finql_postgres::PostgresDB;
+//use finql_postgres::PostgresDB;
 use finql_sqlite::SqliteDB;
 
-fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
+async fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
     print!("Store asset...");
     let asset = Asset::new(
         None,
@@ -19,7 +19,7 @@ fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
         Some("GB00B02J6398".to_string()),
         Some("Here are my notes".to_string()),
     );
-    let asset_id = db.insert_asset(&asset);
+    let asset_id = db.insert_asset(&asset).await;
     match asset_id {
         Ok(_) => println!("ok"),
         Err(err) => println!("failed with error: {}", err),
@@ -27,7 +27,7 @@ fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
 
     // Show all assets in database
     print!("Get list of assets...");
-    let _assets = db.get_all_assets().unwrap();
+    let _assets = db.get_all_assets().await.unwrap();
     println!("ok");
 
     // put some cash into the account
@@ -40,7 +40,7 @@ fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
         cash_flow,
         note: Some("start capital".to_string()),
     };
-    let result = db.insert_transaction(&cash_in);
+    let result = db.insert_transaction(&cash_in).await;
     match result {
         Ok(_) => println!("ok"),
         Err(err) => println!("failed with error: {}", err),
@@ -71,7 +71,7 @@ fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
         cash_flow: CashFlow::new(-30.0, eur, NaiveDate::from_ymd(2020, 01, 15)),
         note: None,
     };
-    let _ = db.insert_transaction(&fee).unwrap();
+    let _ = db.insert_transaction(&fee).await.unwrap();
     println!("ok");
 
     // You got some dividends later
@@ -82,7 +82,7 @@ fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
         cash_flow: CashFlow::new(90.0, eur, NaiveDate::from_ymd(2020, 01, 30)),
         note: None,
     };
-    let dividend_id = db.insert_transaction(&dividend).unwrap();
+    let dividend_id = db.insert_transaction(&dividend).await.unwrap();
     println!("ok");
 
     // But you get taxed, too!
@@ -100,10 +100,11 @@ fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
 
     // Show all transactions in database
     print!("Get list of all transactions...");
-    let _transactions = db.get_all_transactions().unwrap();
+    let _transactions = db.get_all_transactions().await.unwrap();
     println!("ok");
 }
 
+#[tokio::main]
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     assert!(
@@ -119,8 +120,8 @@ fn main() {
     match args[1].as_str() {
         "memory" => {
             let mut conn = Connection::open(":memory:").unwrap();
-            let mut db = SqliteDB{ conn: &mut conn };
-            db.init().unwrap();
+            let mut db = SqliteDB::new(&mut conn);
+            db.init().await.unwrap();
             transaction_tests(&mut db);
         }
         "sqlite" => {
@@ -133,26 +134,26 @@ fn main() {
                     eprintln!("Please provide another path or remove the file, since a new database will be created.");
                 } else {
                     let mut conn = Connection::open(path).unwrap();
-                    let mut db = SqliteDB{ conn: &mut conn };
-                    db.init().unwrap();
+                    let mut db = SqliteDB::new(&mut conn);
+                    db.init().await.unwrap();
                     transaction_tests(&mut db);
                 }
             }
         }
-        "postgres" => {
-            if args.len() < 3 {
-                eprintln!(
-                    "Please give the connection string to PostgreSQL as parameter, in the form of"
-                );
-                eprintln!("'host=127.0.0.1 user=<username> password=<password> dbname=<database name> sslmode=disable'");
-            } else {
-                let connect_str = &args[2];
-                let mut conn = postgres::Client::connect(connect_str, postgres::NoTls).unwrap();
-                let mut db = PostgresDB{ conn: &mut conn };
-                db.clean().unwrap();
-                transaction_tests(&mut db);
-            }
-        }
+        // "postgres" => {
+        //     if args.len() < 3 {
+        //         eprintln!(
+        //             "Please give the connection string to PostgreSQL as parameter, in the form of"
+        //         );
+        //         eprintln!("'host=127.0.0.1 user=<username> password=<password> dbname=<database name> sslmode=disable'");
+        //     } else {
+        //         let connect_str = &args[2];
+        //         let mut conn = postgres::Client::connect(connect_str, postgres::NoTls).unwrap();
+        //         let mut db = PostgresDB{ conn: &mut conn };
+        //         db.clean().unwrap();
+        //         transaction_tests(&mut db);
+        //     }
+        // }
         other => println!("Unknown database type {}", other),
     }
 }

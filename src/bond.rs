@@ -13,10 +13,9 @@ use finql_data::cash_flow::CashFlow;
 use crate::day_adjust::DayAdjust;
 use crate::day_count_conv::{DayCountConv, DayCountConvError};
 use crate::fixed_income::FixedIncome;
-use crate::market::{Market, MarketError};
 use crate::rates::DiscountError;
 use crate::time_period::TimePeriod;
-
+use crate::calendar::{CalendarProvider,CalendarNotFound};
 
 /// Error related to bonds
 #[derive(Debug)]
@@ -54,8 +53,8 @@ impl From<DayCountConvError> for BondError {
     }
 }
 
-impl From<MarketError> for BondError {
-    fn from(_: MarketError) -> Self {
+impl From<CalendarNotFound> for BondError {
+    fn from(_: CalendarNotFound) -> Self {
         BondError::MissingCalendar
     }
 }
@@ -65,6 +64,7 @@ impl From<crate::rates::DiscountError> for BondError {
         BondError::DiscountingFailure(error)
     }
 }
+
 
 /// Container for bonds and similar fixed income assets
 #[derive(Deserialize, Serialize, Debug)]
@@ -162,7 +162,7 @@ impl FixedIncome for Bond {
     fn rollout_cash_flows(
         &self,
         position: f64,
-        market: &Market,
+        calendar_provider: &dyn CalendarProvider,
     ) -> Result<Vec<CashFlow>, BondError> {
         let mut cfs = Vec::new();
         let start_date = self.issue_date;
@@ -170,7 +170,7 @@ impl FixedIncome for Bond {
         let year_fraction = self.coupon.year_fraction(start_date, end_date, end_date)?;
         let amount =
             position * (self.denomination as f64) * self.coupon.rate / 100. * year_fraction;
-        let cal = market.get_calendar(&self.calendar)?;
+        let cal = calendar_provider.get_calendar(&self.calendar)?;
         let pay_date = self.business_day_rule.adjust_date(end_date, cal);
         let cf = CashFlow::new(amount, self.currency, pay_date);
         cfs.push(cf);
@@ -227,7 +227,6 @@ mod tests {
     use std::str::FromStr;
     use rusqlite::{Connection};
 
-    use finql_sqlite::SqliteDB;
     use super::*;
 
     #[test]

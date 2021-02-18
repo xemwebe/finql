@@ -169,7 +169,6 @@ mod tests {
     use finql_data::asset::Asset;
     use finql_data::currency::Currency;
     use finql_data::quote_handler::QuoteHandler;
-    use finql_sqlite::SqliteDB;
 
     use super::*;
 
@@ -240,12 +239,12 @@ mod tests {
     #[test]
     fn test_fetch_latest_quote() {
         let mut conn = Connection::open(":memory:").unwrap();
-        let mut db = SqliteDB{ conn: &mut conn };
-        db.init().unwrap();
+        let mut db = SqliteDB::new(&mut conn);
+        db.init().await.unwrap();
         let ticker = prepare_db(&mut db);
         let provider = DummyProvider {};
         block_on(update_ticker(&provider, &ticker, &mut db)).unwrap();
-        let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).unwrap();
+        let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 1);
         assert_eq!(quotes[0].price, 1.23);
     }
@@ -253,14 +252,14 @@ mod tests {
     #[test]
     fn test_fetch_quote_history() {
         let mut conn = Connection::open(":memory:").unwrap();
-        let mut db = SqliteDB{ conn: &mut conn };
-        db.init().unwrap();
+        let mut db = SqliteDB::new(&mut conn);
+        db.init().await.unwrap();
         let ticker = prepare_db(&mut db);
         let provider = DummyProvider {};
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
         block_on(update_ticker_history(&provider, &ticker, &mut db, start, end)).unwrap();
-        let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).unwrap();
+        let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 31);
         assert_eq!(quotes[0].price, 1.23);
     }

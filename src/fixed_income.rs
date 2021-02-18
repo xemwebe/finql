@@ -9,9 +9,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use finql_data::CashFlow;
 
 use crate::day_count_conv::DayCountConv;
-use crate::market::Market;
 use crate::rates::{Compounding, DiscountError, Discounter, FlatRate};
-
+use crate::calendar::CalendarProvider;
 
 /// Get all future cash flows with respect to a given date
 pub fn get_cash_flows_after(cash_flows: &Vec<CashFlow>, date: NaiveDate) -> Vec<CashFlow> {
@@ -31,7 +30,7 @@ pub trait FixedIncome {
     fn rollout_cash_flows(
         &self,
         position: f64,
-        market: &Market,
+        calendar_provider: &dyn CalendarProvider,
     ) -> Result<Vec<CashFlow>, Self::Error>;
 
     /// Calculate accrued interest for current coupon period
@@ -41,9 +40,9 @@ pub trait FixedIncome {
     fn calculate_ytm(
         &self,
         purchase_cash_flow: &CashFlow,
-        market: &Market,
+        calendar_provider: &dyn CalendarProvider,
     ) -> Result<f64, Self::Error> {
-        let cash_flows = self.rollout_cash_flows(1., market)?;
+        let cash_flows = self.rollout_cash_flows(1., calendar_provider)?;
         let value = calculate_cash_flows_ytm(&cash_flows, &purchase_cash_flow)?;
         Ok(value)
     }
@@ -143,7 +142,6 @@ mod tests {
     use rusqlite::Connection;
     use chrono::{TimeZone, Utc};
 
-    use finql_sqlite::SqliteDB;
     use finql_data::{Currency, CashAmount, CashFlow, QuoteHandler};
 
     use super::*;

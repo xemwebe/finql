@@ -2,7 +2,6 @@ use chrono::NaiveDate;
 use finql_data::{Currency, CashFlow};
 use finql::{fixed_income::{get_cash_flows_after, FixedIncome}, bond::Bond};
 use finql::market::Market;
-use finql_sqlite::SqliteDB;
 use serde_json;
 use rusqlite::Connection;
 use std::fs::File;
@@ -17,7 +16,7 @@ fn main() {
     let today = NaiveDate::from_ymd(2019, 12, 11);
     let bond1: Bond = serde_json::from_str(&data).unwrap();
     let mut conn = Connection::open(":memory:").unwrap();
-    let mut db = SqliteDB{ conn: &mut conn };
+    let mut db = SqliteDB::new(&mut conn);
     db.init().unwrap();
     let market = Market::new(&mut db);
     let cfs1 = bond1.rollout_cash_flows(1., &market).unwrap();

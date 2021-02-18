@@ -8,11 +8,12 @@ use rusqlite::Connection;
 use tokio_test::block_on;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Local, Utc, TimeZone};
 
+use sqlx;
 use finql_data::{Asset, Currency, Quote, Ticker};
 use finql::fx_rates::{get_fx_rate, insert_fx_quote};
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
-use finql_postgres::PostgresDB;
+//use finql_postgres::PostgresDB;
 use finql_sqlite::SqliteDB;
 
 /// Given a date and time construct a UTC DateTime, assuming that
@@ -263,6 +264,8 @@ fn quote_tests(market: &mut Market) {
     println!("\nDone.");
 }
 
+
+#[tokio::main]
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     assert!(
@@ -301,22 +304,22 @@ fn main() {
                 }
             }
         }
-        "postgres" => {
-            if args.len() < 3 {
-                eprintln!(
-                    "Please give the connection string to PostgreSQL as parameter, in the form of"
-                );
-                eprintln!("'host=127.0.0.1 user=<username> password=<password> dbname=<database name> sslmode=disable'");
-            } else {
-                let connect_str = &args[2];
-                let mut conn = postgres::Client::connect(connect_str, postgres::NoTls).unwrap();
-                let mut db = PostgresDB{ conn: &mut conn };
-                db.clean().unwrap();
-                let mut market = Market::new(&mut db);
-                quote_tests(&mut market);
-                println!("You may have a look at the database for further inspection.");
-            }
-        }
+        // "postgres" => {
+        //     if args.len() < 3 {
+        //         eprintln!(
+        //             "Please give the connection string to PostgreSQL as parameter, in the form of"
+        //         );
+        //         eprintln!("'host=127.0.0.1 user=<username> password=<password> dbname=<database name> sslmode=disable'");
+        //     } else {
+        //         let connect_str = &args[2];
+        //         let mut conn = postgres::Client::connect(connect_str, postgres::NoTls).unwrap();
+        //         let mut db = PostgresDB{ conn: &mut conn };
+        //         db.clean().unwrap();
+        //         let mut market = Market::new(&mut db);
+        //         quote_tests(&mut market);
+        //         println!("You may have a look at the database for further inspection.");
+        //     }
+        // }
         other => println!("Unknown database type {}", other),
     }
 }

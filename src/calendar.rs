@@ -230,6 +230,12 @@ impl Calendar {
     }
 }
 
+pub struct CalendarNotFound {}
+
+pub trait CalendarProvider{
+    fn get_calendar(&self, calendar_name: &str) -> Result<&Calendar, CalendarNotFound>;
+}
+
 /// Returns true if the specified year is a leap year (i.e. Feb 29th exists for this year)
 pub fn is_leap_year(year: i32) -> bool {
     NaiveDate::from_ymd_opt(year, 2, 29).is_some()
