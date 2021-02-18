@@ -11,7 +11,7 @@ use super::PostgresDB;
 struct ID { id: i32, }
 
 
-/// Handler for globally available data
+/// Handler for globally available Asset data
 #[async_trait]
 impl AssetHandler for PostgresDB {
     async fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {

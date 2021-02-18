@@ -23,7 +23,6 @@ impl PostgresDB {
     /// Clean database by dropping all tables and than run init
     pub async fn clean(&mut self) -> Result<(), sqlx::Error> {
         sqlx::query!("DROP TABLE IF EXISTS transactions").execute(&self.pool).await?;
-        sqlx::query!("DROP TABLE IF EXISTS transactions").execute(&self.pool).await?;
         sqlx::query!("DROP TABLE IF EXISTS quotes").execute(&self.pool).await?;
         sqlx::query!("DROP TABLE IF EXISTS ticker").execute(&self.pool).await?;
         sqlx::query!("DROP TYPE IF EXISTS market_data_source").execute(&self.pool).await?;

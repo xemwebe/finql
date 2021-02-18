@@ -1,161 +1,136 @@
 ///! Implementation of sqlite3 data handler
 
 use std::str::FromStr;
-use rusqlite::{params, Row, NO_PARAMS};
+use async_trait::async_trait;
 
-use super::SqliteDB;
 use finql_data::asset::Asset;
 use finql_data::{AssetHandler, DataError};
 use finql_data::currency::Currency;
 
-impl AssetHandler for SqliteDB<'_> {
-    fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {
-        self.conn
-            .execute(
-                "INSERT INTO assets (name, wkn, isin, note) VALUES (?1, ?2, ?3, ?4)",
-                params![asset.name, asset.wkn, asset.isin, asset.note],
-            )
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id = self
-            .conn
-            .query_row(
-                "SELECT id FROM assets WHERE name=?;",
-                params![asset.name],
-                |row| {
-                    let id: i64 = row.get(0)?;
-                    Ok(id as usize)
-                },
-            )
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        Ok(id)
-    }
+use super::SqliteDB;
 
-    fn get_asset_id(&mut self, asset: &Asset) -> Option<usize> {
-        let get_id = |row: &Row| -> rusqlite::Result<i64> { row.get(0) };
-        let id = if let Some(isin) = &asset.isin {
-            self.conn
-                .query_row("SELECT id FROM assets WHERE isin=?", &[&isin], get_id)
-        } else if let Some(wkn) = &asset.wkn {
-            self.conn
-                .query_row("SELECT id FROM assets WHERE wkn=?", &[&wkn], get_id)
+/// helper struct
+struct ID { id: Option<i64>, }
+
+/// Handler for globally available Asset data
+#[async_trait]
+impl AssetHandler for SqliteDB {
+    async fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {
+        sqlx::query!(
+                "INSERT INTO assets (name, wkn, isin, note) VALUES (?1, ?2, ?3, ?4)",
+                asset.name, asset.wkn, asset.isin, asset.note,
+            ).execute(&self.pool).await
+            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+        let row = sqlx::query!(
+                "SELECT id FROM assets WHERE name=?",
+                asset.name,
+            ).fetch_one(&self.pool).await
+            .map_err(|e| DataError::NotFound(e.to_string()))?;
+        if let Some(id) = row.id {
+            Ok(id as usize)
         } else {
-            self.conn
-                .query_row("SELECT id FROM assets WHERE name=?", &[&asset.name], get_id)
-        };
-        match id {
-            Ok(id) => Some(id as usize),
-            _ => None,
+            Err(DataError::NotFound("id after insert not found".to_string()))
         }
     }
 
-    fn get_asset_by_id(&mut self, id: usize) -> Result<Asset, DataError> {
-        let asset = self
-            .conn
-            .query_row(
-                "SELECT name, wkn, isin, note FROM assets
-        WHERE id=?;",
-                &[id as i64],
-                |row| {
-                    Ok(Asset {
-                        id: Some(id),
-                        name: row.get(0)?,
-                        wkn: row.get(1)?,
-                        isin: row.get(2)?,
-                        note: row.get(3)?,
-                    })
-                },
-            )
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        Ok(asset)
+    async fn get_asset_id(&mut self, asset: &Asset) -> Option<usize> {
+        let id = if let Some(isin) = &asset.isin {
+            sqlx::query_as!(ID, "SELECT id FROM assets WHERE isin=?", isin).fetch_one(&self.pool).await
+        } else if let Some(wkn) = &asset.wkn {
+            sqlx::query_as!(ID, "SELECT id FROM assets WHERE wkn=?", wkn).fetch_one(&self.pool).await
+        } else {
+            sqlx::query_as!(ID, "SELECT id FROM assets WHERE name=?", asset.name).fetch_one(&self.pool).await
+        }.ok();
+        if let Some(id_opt) = id {
+            id_opt.id.map(|x| x as usize)
+        } else {
+            None
+        }
     }
 
-    fn get_asset_by_isin(&mut self, isin: &str) -> Result<Asset, DataError> {
-        let asset = self
-            .conn
-            .query_row(
-                "SELECT id, name, wkn, note FROM assets
-        WHERE isin=?;",
-                &[isin],
-                |row| {
-                    let id: i32 = row.get(0)?;
-                    Ok(Asset {
-                        id: Some(id as usize),
-                        name: row.get(1)?,
-                        wkn: row.get(2)?,
-                        isin: Some(isin.to_string()),
-                        note: row.get(3)?,
-                    })
-                },
-            )
+    async fn get_asset_by_id(&mut self, id: usize) -> Result<Asset, DataError> {
+        let id_param = id as i64;
+        let row = sqlx::query!(
+                "SELECT name, wkn, isin, note FROM assets WHERE id=?",
+                id_param,
+            ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
-        Ok(asset)
+        Ok(Asset {
+            id: Some(id),
+            name: row.name,
+            wkn: row.wkn,
+            isin: row.isin,
+            note: row.note,
+        })
     }
 
-    fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, name, wkn, isin, note FROM assets ORDER BY name;")
+    async fn get_asset_by_isin(&mut self, isin: &str) -> Result<Asset, DataError> {
+        let row = sqlx::query!(
+                "SELECT id, name, wkn, note FROM assets WHERE isin=?",
+                isin,
+            ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let asset_map = stmt
-            .query_map(NO_PARAMS, |row| {
-                let id: i64 = row.get(0)?;
-                let id = Some(id as usize);
-                Ok(Asset {
-                    id,
-                    name: row.get(1)?,
-                    wkn: row.get(2)?,
-                    isin: row.get(3)?,
-                    note: row.get(4)?,
-                })
-            })
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
+        let id = row.id.map(|x| x as usize);
+        Ok(Asset {
+            id,
+            name: row.name,
+            wkn: row.wkn,
+            isin: Some(isin.to_string()),
+            note: row.note,
+        })
+    }
+
+    async fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError> {
         let mut assets = Vec::new();
-        for asset in asset_map {
-            assets.push(asset.unwrap());
+        for row in sqlx::query!("SELECT id, name, wkn, isin, note FROM assets ORDER BY name")
+            .fetch_all(&self.pool).await
+            .map_err(|e| DataError::NotFound(e.to_string()))?
+        {
+            let id = row.id.map(|x| x as usize);
+            assets.push(Asset {
+                id,
+                name: row.name,
+                wkn: row.wkn,
+                isin: row.isin,
+                note: row.note,
+            });
         }
         Ok(assets)
     }
 
-    fn update_asset(&mut self, asset: &Asset) -> Result<(), DataError> {
+    async fn update_asset(&mut self, asset: &Asset) -> Result<(), DataError> {
         if asset.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
             ));
         }
-        let id = asset.id.unwrap() as i64;
-        self.conn
-            .execute(
+        let id = asset.id.unwrap() as i32;
+        sqlx::query!(
                 "UPDATE assets SET name=?2, wkn=?3, isin=?4, note=?5 
-                WHERE id=?1;",
-                params![id, asset.name, asset.wkn, asset.isin, asset.note],
-            )
+                WHERE id=?1",
+                id, asset.name, asset.wkn, asset.isin, asset.note,
+            ).execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
 
-    fn delete_asset(&mut self, id: usize) -> Result<(), DataError> {
-        self.conn
-            .execute("DELETE FROM assets WHERE id=?1;", params![id as i64])
+    async fn delete_asset(&mut self, id: usize) -> Result<(), DataError> {
+        let id = id as i32;
+        sqlx::query!("DELETE FROM assets WHERE id=?;", id)
+            .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
 
-    /// We assume here that a currency is an Asset with a three letter name and no ISIN nor WKN
-    fn get_all_currencies(&mut self) -> Result<Vec<Currency>, DataError> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT name FROM assets WHERE isin IS NULL AND wkn IS NULL AND length(name)=3;")
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let currency_map = stmt
-            .query_map(NO_PARAMS, |row| {
-                let currency: String = row.get(0)?;
-                Ok(currency)
-            })
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
+    async fn get_all_currencies(&mut self) -> Result<Vec<Currency>, DataError> {
         let mut currencies = Vec::new();
-        for curr in currency_map {
+        for row in sqlx::query!("SELECT name FROM assets WHERE isin IS NULL AND wkn IS NULL AND length(name)=3")
+            .fetch_all(&self.pool).await
+            .map_err(|e| DataError::NotFound(e.to_string()))?
+        {
+            let currency = row.name;
             let currency =
-                Currency::from_str(&curr.unwrap()).map_err(|e| DataError::NotFound(e.to_string()))?;
+                Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
             currencies.push(currency);
         }
         Ok(currencies)

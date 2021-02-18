@@ -9,7 +9,7 @@ use finql_data::quote::{Quote, Ticker};
 
 use super::PostgresDB;
 
-/// Sqlite implementation of quote handler
+/// PostgreSQL implementation of quote handler
 #[async_trait]
 impl QuoteHandler for PostgresDB {
     // insert, get, update and delete for market data sources
@@ -43,7 +43,7 @@ impl QuoteHandler for PostgresDB {
 
     async fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
         let row = sqlx::query!(
-                "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=$1;",
+                "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=$1",
                 (id as i32),
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
@@ -63,6 +63,7 @@ impl QuoteHandler for PostgresDB {
             factor: row.factor,
         })
     }
+
     async fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
@@ -96,7 +97,7 @@ impl QuoteHandler for PostgresDB {
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=$1;",
+                "SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=$1",
                 (source.to_string()),
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
@@ -126,7 +127,7 @@ impl QuoteHandler for PostgresDB {
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, name, source, priority, currency, factor FROM ticker WHERE asset_id=$1;",
+                "SELECT id, name, source, priority, currency, factor FROM ticker WHERE asset_id=$1",
                 (asset_id as i32),
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?

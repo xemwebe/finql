@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc, Local, TimeZone};
-use rusqlite::{params, Row, NO_PARAMS};
+use async_trait::async_trait;
 
 use finql_data::Currency;
 use finql_data::{DataError, QuoteHandler};
@@ -40,67 +40,55 @@ pub fn make_time(
 
 
 /// Sqlite implementation of quote handler
-impl QuoteHandler for SqliteDB<'_> {
+#[async_trait]
+impl QuoteHandler for SqliteDB {
     // insert, get, update and delete for market data sources
-    fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
-        self.conn
-            .execute(
-                "INSERT INTO ticker (name, asset_id, source, priority, currency, factor) VALUES (?, ?, ?, ?, ?, ?)",
-                params![
-                    ticker.name,
-                    ticker.asset as i64,
-                    ticker.source.to_string(),
-                    ticker.priority,
-                    ticker.currency.to_string(),
-                    ticker.factor,
-                ],
-            )
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id = self
-            .conn
-            .query_row(
-                "SELECT id FROM ticker
-        WHERE name=? AND source=?;",
-                params![ticker.name, ticker.source.to_string()],
-                |row| {
-                    let id: i64 = row.get(0)?;
-                    Ok(id as usize)
-                },
-            )
+    async fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
+        let asset_id = ticker.asset as i64;
+        let curr = ticker.currency.to_string();
+        sqlx::query!(
+            "INSERT INTO ticker (name, asset_id, source, priority, currency, factor) 
+            VALUES ($1, $2, $3, $4, $5, $6)",
+            ticker.name,
+            asset_id,
+            ticker.source,
+            ticker.priority,
+            curr,
+            ticker.factor,
+        ).execute(&self.pool).await
+        .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+
+        let row = sqlx::query!(
+            "SELECT id FROM ticker WHERE name=? AND source=?",
+                ticker.name, ticker.source,
+            ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
-        Ok(id)
+        Ok(row.id as usize)
     }
 
-    fn get_ticker_id(&mut self, ticker: &str) -> Option<usize> {
-        let get_id = |row: &Row| -> rusqlite::Result<i64> { row.get(0) };
-        let id = self.conn.query_row(
-            "SELECT id FROM ticker WHERE name=?",
-            params![ticker],
-            get_id,
-        );
-        match id {
-            Ok(id) => Some(id as usize),
+    async fn get_ticker_id(&mut self, ticker: &str) -> Option<usize> {
+        let row = sqlx::query!("SELECT id FROM ticker WHERE name=?", ticker)
+            .fetch_one(&self.pool).await;
+        match row {
+            Ok(row) => {
+                let id = row.id as usize;
+                Some(id)
+            }
             _ => None,
         }
     }
 
-    fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
-        let (name, asset, source, priority, currency, factor) = self
-            .conn
-            .query_row(
-                "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=?;",
-                params![id as i64],
-                |row| {
-                    let name: String = row.get(0)?;
-                    let asset: i64 = row.get(1)?;
-                    let source: String = row.get(2)?;
-                    let priority: i32 = row.get(3)?;
-                    let currency: String = row.get(4)?;
-                    let factor: f64 = row.get(5)?;
-                    Ok((name, asset, source, priority, currency, factor))
-                },
-            )
+    async fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
+        let id_param = id as i32;
+        let row = sqlx::query!(
+                "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=?",
+                id_param,
+            ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
+        let name = row.name;
+        let asset = row.asset_id;
+        let source = row.source;
+        let currency = row.currency;
         let currency =
             Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(Ticker {
@@ -108,340 +96,298 @@ impl QuoteHandler for SqliteDB<'_> {
             name,
             asset: asset as usize,
             source,
-            priority,
+            priority: row.priority as i32,
             currency,
-            factor,
+            factor: row.factor.into(),
         })
     }
 
-    fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, name, asset_id, priority, source, currency, factor FROM ticker;")
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let ticker_map = stmt
-            .query_map(NO_PARAMS, |row| {
-                let id: i64 = row.get(0)?;
-                let name: String = row.get(1)?;
-                let asset: i64 = row.get(2)?;
-                let priority: i32 = row.get(3)?;
-                let source: String = row.get(4)?;
-                let currency: String = row.get(5)?;
-                let factor: f64 = row.get(6)?;
-                Ok((id, name, asset, priority, source, currency, factor))
-            })
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
+    async fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
-        for ticker in ticker_map {
-            let (id, name, asset, priority, source, currency, factor) = ticker.unwrap();
+        for row in sqlx::query!(
+                "SELECT id, name, asset_id, priority, source, currency, factor FROM ticker",
+            ).fetch_all(&self.pool).await
+            .map_err(|e| DataError::NotFound(e.to_string()))?
+        {
+            let id = row.id;
+            let asset = row.asset_id;
+            let source = row.source;
+            let currency = row.currency;
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let factor = row.factor;
             all_ticker.push(Ticker {
                 id: Some(id as usize),
-                name,
+                name: row.name,
                 asset: asset as usize,
                 source,
-                priority,
+                priority: row.priority as i32,
                 currency,
-                factor,
+                factor: factor as f64,
             });
         }
         Ok(all_ticker)
     }
 
-    fn get_all_ticker_for_source(
+    async fn get_all_ticker_for_source(
         &mut self,
         source: &str,
     ) -> Result<Vec<Ticker>, DataError> {
-        let mut stmt = self
-            .conn
-            .prepare(
-                "SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=?;",
-            )
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let ticker_map = stmt
-            .query_map(params![source.to_string()], |row| {
-                let id: i64 = row.get(0)?;
-                let name: String = row.get(1)?;
-                let asset: i64 = row.get(2)?;
-                let priority: i32 = row.get(3)?;
-                let currency: String = row.get(4)?;
-                let factor: f64 = row.get(5)?;
-                Ok((id, name, asset, priority, currency, factor))
-            })
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
         let mut all_ticker = Vec::new();
-        for ticker in ticker_map {
-            let (id, name, asset, priority, currency, factor) = ticker.unwrap();
+        for row in sqlx::query!(
+                "SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=?",
+                source,
+            ).fetch_all(&self.pool).await
+            .map_err(|e| DataError::NotFound(e.to_string()))?
+        {
+            let id = row.id;
+            let asset = row.asset_id;
+            let currency = row.currency;
             let currency =
                 Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let factor = row.factor;
             all_ticker.push(Ticker {
                 id: Some(id as usize),
-                name,
+                name: row.name,
                 asset: asset as usize,
                 source: source.to_string(),
-                priority,
+                priority: row.priority as i32,
                 currency,
-                factor,
-            });
-        }
-        Ok(all_ticker)
-    }
-    fn get_all_ticker_for_asset(
-        &mut self,
-        asset_id: usize,
-    ) -> Result<Vec<Ticker>, DataError> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, name, priority, source, currency, factor FROM ticker WHERE asset_id=?;")
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let ticker_map = stmt
-            .query_map(params![asset_id as i32], |row| {
-                let id: i64 = row.get(0)?;
-                let name: String = row.get(1)?;
-                let priority: i32 = row.get(2)?;
-                let source: String = row.get(3)?;
-                let currency: String = row.get(4)?;
-                let factor: f64 = row.get(5)?;
-                Ok((id, name, priority, source, currency, factor))
-            })
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let mut all_ticker = Vec::new();
-        for ticker in ticker_map {
-            let (id, name, priority, source, currency, factor) = ticker.unwrap();
-            let currency =
-                Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
-            all_ticker.push(Ticker {
-                id: Some(id as usize),
-                name,
-                asset: asset_id,
-                source,
-                priority,
-                currency,
-                factor,
+                factor: factor.into(),
             });
         }
         Ok(all_ticker)
     }
 
-    fn update_ticker(&mut self, ticker: &Ticker) -> Result<(), DataError> {
+    async fn get_all_ticker_for_asset(
+        &mut self,
+        asset_id: usize,
+    ) -> Result<Vec<Ticker>, DataError> {
+        let mut all_ticker = Vec::new();
+        let a_id = asset_id as i64;
+        for row in sqlx::query!(
+                "SELECT id, name, source, priority, currency, factor FROM ticker WHERE asset_id=?",
+                a_id,
+            ).fetch_all(&self.pool).await
+            .map_err(|e| DataError::NotFound(e.to_string()))?
+        {
+            let id = row.id;
+            let source = row.source;
+            let currency = row.currency;
+            let currency =
+                Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            all_ticker.push(Ticker {
+                id: Some(id as usize),
+                name: row.name,
+                asset: asset_id,
+                source,
+                priority: row.priority as i32,
+                currency,
+                factor: row.factor.into(),
+            });
+        }
+        Ok(all_ticker)
+    }
+
+    async fn update_ticker(&mut self, ticker: &Ticker) -> Result<(), DataError> {
         if ticker.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
             ));
         }
-        let id = ticker.id.unwrap() as i64;
-        self.conn
-            .execute(
+        let id = ticker.id.unwrap() as i32;
+        let curr = ticker.currency.to_string();
+        let asset_id = ticker.asset as i32;
+        sqlx::query!(
                 "UPDATE ticker SET name=?2, asset_id=?3, source=?4, priority=?5, currency=?6, factor=?7
                 WHERE id=?1",
-                params![
-                    id,
-                    ticker.name,
-                    ticker.asset as i64,
-                    ticker.source.to_string(),
-                    ticker.priority,
-                    ticker.currency.to_string(),
-                    ticker.factor,
-                ],
+                id,
+                ticker.name,
+                asset_id,
+                ticker.source,
+                ticker.priority,
+                curr,
+                ticker.factor,
             )
+            .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
-    fn delete_ticker(&mut self, id: usize) -> Result<(), DataError> {
-        self.conn
-            .execute("DELETE FROM ticker WHERE id=?1;", params![id as i64])
+
+    async fn delete_ticker(&mut self, id: usize) -> Result<(), DataError> {
+        let id = id as i64;
+        sqlx::query!("DELETE FROM ticker WHERE id=?", id)
+            .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
 
     // insert, get, update and delete for market data sources
-    fn insert_quote(&mut self, quote: &Quote) -> Result<usize, DataError> {
-        self.conn
-            .execute(
-                "INSERT INTO quotes (ticker_id, price, time, volume) VALUES (?, ?, ?, ?)",
-                params![
-                    quote.ticker as i64,
-                    quote.price,
-                    quote.time.to_rfc3339(),
-                    quote.volume
-                ],
-            )
+    async fn insert_quote(&mut self, quote: &Quote) -> Result<usize, DataError> {
+        let ticker_id = quote.ticker as i64;
+        sqlx::query!(
+                "INSERT INTO quotes (ticker_id, price, time, volume) 
+                VALUES (?, ?, ?, ?)",
+                ticker_id,
+                quote.price,
+                quote.time,
+                quote.volume,
+            ).execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id = self
-            .conn
-            .query_row("SELECT last_insert_rowid();", NO_PARAMS, |row| {
-                let id: i64 = row.get(0)?;
-                Ok(id as usize)
-            })
+        let row = sqlx::query!(
+                "SELECT id FROM quotes WHERE ticker_id=? and time=?",
+                ticker_id, quote.time,
+            ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
-        Ok(id)
+        Ok(row.id as usize)
     }
-    fn get_last_quote_before(
+
+    async fn get_last_quote_before(
         &mut self,
         asset_name: &str,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError> {
-        let time = time.to_rfc3339();
-        let row = self
-            .conn
-            .query_row(
+        let row = sqlx::query!(
                 "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
                 FROM quotes q, ticker t, assets a 
-                WHERE a.name=? AND t.asset_id=a.id AND t.id=q.ticker_id AND q.time<= ?
-                ORDER BY q.time, t.priority DESC LIMIT 1",
-                params![asset_name, time],
-                |row| {
-                    let id: i64 = row.get(0)?;
-                    let ticker: i64 = row.get(1)?;
-                    let price: f64 = row.get(2)?;
-                    let time: String = row.get(3)?;
-                    let volume: Option<f64> = row.get(4)?;
-                    let currency: String = row.get(5)?;
-                    Ok((id, ticker, price, time, volume, currency))
-                },
-            )
+                WHERE a.name=$1 AND t.asset_id=a.id AND t.id=q.ticker_id AND q.time<= $2
+                ORDER BY q.time DESC, t.priority ASC LIMIT 1",
+                asset_name, time,
+            ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let (id, ticker, price, time, volume, currency) = row;
+
+        let id = row.id;
+        let ticker = row.ticker_id;
+        let price = row.price;
+        let time = row.time;
+        let volume = row.volume;
+        let currency = row.currency;
         let currency =
             Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
-        let time = to_time(&time).map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok((
             Quote {
                 id: Some(id as usize),
                 ticker: ticker as usize,
-                price,
-                time,
-                volume,
+                price: price.into(),
+                time: to_time(&time)?,
+                volume: volume.map(|x| x as f64),
             },
             currency,
         ))
     }
-    fn get_last_quote_before_by_id(
+
+    async fn get_last_quote_before_by_id(
         &mut self,
         asset_id: usize,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError> {
-        let time = time.to_rfc3339();
-        let row = self
-            .conn
-            .query_row(
+        let asset_id = asset_id as i32;
+        let row = sqlx::query!(
                 "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
-                FROM quotes q, ticker t 
-                WHERE t.asset_id=? AND t.id=q.ticker_id AND q.time<= ?
-                ORDER BY q.time, t.priority DESC LIMIT 1",
-                params![asset_id as i64, time],
-                |row| {
-                    let id: i64 = row.get(0)?;
-                    let ticker: i64 = row.get(1)?;
-                    let price: f64 = row.get(2)?;
-                    let time: String = row.get(3)?;
-                    let volume: Option<f64> = row.get(4)?;
-                    let currency: String = row.get(5)?;
-                    Ok((id, ticker, price, time, volume, currency))
-                },
-            )
+                FROM quotes q, ticker t
+                WHERE t.asset_id=$1 AND t.id=q.ticker_id AND q.time<= $2
+                ORDER BY q.time DESC, t.priority ASC LIMIT 1",
+                asset_id, time,
+            ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let (id, ticker, price, time, volume, currency) = row;
+
+        let id = row.id;
+        let ticker = row.ticker_id;
+        let price = row.price;
+        let time = row.time;
+        let volume = row.volume;
+        let currency = row.currency;
         let currency =
             Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
-        let time = to_time(&time).map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok((
             Quote {
                 id: Some(id as usize),
                 ticker: ticker as usize,
-                price,
-                time,
-                volume,
+                price: price.into(),
+                time: to_time(&time)?,
+                volume: volume.map(|x| x as f64),
             },
             currency,
         ))
     }
-    fn get_all_quotes_for_ticker(&mut self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {
-        let mut stmt = self
-            .conn
-            .prepare(
-                "SELECT id, price, time, volume FROM quotes 
-            WHERE ticker_id=? ORDER BY time ASC;",
-            )
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
-        let quotes_map = stmt
-            .query_map(params![ticker_id as i64], |row| {
-                let id: i64 = row.get(0)?;
-                let price: f64 = row.get(1)?;
-                let time: String = row.get(2)?;
-                let volume: Option<f64> = row.get(3)?;
-                Ok((id, price, time, volume))
-            })
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
+
+    async fn get_all_quotes_for_ticker(&mut self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {
         let mut quotes = Vec::new();
-        for quote in quotes_map {
-            let (id, price, time, volume) = quote.unwrap();
-            let time = to_time(&time)?;
+        let t_id = ticker_id as i32;
+        for row in sqlx::query!(
+                "SELECT id, price, time, volume FROM quotes 
+                WHERE ticker_id=$1 ORDER BY time ASC;",
+                t_id,
+            ).fetch_all(&self.pool).await
+            .map_err(|e| DataError::NotFound(e.to_string()))?
+        {
+            let id = row.id;
+            let time = row.time;
             quotes.push(Quote {
                 id: Some(id as usize),
                 ticker: ticker_id,
-                price,
-                time,
-                volume,
+                price: row.price.into(),
+                time: to_time(&time)?,
+                volume: row.volume.map(|x| x as f64),
             });
         }
         Ok(quotes)
     }
 
-    fn update_quote(&mut self, quote: &Quote) -> Result<(), DataError> {
+    async fn update_quote(&mut self, quote: &Quote) -> Result<(), DataError> {
         if quote.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
             ));
         }
-        let id = quote.id.unwrap() as i64;
-        self.conn
-            .execute(
-                "UPDATE quotes SET ticker_id=?2, price=?2, time=?4, volume=?5
-                WHERE id=?1",
-                params![
-                    id,
-                    quote.ticker as i64,
-                    quote.price,
-                    quote.time.to_rfc3339(),
-                    quote.volume
-                ],
+        let id = quote.id.unwrap() as i32;
+        let ticker_id = quote.ticker as i32;
+        sqlx::query!(
+                "UPDATE quotes SET ticker_id=$2, price=$3, time=$4, volume=$5
+                WHERE id=$1",
+                id,
+                ticker_id,
+                quote.price,
+                quote.time,
+                quote.volume,
             )
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        Ok(())
-    }
-    fn delete_quote(&mut self, id: usize) -> Result<(), DataError> {
-        self.conn
-            .execute("DELETE FROM quotes WHERE id=?1;", params![id as i64])
+            .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
 
-    fn get_rounding_digits(&mut self, currency: Currency) -> i32 {
-        let digits = self
-            .conn
-            .query_row(
-                "SELECT digits FROM rounding_digits WHERE currency=?;",
-                params![currency.to_string()],
-                |row| {
-                    let digits: i32 = row.get(0)?;
-                    Ok(digits)
-                },
-            )
-            .map_err(|e| DataError::NotFound(e.to_string()));
-        match digits {
-            Ok(digits) => digits,
+    async fn delete_quote(&mut self, id: usize) -> Result<(), DataError> {
+        let id = id as i64;
+        sqlx::query!("DELETE FROM quotes WHERE id=$1;", id)
+            .execute(&self.pool).await
+            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn get_rounding_digits(&mut self, currency: Currency) -> i32 {
+        let curr = currency.to_string();
+        let rows = sqlx::query!(
+            "SELECT digits FROM rounding_digits WHERE currency=$1;",
+            curr,
+        ).fetch_all(&self.pool).await;
+        match rows {
+            Ok(row_vec) => {
+                if !row_vec.is_empty() {
+                    row_vec[0].digits as i32
+                } else {
+                    2
+                }
+            }
             Err(_) => 2,
         }
     }
 
-    fn set_rounding_digits(&mut self, currency: Currency, digits: i32) -> Result<(), DataError> {
-        self.conn
-            .execute(
-                "INSERT INTO rounding_digits (currency, digits) VALUES (?1, ?2)",
-                params![currency.to_string(), digits],
-            )
+    async fn set_rounding_digits(&mut self, currency: Currency, digits: i32) -> Result<(), DataError> {
+        let curr = currency.to_string();
+        let _row = sqlx::query!(
+                "INSERT INTO rounding_digits (currency, digits) VALUES ($1, $2)",
+                curr, digits,
+            ).execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
