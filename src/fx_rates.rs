@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use finql_data::{Asset, Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, Quote, Ticker};
 
 /// Calculate foreign exchange rates by reading data from quotes table
-pub fn get_fx_rate(
+pub async fn get_fx_rate(
     foreign: Currency,
     base: Currency,
     time: DateTime<Utc>,
@@ -16,7 +16,7 @@ pub fn get_fx_rate(
         return Ok(1.0);
     } else {
         let (fx_quote, quote_currency) =
-            quotes.get_last_quote_before(&format!("{}", foreign), time)?;
+            quotes.get_last_quote_before(&format!("{}", foreign), time).await?;
         if quote_currency == base {
             return Ok(fx_quote.price);
         }
@@ -25,7 +25,7 @@ pub fn get_fx_rate(
 }
 
 /// Insert fx rate quote in database including the inverse quote
-pub fn insert_fx_quote(
+pub async fn insert_fx_quote(
     fx_rate: f64,
     foreign: Currency,
     base: Currency,
@@ -40,7 +40,7 @@ pub fn insert_fx_quote(
             isin: None,
             note: None,
         })
-        .unwrap();
+        .await.unwrap();
     let currency_pair = format!("{}/{}", foreign, base);
     let ticker_id = quotes
         .insert_ticker(&Ticker {
@@ -52,7 +52,7 @@ pub fn insert_fx_quote(
             currency: base,
             factor: 1.0,
         })
-        .unwrap();
+        .await.unwrap();
     let _ = quotes.insert_quote(&Quote {
         id: None,
         ticker: ticker_id,
@@ -69,7 +69,7 @@ pub fn insert_fx_quote(
             isin: None,
             note: None,
         })
-        .unwrap();
+        .await.unwrap();
     let currency_pair = format!("{}/{}", base, foreign);
     let ticker_id = quotes
         .insert_ticker(&Ticker {
@@ -81,7 +81,7 @@ pub fn insert_fx_quote(
             currency: foreign,
             factor: 1.0,
         })
-        .unwrap();
+        .await.unwrap();
     let _ = quotes.insert_quote(&Quote {
         id: None,
         ticker: ticker_id,

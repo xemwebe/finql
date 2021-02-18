@@ -68,7 +68,7 @@ pub async fn update_ticker(
 ) -> Result<(), MarketQuoteError> {
     let mut quote = provider.fetch_latest_quote(&ticker).await?;
     quote.price *= ticker.factor;
-    db.insert_quote(&quote)
+    db.insert_quote(&quote).await
         .map_err(|e| MarketQuoteError::StoringFailed(e.to_string()))?;
     Ok(())
 }
@@ -83,7 +83,7 @@ pub async fn update_ticker_history(
     let mut quotes = provider.fetch_quote_history(ticker, start, end).await?;
     for mut quote in &mut quotes {
         quote.price *= ticker.factor;
-        db.insert_quote(&quote)
+        db.insert_quote(&quote).await
             .map_err(|e| MarketQuoteError::StoringFailed(e.to_string()))?;
     }
     Ok(())

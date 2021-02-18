@@ -101,7 +101,7 @@ impl<'a> Market<'a> {
     /// Fetch latest quotes for all active ticker
     /// Returns a list of ticker for which the update failed.
     pub async fn update_quotes(&mut self) -> Result<Vec<usize>, MarketError> {
-        let tickers = self.db.deref_mut().get_all_ticker()?;
+        let tickers = self.db.deref_mut().get_all_ticker().await?;
         let mut failed_ticker = Vec::new();
         for ticker in tickers {
             let provider = self.provider.get(&ticker.source);
@@ -126,7 +126,7 @@ impl<'a> Market<'a> {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<(), MarketError> {
-        let ticker = self.db.get_ticker_by_id(ticker_id)?;
+        let ticker = self.db.get_ticker_by_id(ticker_id).await?;
         let provider = self.provider.get(&ticker.source);
         if provider.is_some() {
             market_quotes::update_ticker_history(
