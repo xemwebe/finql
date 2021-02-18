@@ -36,4 +36,3 @@ finql-sqlite = { path = "finql-sqlite" }
 postgres = { version = "0.19", features = ["with-chrono-0_4"] }
 finql-postgres = { path = "finql-postgres"}
 
-
