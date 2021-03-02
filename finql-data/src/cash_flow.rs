@@ -19,7 +19,7 @@ pub fn round2digits(x: f64, digits: i32) -> f64 {
 }
 
 impl CashAmount {
-    pub fn add(
+    pub async fn add(
         &mut self,
         cash_amount: CashAmount,
         time: DateTime<Utc>,
@@ -30,7 +30,7 @@ impl CashAmount {
             self.amount += cash_amount.amount;
             Ok(self)
         } else {
-            let fx_rate = currency_converter.fx_rate(cash_amount.currency, self.currency, time)?;
+            let fx_rate = currency_converter.fx_rate(cash_amount.currency, self.currency, time).await?;
             self.amount += fx_rate * cash_amount.amount;
             if with_rounding {
                 let digits = self.currency.rounding_digits();
@@ -40,7 +40,7 @@ impl CashAmount {
         }
     }
 
-    pub fn add_opt(
+    pub async fn add_opt(
         &mut self,
         cash_amount: Option<CashAmount>,
         time: DateTime<Utc>,
@@ -49,11 +49,11 @@ impl CashAmount {
     ) -> Result<&mut Self, CurrencyError> {
         match cash_amount {
             None => Ok(self),
-            Some(cash_amount) => self.add(cash_amount, time, currency_converter, with_rounding),
+            Some(cash_amount) => self.add(cash_amount, time, currency_converter, with_rounding).await,
         }
     }
 
-    pub fn sub(
+    pub async fn sub(
         &mut self,
         cash_amount: CashAmount,
         time: DateTime<Utc>,
@@ -64,7 +64,7 @@ impl CashAmount {
             self.amount -= cash_amount.amount;
             Ok(self)
         } else {
-            let fx_rate = currency_converter.fx_rate(cash_amount.currency, self.currency, time)?;
+            let fx_rate = currency_converter.fx_rate(cash_amount.currency, self.currency, time).await?;
             self.amount -= fx_rate * cash_amount.amount;
             if with_rounding {
                 let digits = self.currency.rounding_digits();
@@ -74,7 +74,7 @@ impl CashAmount {
         }
     }
 
-    pub fn sub_opt(
+    pub async fn sub_opt(
         &mut self,
         cash_amount: Option<CashAmount>,
         time: DateTime<Utc>,
@@ -83,7 +83,7 @@ impl CashAmount {
     ) -> Result<&mut Self, CurrencyError> {
         match cash_amount {
             None => Ok(self),
-            Some(cash_amount) => self.sub(cash_amount, time, currency_converter, with_rounding),
+            Some(cash_amount) => self.sub(cash_amount, time, currency_converter, with_rounding).await,
         }
     }
 

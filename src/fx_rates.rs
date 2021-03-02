@@ -2,27 +2,10 @@
 
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use async_trait::async_trait;
 
 use finql_data::{Asset, Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, Quote, Ticker};
 
-/// Calculate foreign exchange rates by reading data from quotes table
-pub async fn get_fx_rate(
-    foreign: Currency,
-    base: Currency,
-    time: DateTime<Utc>,
-    quotes: &mut dyn QuoteHandler,
-) -> Result<f64, DataError> {
-    if foreign == base {
-        return Ok(1.0);
-    } else {
-        let (fx_quote, quote_currency) =
-            quotes.get_last_quote_before(&format!("{}", foreign), time).await?;
-        if quote_currency == base {
-            return Ok(fx_quote.price);
-        }
-    }
-    Err(DataError::NotFound(format!("{}/{}", foreign, base)))
-}
 
 /// Insert fx rate quote in database including the inverse quote
 pub async fn insert_fx_quote(
@@ -98,8 +81,9 @@ pub struct SimpleCurrencyConverter {
     fx_rates: HashMap<String,HashMap<String,f64>>,
 }
 
+#[async_trait]
 impl CurrencyConverter for SimpleCurrencyConverter {
-    fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, _time: DateTime<Utc>) -> Result<f64, CurrencyError> {
+    async fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, _time: DateTime<Utc>) -> Result<f64, CurrencyError> {
         Ok(self.fx_rates[&foreign_currency.to_string()][&domestic_currency.to_string()])
     }
 }
@@ -154,9 +138,9 @@ mod tests {
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
         let time = Utc::now();
-        let fx = block_on(get_fx_rate(eur, eur, time, &mut fx_converter)).unwrap();
+        let fx = block_on(fx_converter.fx_rate(eur, eur, time)).unwrap();
         assert_fuzzy_eq!(fx, 1.0, tol);
-        let fx = block_on(get_fx_rate(usd, eur, time, &mut fx_converter)).unwrap();
+        let fx = block_on(fx_converter.fx_rate(usd, eur, time)).unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);
     }
 }

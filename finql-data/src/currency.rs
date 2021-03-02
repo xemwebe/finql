@@ -2,6 +2,7 @@ use std::error;
 use std::fmt;
 use std::str::FromStr;
 
+use async_trait::async_trait;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use chrono::{DateTime, Utc};
@@ -142,9 +143,10 @@ impl Currency {
 }
 
 /// Trait for calculating FX rates for currency conversion
+#[async_trait]
 pub trait CurrencyConverter {
     /// returns the price of 1 unit of foreign currency in terms of domestic currency
-    fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError>;
+    async fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError>;
 }
 
 #[cfg(test)]

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 
 use super::AssetHandler;
 use super::DataError;
-use crate::currency::Currency;
+use crate::currency::{Currency, CurrencyConverter, CurrencyError};
 use crate::quote::{Quote, Ticker};
 
 /// Handler for globally available market quotes data
@@ -56,4 +56,21 @@ pub trait QuoteHandler: AssetHandler {
     // This method never throws, if currency could not be found in table, return 2 by default instead
     async fn get_rounding_digits(&mut self, currency: Currency) -> i32;
     async fn set_rounding_digits(&mut self, currency: Currency, digits: i32) -> Result<(), DataError>;
+}
+
+#[async_trait]
+impl CurrencyConverter for dyn QuoteHandler + Send {
+    async fn fx_rate(&mut self, foreign: Currency, base: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError> {
+        if foreign == base {
+            return Ok(1.0);
+        } else {
+            let (fx_quote, quote_currency) =
+                self.get_last_quote_before(&format!("{}", foreign), time).await
+                    .map_err(|_| CurrencyError::ConversionFailed)?;
+            if quote_currency == base {
+                return Ok(fx_quote.price);
+            }
+        }
+        Err(CurrencyError::ConversionFailed)    
+    }
 }
