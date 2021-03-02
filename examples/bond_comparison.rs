@@ -5,8 +5,7 @@ use serde_json;
 use chrono::NaiveDate;
 use finql_data::{Currency, CashFlow};
 use finql::{fixed_income::{get_cash_flows_after, FixedIncome}, bond::Bond};
-use finql::market::Market;
-use finql_sqlite::SqliteDB;
+use finql::calendar::SimpleCalendar;
 
 #[tokio::main]
 async fn main() {
@@ -16,11 +15,8 @@ async fn main() {
 
     let today = NaiveDate::from_ymd(2019, 12, 11);
     let bond1: Bond = serde_json::from_str(&data).unwrap();
-    let mut conn = Connection::open(":memory:").unwrap();
-    let mut db = SqliteDB::new(&mut conn);
-    db.init().unwrap();
-    let market = Market::new(&mut db);
-    let cfs1 = bond1.rollout_cash_flows(1., &market).unwrap();
+    let calendar = SimpleCalendar::default();
+    let cfs1 = bond1.rollout_cash_flows(1., &calendar).unwrap();
     let cfs1 = get_cash_flows_after(&cfs1, today);
 
     let mut file = File::open("./examples/photon_energy_bond.json").unwrap();
@@ -28,7 +24,7 @@ async fn main() {
     file.read_to_string(&mut data).unwrap();
 
     let bond2: Bond = serde_json::from_str(&data).unwrap();
-    let cfs2 = bond2.rollout_cash_flows(1., &market).unwrap();
+    let cfs2 = bond2.rollout_cash_flows(1., &calendar).unwrap();
     let cfs2 = get_cash_flows_after(&cfs2, today);
 
     let clean_price1 = 103.;
@@ -60,8 +56,8 @@ async fn main() {
     let purchase2_cash_flow = CashFlow::new(-dirty_price2 * price_quote_factor2, eur_curr, today);
     println!(
         "Yield-to-Maturity: {:16.4}%|{:16.4}%",
-        100. * bond1.calculate_ytm(&purchase1_cash_flow, &market).unwrap(),
-        100. * bond2.calculate_ytm(&purchase2_cash_flow, &market).unwrap()
+        100. * bond1.calculate_ytm(&purchase1_cash_flow, &calendar).unwrap(),
+        100. * bond2.calculate_ytm(&purchase2_cash_flow, &calendar).unwrap()
     );
     println!("\n    Future cash flows bond1      |    Future cash flows bond2");
     println!("===================================================================");

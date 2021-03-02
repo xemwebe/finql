@@ -77,7 +77,7 @@ impl Calendar {
     /// Calculate all holidays and recognize weekend days for a given range of years
     /// from `start` to `end` (inclusively). The calculation is performed on the basis
     /// of a vector of holiday rules.
-    pub fn calc_calendar(holiday_rules: &Vec<Holiday>, start: i32, end: i32) -> Calendar {
+    pub fn calc_calendar(holiday_rules: &[Holiday], start: i32, end: i32) -> Calendar {
         let mut holidays = BTreeSet::new();
         let mut weekdays = Vec::new();
 
@@ -247,6 +247,23 @@ pub fn last_day_of_month(year: i32, month: u32) -> u32 {
         .unwrap_or(NaiveDate::from_ymd(year + 1, 1, 1))
         .pred()
         .day()
+}
+
+
+pub struct SimpleCalendar {
+    cal: Calendar
+}
+
+impl CalendarProvider for SimpleCalendar {  
+    fn get_calendar(&self, _calendar_name: &str) -> Result<&Calendar, CalendarNotFound> {
+        Ok(&self.cal)
+    }
+}
+
+impl Default for SimpleCalendar {
+    fn default() -> SimpleCalendar {
+        SimpleCalendar{ cal: Calendar::calc_calendar(&[], 2020, 2021) }
+    }
 }
 
 #[cfg(test)]

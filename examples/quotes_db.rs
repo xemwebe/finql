@@ -4,11 +4,9 @@ use std::fs;
 use std::io::{stdout, Write};
 use std::str::FromStr;
 
-use rusqlite::Connection;
 use tokio_test::block_on;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Local, Utc, TimeZone};
 
-use sqlx;
 use finql_data::{Asset, Currency, Quote, Ticker};
 use finql::fx_rates::{get_fx_rate, insert_fx_quote};
 use finql::market::Market;
@@ -39,8 +37,8 @@ fn log(s: &str) {
     stdout().flush().unwrap();
 }
 
-fn quote_tests(market: &mut Market) {
-    // We need some assets the quotess are related
+async fn quote_tests(market: &mut Market<'_>) {
+    // We need some assets the quotes are related
     let basf_id = market
         .db()
         .insert_asset(&Asset {
@@ -50,7 +48,7 @@ fn quote_tests(market: &mut Market) {
             isin: None,
             note: None,
         })
-        .unwrap();
+        .await.unwrap();
     let siemens_id = market
         .db()
         .insert_asset(&Asset {
@@ -60,7 +58,7 @@ fn quote_tests(market: &mut Market) {
             isin: None,
             note: None,
         })
-        .unwrap();
+        .await.unwrap();
     let bhp_id = market
         .db()
         .insert_asset(&Asset {
@@ -70,7 +68,7 @@ fn quote_tests(market: &mut Market) {
             isin: None,
             note: None,
         })
-        .unwrap();
+        .await.unwrap();
 
     // Create some market data sources
     let yahoo = MarketDataSource::Yahoo;
@@ -89,9 +87,9 @@ fn quote_tests(market: &mut Market) {
         source: yahoo.to_string(),
         factor: 1.0,
     };
-    let basf_id = market.db().insert_ticker(&basf).unwrap();
+    let basf_id = market.db().insert_ticker(&basf).await.unwrap();
     // Get ticker back
-    market.db().get_ticker_by_id(basf_id).unwrap();
+    market.db().get_ticker_by_id(basf_id).await.unwrap();
     // Insert another ticker, same source
     let siemens = Ticker {
         id: None,
@@ -102,7 +100,7 @@ fn quote_tests(market: &mut Market) {
         source: yahoo.to_string(),
         factor: 1.0,
     };
-    let siemens_id = market.db().insert_ticker(&siemens).unwrap();
+    let siemens_id = market.db().insert_ticker(&siemens).await.unwrap();
     // Insert another ticker, with other source
     let mut bhp = Ticker {
         id: None,
@@ -113,17 +111,17 @@ fn quote_tests(market: &mut Market) {
         source: MarketDataSource::Manual.to_string(),
         factor: 1.0,
     };
-    let bhp_id = market.db().insert_ticker(&bhp).unwrap();
+    let bhp_id = market.db().insert_ticker(&bhp).await.unwrap();
     println!("ok");
     // Ups, wrong currency, update ticker
     bhp.id = Some(bhp_id);
     bhp.currency = aus;
     // Show all ticker with yahoo as market source
     log("Update ticker...");
-    market.db().update_ticker(&bhp).unwrap();
+    market.db().update_ticker(&bhp).await.unwrap();
     println!("ok");
     log("Get all ticker by source...");
-    let tickers = market.db().get_all_ticker_for_source(&yahoo.to_string()).unwrap();
+    let tickers = market.db().get_all_ticker_for_source(&yahoo.to_string()).await.unwrap();
     if tickers.len() == 2 {
         println!("ok");
     } else {
@@ -132,7 +130,7 @@ fn quote_tests(market: &mut Market) {
 
     // Don't need this ticker anymore, delete
     log("Delete ticker...");
-    market.db().delete_ticker(bhp_id).unwrap();
+    market.db().delete_ticker(bhp_id).await.unwrap();
     println!("ok");
 
     // Dealing with quotes
@@ -145,7 +143,7 @@ fn quote_tests(market: &mut Market) {
         time,
         volume: None,
     };
-    market.db().insert_quote(&quote).unwrap();
+    market.db().insert_quote(&quote).await.unwrap();
     let time = make_time(2020, 1, 2, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
@@ -154,7 +152,7 @@ fn quote_tests(market: &mut Market) {
         time,
         volume: None,
     };
-    market.db().insert_quote(&quote).unwrap();
+    market.db().insert_quote(&quote).await.unwrap();
     let time = make_time(2020, 1, 3, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
@@ -163,7 +161,7 @@ fn quote_tests(market: &mut Market) {
         time,
         volume: None,
     };
-    market.db().insert_quote(&quote).unwrap();
+    market.db().insert_quote(&quote).await.unwrap();
     let time = make_time(2020, 1, 6, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
@@ -172,7 +170,7 @@ fn quote_tests(market: &mut Market) {
         time,
         volume: None,
     };
-    market.db().insert_quote(&quote).unwrap();
+    market.db().insert_quote(&quote).await.unwrap();
     let time = make_time(2020, 1, 7, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
@@ -181,7 +179,7 @@ fn quote_tests(market: &mut Market) {
         time,
         volume: None,
     };
-    market.db().insert_quote(&quote).unwrap();
+    market.db().insert_quote(&quote).await.unwrap();
     let time = make_time(2020, 1, 8, 20, 0, 0).unwrap();
     let mut wrong_quote = Quote {
         id: None,
@@ -190,18 +188,18 @@ fn quote_tests(market: &mut Market) {
         time,
         volume: None,
     };
-    let wrong_quote_id = market.db().insert_quote(&wrong_quote).unwrap();
+    let wrong_quote_id = market.db().insert_quote(&wrong_quote).await.unwrap();
     println!("ok");
     let time = make_time(2020, 1, 4, 0, 0, 0).unwrap();
     log("get last quote...");
-    let (quote, currency) = market.db().get_last_quote_before("BASF AG", time).unwrap();
+    let (quote, currency) = market.db().get_last_quote_before("BASF AG", time).await.unwrap();
     if currency == eur && (quote.price - 67.27) < 1e-10 {
         println!("ok");
     } else {
         println!("failed");
     }
     log("get all quotes for ticker...");
-    let quotes = market.db().get_all_quotes_for_ticker(basf_id).unwrap();
+    let quotes = market.db().get_all_quotes_for_ticker(basf_id).await.unwrap();
     if quotes.len() == 5 {
         println!("ok");
     } else {
@@ -211,20 +209,20 @@ fn quote_tests(market: &mut Market) {
     log("update quote...");
     wrong_quote.id = Some(wrong_quote_id);
     wrong_quote.ticker = basf_id;
-    market.db().update_quote(&wrong_quote).unwrap();
+    market.db().update_quote(&wrong_quote).await.unwrap();
     println!("ok");
     // Maybe deleting strange quote is better...
     log("delete quote...");
-    market.db().delete_quote(wrong_quote_id).unwrap();
+    market.db().delete_quote(wrong_quote_id).await.unwrap();
     println!("ok");
     log("insert fx quote...");
-    insert_fx_quote(0.9, aus, eur, time, market.db()).unwrap();
+    insert_fx_quote(0.9, aus, eur, time, market.db()).await.unwrap();
     println!("ok");
     log("read fx quote...");
-    let fx1 = get_fx_rate(aus, eur, time, market.db()).unwrap();
+    let fx1 = get_fx_rate(aus, eur, time, market.db()).await.unwrap();
     println!("ok");
     log("read inverse fx quote...");
-    let fx2 = get_fx_rate(eur, aus, time, market.db()).unwrap();
+    let fx2 = get_fx_rate(eur, aus, time, market.db()).await.unwrap();
     println!("ok");
     log("sanity check fx quotes...");
     if (fx1 * fx2).abs() > 1.0e-10 {
@@ -235,11 +233,11 @@ fn quote_tests(market: &mut Market) {
 
     log("insert rounding convention...");
     let xxx = Currency::from_str("XXX").unwrap();
-    market.db().set_rounding_digits(xxx, 3).unwrap();
+    market.db().set_rounding_digits(xxx, 3).await.unwrap();
     println!("ok");
     log("read rounding convention...");
 
-    let digits = market.db().get_rounding_digits(xxx);
+    let digits = block_on(market.db().get_rounding_digits(xxx));
     if digits == 3 {
         println!("ok");
     } else {
@@ -247,7 +245,7 @@ fn quote_tests(market: &mut Market) {
     }
 
     log("Check default rounding convention...");
-    let digits = market.db().get_rounding_digits(eur);
+    let digits = block_on(market.db().get_rounding_digits(eur));
     if digits == 2 {
         println!("ok");
     } else {
@@ -266,60 +264,22 @@ fn quote_tests(market: &mut Market) {
 
 
 #[tokio::main]
-fn main() {
+async fn main() {
     let args: Vec<String> = std::env::args().collect();
     assert!(
-        args.len() >= 2,
-        format!(
-            concat!(
-                "usage: {} <db_type> [<database connection string>]\n",
-                "where <db_type> is any of 'sqlite', 'postgres' or 'memory'"
-            ),
-            args[0]
-        )
+        args.len() >= 1,
+        format!("usage: {} <sqlite3 database file path>\n", args[0])
     );
-    match args[1].as_str() {
-        "memory" => {
-            let mut conn = Connection::open(":memory:").unwrap();
-            let mut db = SqliteDB{ conn: &mut conn };
-            db.init().unwrap();
-            let mut market = Market::new(&mut db);
-            quote_tests(&mut market);
-        }
-        "sqlite" => {
-            if args.len() < 3 {
-                eprintln!("Please give the sqlite database path as parameter");
-            } else {
-                let path = &args[2];
-                if fs::metadata(path).is_ok() {
-                    eprintln!("Apparently there exists already a file with this path.");
-                    eprintln!("Please provide another path or remove the file, since a new database will be created.");
-                } else {
-                    let mut conn = Connection::open(path).unwrap();
-                    let mut db = SqliteDB{ conn: &mut conn };
-                    db.init().unwrap();
-                    let mut market = Market::new(&mut db);            
-                    quote_tests(&mut market);
-                    println!("You may have a look at the database for further inspection.");
-                }
-            }
-        }
-        // "postgres" => {
-        //     if args.len() < 3 {
-        //         eprintln!(
-        //             "Please give the connection string to PostgreSQL as parameter, in the form of"
-        //         );
-        //         eprintln!("'host=127.0.0.1 user=<username> password=<password> dbname=<database name> sslmode=disable'");
-        //     } else {
-        //         let connect_str = &args[2];
-        //         let mut conn = postgres::Client::connect(connect_str, postgres::NoTls).unwrap();
-        //         let mut db = PostgresDB{ conn: &mut conn };
-        //         db.clean().unwrap();
-        //         let mut market = Market::new(&mut db);
-        //         quote_tests(&mut market);
-        //         println!("You may have a look at the database for further inspection.");
-        //     }
-        // }
-        other => println!("Unknown database type {}", other),
+    let path = &args[1];
+    if fs::metadata(path).is_ok() {
+        eprintln!("Apparently there exists already a file with this path.");
+        eprintln!("Please provide another path or remove the file, since a new database will be created.");
+    } else {
+        let conn = format!("sqlite:{}", path);
+        let mut db = SqliteDB::new(&conn).await.unwrap();
+        db.init().await.unwrap();
+        let mut market = Market::new(&mut db);            
+        quote_tests(&mut market).await;
+        println!("You may have a look at the database for further inspection.");
     }
 }

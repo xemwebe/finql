@@ -160,7 +160,6 @@ impl MarketDataSource {
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
-    use rusqlite::Connection;
     use tokio_test::block_on;
     use chrono::offset::TimeZone;
     use chrono::{Duration, Utc};
@@ -169,6 +168,7 @@ mod tests {
     use finql_data::asset::Asset;
     use finql_data::currency::Currency;
     use finql_data::quote_handler::QuoteHandler;
+    use finql_sqlite::SqliteDB;
 
     use super::*;
 
@@ -211,7 +211,7 @@ mod tests {
         }
     }
 
-    fn prepare_db(db: &mut dyn QuoteHandler) -> Ticker {
+    async fn prepare_db(db: &mut dyn QuoteHandler) -> Ticker {
         let asset_id = db
             .insert_asset(&Asset {
                 id: None,
@@ -220,7 +220,7 @@ mod tests {
                 isin: None,
                 note: None,
             })
-            .unwrap();
+            .await.unwrap();
 
         let mut ticker = Ticker {
             id: None,
@@ -231,35 +231,33 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let ticker_id = db.insert_ticker(&ticker).unwrap();
+        let ticker_id = db.insert_ticker(&ticker).await.unwrap();
         ticker.id = Some(ticker_id);
         ticker
     }
 
     #[test]
     fn test_fetch_latest_quote() {
-        let mut conn = Connection::open(":memory:").unwrap();
-        let mut db = SqliteDB::new(&mut conn);
-        db.init().await.unwrap();
-        let ticker = prepare_db(&mut db);
+        let mut db = block_on(SqliteDB::new("sqlite:memory")).unwrap();
+        block_on(db.init()).unwrap();
+        let ticker = block_on(prepare_db(&mut db));
         let provider = DummyProvider {};
         block_on(update_ticker(&provider, &ticker, &mut db)).unwrap();
-        let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
+        let quotes = block_on(db.get_all_quotes_for_ticker(ticker.id.unwrap())).unwrap();
         assert_eq!(quotes.len(), 1);
         assert_eq!(quotes[0].price, 1.23);
     }
 
     #[test]
     fn test_fetch_quote_history() {
-        let mut conn = Connection::open(":memory:").unwrap();
-        let mut db = SqliteDB::new(&mut conn);
-        db.init().await.unwrap();
-        let ticker = prepare_db(&mut db);
+        let mut db = block_on(SqliteDB::new("sqlite:memory")).unwrap();
+        block_on(db.init()).unwrap();
+        let ticker = block_on(prepare_db(&mut db));
         let provider = DummyProvider {};
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
         block_on(update_ticker_history(&provider, &ticker, &mut db, start, end)).unwrap();
-        let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
+        let quotes = block_on(db.get_all_quotes_for_ticker(ticker.id.unwrap())).unwrap();
         assert_eq!(quotes.len(), 31);
         assert_eq!(quotes[0].price, 1.23);
     }

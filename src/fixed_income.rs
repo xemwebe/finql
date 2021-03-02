@@ -139,13 +139,12 @@ impl<'de> Deserialize<'de> for FlatRateDiscounter<'de> {
 mod tests {
     use std::str::FromStr;
     use std::collections::BTreeMap;
-    use rusqlite::Connection;
     use chrono::{TimeZone, Utc};
 
-    use finql_data::{Currency, CashAmount, CashFlow, QuoteHandler};
+    use finql_data::{Currency, CashAmount, CashFlow};
 
     use super::*;
-    use crate::fx_rates::{insert_fx_quote, SimpleCurrencyConverter};
+    use crate::fx_rates::SimpleCurrencyConverter;
 
     #[test]
     fn yield_to_maturity() {
@@ -168,12 +167,9 @@ mod tests {
 
         let fx_rate = 81.2345;
         // temporary storage for fx rates
-        let mut conn = Connection::open(":memory:").unwrap();
-        let mut fx_db = SqliteDB{ conn: &mut conn };
-        fx_db.init().unwrap();
-        insert_fx_quote(fx_rate, eur, jpy, time, &mut fx_db).unwrap();
-        fx_db.set_rounding_digits(jpy, 0).unwrap();
-
+        let currency_converter = SimpleCurrencyConverter::new();
+        currency_converter.insert_fx_rate(eur, jpy, fx_rate);
+        
         let eur_amount = CashAmount {
             amount: 100.0,
             currency: eur,
@@ -192,27 +188,27 @@ mod tests {
             currency: eur,
         };
         // Simple addition, same currency
-        tmp.add(eur_amount, time, &mut fx_db, false).unwrap();
+        tmp.add(eur_amount, time, &mut currency_converter, false).unwrap();
         assert_fuzzy_eq!(tmp.amount, 100.0, tol);
         // Adding optional cash amount
-        tmp.add_opt(Some(eur2_amount), time, &mut fx_db, false)
+        tmp.add_opt(Some(eur2_amount), time, &mut currency_converter, false)
             .unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Adding optional cash amount that is none
-        tmp.add_opt(None, time, &mut fx_db, false).unwrap();
+        tmp.add_opt(None, time, &mut currency_converter, false).unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Adding optional foreign cash amount
-        tmp.add_opt(Some(jpy_amount), time, &mut fx_db, false)
+        tmp.add_opt(Some(jpy_amount), time, &mut currency_converter, false)
             .unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0 + 7500.0 / fx_rate, tol);
         // Substract foreign cash amount
-        tmp.sub(jpy_amount, time, &mut fx_db, false).unwrap();
+        tmp.sub(jpy_amount, time, &mut currency_converter, false).unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Substract optional None cash amount
-        tmp.sub_opt(None, time, &mut fx_db, false).unwrap();
+        tmp.sub_opt(None, time, &mut currency_converter, false).unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Substract optional cash amount, same currency
-        tmp.sub_opt(Some(eur_amount), time, &mut fx_db, false)
+        tmp.sub_opt(Some(eur_amount), time, &mut currency_converter, false)
             .unwrap();
         assert_fuzzy_eq!(tmp.amount, 200.0, tol);
 
@@ -222,7 +218,7 @@ mod tests {
         curr_rounding_conventions.insert("JPY".to_string(), 0);
 
         let mut tmp = eur_amount;
-        tmp.add(jpy_amount, time, &mut fx_db, false).unwrap();
+        tmp.add(jpy_amount, time, &mut currency_converter, false).unwrap();
         let tmp = tmp.round_by_convention(&curr_rounding_conventions);
         assert_fuzzy_eq!(
             tmp.amount,
@@ -231,7 +227,7 @@ mod tests {
         );
 
         let mut tmp = jpy_amount;
-        tmp.add(eur_amount, time, &mut fx_db, false).unwrap();
+        tmp.add(eur_amount, time, &mut currency_converter, false).unwrap();
         // Sum must be in EUR, since tmp was originally in EUR
         assert_eq!(tmp.currency.to_string(), "JPY");
         assert_fuzzy_eq!(tmp.amount, 7500.0 + 100.0 * fx_rate, tol);
@@ -240,7 +236,7 @@ mod tests {
 
         // With automatic rounding according to conventions
         let mut tmp = eur_amount;
-        tmp.add(jpy_amount, time, &mut fx_db, true).unwrap();
+        tmp.add(jpy_amount, time, &mut currency_converter, true).unwrap();
         assert_fuzzy_eq!(
             tmp.amount,
             ((100.0 + 7500.0 / fx_rate) * 100.0_f64).round() / 100.0,
@@ -249,7 +245,7 @@ mod tests {
 
         // With automatic rounding according to conventions
         let mut tmp = jpy_amount;
-        tmp.add(eur_amount, time, &mut fx_db, true).unwrap();
+        tmp.add(eur_amount, time, &mut currency_converter, true).unwrap();
         assert_fuzzy_eq!(tmp.amount, (7500.0 + 100.0 * fx_rate).round(), tol);
     }
 
