@@ -1,6 +1,6 @@
 [package]
 name = "finql-postgres"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Mark Beinker <mwb@quantlink.de>"]
 edition = "2018"
 description = "Internal crate used by finql implementing the postgres adaptor"
