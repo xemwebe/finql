@@ -1,14 +1,15 @@
+use std::fs::File;
+use std::io::Read;
+use std::str::FromStr;
+use serde_json;
 use chrono::NaiveDate;
 use finql_data::{Currency, CashFlow};
 use finql::{fixed_income::{get_cash_flows_after, FixedIncome}, bond::Bond};
 use finql::market::Market;
-use serde_json;
-use rusqlite::Connection;
-use std::fs::File;
-use std::io::Read;
-use std::str::FromStr;
+use finql_sqlite::SqliteDB;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let mut file = File::open("./examples/Euroboden_deb_bond.json").unwrap();
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();

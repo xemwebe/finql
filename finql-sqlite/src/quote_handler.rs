@@ -78,6 +78,13 @@ impl QuoteHandler for SqliteDB {
         }
     }
 
+    async fn insert_if_new_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
+         match self.get_ticker_id(&ticker.name).await {
+             Some(id) => Ok(id),
+             None => self.insert_ticker(ticker).await,
+         }
+    }
+
     async fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
         let id_param = id as i32;
         let row = sqlx::query!(

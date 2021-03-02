@@ -33,6 +33,33 @@ impl AssetHandler for SqliteDB {
         }
     }
 
+    async fn insert_asset_if_new(
+        &mut self,
+        asset: &Asset,
+        rename_asset: bool,
+    ) -> Result<usize, DataError> {
+        match self.get_asset_id(asset).await {
+            Some(id) => Ok(id),
+            None => match self.insert_asset(asset).await {
+                Ok(id) => Ok(id),
+                Err(err) => {
+                    if rename_asset {
+                        let new_name = format!("{} (NEW)", asset.name);
+                        self.insert_asset(&Asset {
+                            id: None,
+                            name: new_name,
+                            wkn: asset.wkn.clone(),
+                            isin: asset.isin.clone(),
+                            note: asset.note.clone(),
+                        }).await
+                    } else {
+                        Err(err)
+                    }
+                }
+            },
+        }
+    }
+
     async fn get_asset_id(&mut self, asset: &Asset) -> Option<usize> {
         let id = if let Some(isin) = &asset.isin {
             sqlx::query_as!(ID, "SELECT id FROM assets WHERE isin=?", isin).fetch_one(&self.pool).await

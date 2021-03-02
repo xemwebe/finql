@@ -14,12 +14,7 @@ pub trait QuoteHandler: AssetHandler {
     // insert, get, update and delete for market data sources
     async fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError>;
     async fn get_ticker_id(&mut self, ticker: &str) -> Option<usize>;
-    async fn insert_if_new_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
-        match self.get_ticker_id(&ticker.name).await {
-            Some(id) => Ok(id),
-            None => self.insert_ticker(ticker).await,
-        }
-    }
+    async fn insert_if_new_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError>;
     async fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError>;
     async fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError>;
     async fn get_all_ticker_for_source(

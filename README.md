@@ -49,11 +49,11 @@ export DATABASE_URL="postgresql:///<dbname>?user=<user>&password=<password>&ssl=
 and for sqlite3 the string would look like
 
 ```bash
-export DATABASE_URL="sqlite::memory"
+export DATABASE_URL="sqlite:memory"
 ```
 
 or 
 
 ```bash
-export DATABASE_URL="sqlite::///test.db"
+export DATABASE_URL="sqlite:<absolute_path>/finql-sqlite/data/test.db"
 ```

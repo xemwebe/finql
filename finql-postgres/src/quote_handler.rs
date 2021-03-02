@@ -41,6 +41,13 @@ impl QuoteHandler for PostgresDB {
         }
     }
 
+    async fn insert_if_new_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
+        match self.get_ticker_id(&ticker.name).await {
+            Some(id) => Ok(id),
+            None => self.insert_ticker(ticker).await,
+        }
+    }
+
     async fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
         let row = sqlx::query!(
                 "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=$1",

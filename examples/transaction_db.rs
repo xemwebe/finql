@@ -2,7 +2,7 @@
 
 use std::fs;
 use std::str::FromStr;
-
+use sqlx;
 use rusqlite::Connection;
 use chrono::NaiveDate;
 
@@ -105,7 +105,7 @@ async fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
 }
 
 #[tokio::main]
-fn main() {
+async fn main() {
     let args: Vec<String> = std::env::args().collect();
     assert!(
         args.len() >= 2 && args.len() <= 3,

@@ -13,28 +13,8 @@ pub trait AssetHandler {
         &mut self,
         asset: &Asset,
         rename_asset: bool,
-    ) -> Result<usize, DataError> {
-        match self.get_asset_id(asset).await {
-            Some(id) => Ok(id),
-            None => match self.insert_asset(asset).await {
-                Ok(id) => Ok(id),
-                Err(err) => {
-                    if rename_asset {
-                        let new_name = format!("{} (NEW)", asset.name);
-                        self.insert_asset(&Asset {
-                            id: None,
-                            name: new_name,
-                            wkn: asset.wkn.clone(),
-                            isin: asset.isin.clone(),
-                            note: asset.note.clone(),
-                        }).await
-                    } else {
-                        Err(err)
-                    }
-                }
-            },
-        }
-    }
+    ) -> Result<usize, DataError>; 
+    
     async fn get_asset_id(&mut self, asset: &Asset) -> Option<usize>;
     async fn get_asset_by_id(&mut self, id: usize) -> Result<Asset, DataError>;
     async fn get_asset_by_isin(&mut self, id: &str) -> Result<Asset, DataError>;
