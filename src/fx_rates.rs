@@ -123,8 +123,9 @@ mod tests {
     use std::str::FromStr;
     use finql_data::quote_handler::QuoteHandler;
     use tokio_test::block_on;
-    
-    fn prepare_db(db: &mut dyn QuoteHandler) {
+    use finql_sqlite::SqliteDB;
+
+    async fn prepare_db(db: &mut dyn QuoteHandler) {
         let time = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
@@ -133,14 +134,15 @@ mod tests {
 
     #[test]
     fn test_get_fx_rate() {
-        let mut fx_converter = SimpleCurrencyConverter::new();
+        let mut fx_db = block_on(SqliteDB::new("sqlite:memory")).unwrap();
+        block_on(prepare_db(&mut fx_db));
         let tol = 1.0e-8;
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
         let time = Utc::now();
-        let fx = block_on(fx_converter.fx_rate(eur, eur, time)).unwrap();
+        let fx = block_on(fx_db.fx_rate(eur, eur, time)).unwrap();
         assert_fuzzy_eq!(fx, 1.0, tol);
-        let fx = block_on(fx_converter.fx_rate(usd, eur, time)).unwrap();
+        let fx = block_on(fx_db.fx_rate(usd, eur, time)).unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);
     }
 }

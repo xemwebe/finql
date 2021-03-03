@@ -7,7 +7,7 @@ use std::str::FromStr;
 use tokio_test::block_on;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Local, Utc, TimeZone};
 
-use finql_data::{Asset, Currency, CurrencyConverter, Quote, Ticker};
+use finql_data::{Asset, Currency, CurrencyConverter, Quote, QuoteHandler, Ticker};
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
