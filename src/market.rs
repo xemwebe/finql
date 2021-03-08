@@ -153,7 +153,7 @@ impl<'a> CurrencyConverter for Market<'a> {
 }
 
 /// Generate fixed set of some calendars for testing purposes only
-fn generate_calendars() -> BTreeMap<String, Calendar> {
+pub fn generate_calendars() -> BTreeMap<String, Calendar> {
     let mut calendars = BTreeMap::new();
     let uk_settlement_holidays = vec![
         // Saturdays

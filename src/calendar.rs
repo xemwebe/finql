@@ -254,6 +254,12 @@ pub struct SimpleCalendar {
     cal: Calendar
 }
 
+impl SimpleCalendar {
+    pub fn new( cal: &Calendar ) -> SimpleCalendar {
+        SimpleCalendar{ cal: cal.clone() }
+    }
+}
+
 impl CalendarProvider for SimpleCalendar {  
     fn get_calendar(&self, _calendar_name: &str) -> Result<&Calendar, CalendarNotFound> {
         Ok(&self.cal)

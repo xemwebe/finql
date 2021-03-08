@@ -226,6 +226,7 @@ impl FixedIncome for Bond {
 mod tests {
     use std::str::FromStr;
     use crate::calendar::SimpleCalendar;
+    use crate::market::generate_calendars;
     use super::*;
 
     #[test]
@@ -301,7 +302,8 @@ mod tests {
             "denomination": 1000
         }"#;
         let bond: Bond = serde_json::from_str(&data).unwrap();
-        let calendar = SimpleCalendar::default();
+        let sample_calendars = generate_calendars();
+        let calendar = SimpleCalendar::new(&sample_calendars["TARGET"]);
         let cash_flows = bond.rollout_cash_flows(1., &calendar).unwrap();
         assert_eq!(cash_flows.len(), 5);
         let curr = Currency::from_str("EUR").unwrap();
