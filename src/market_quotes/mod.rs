@@ -49,7 +49,7 @@ impl fmt::Display for MarketQuoteError {
 
 /// General interface for market data quotes provider
 #[async_trait]
-pub trait MarketQuoteProvider {
+pub trait MarketQuoteProvider: Send {
     /// Fetch latest quote
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError>;
     /// Fetch historic quotes between start and end date

@@ -140,9 +140,8 @@ mod tests {
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
         let time = Utc::now();
-        let fx = block_on(fx_db.fx_rate(eur, eur, time)).unwrap();
-        assert_fuzzy_eq!(fx, 1.0, tol);
-        let fx = block_on(fx_db.fx_rate(usd, eur, time)).unwrap();
+        let qv : &mut (dyn QuoteHandler + Send) = &mut fx_db;
+        let fx = block_on(qv.fx_rate(usd, eur, time)).unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);
     }
 }

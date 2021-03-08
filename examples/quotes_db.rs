@@ -7,7 +7,7 @@ use std::str::FromStr;
 use tokio_test::block_on;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Local, Utc, TimeZone};
 
-use finql_data::{Asset, Currency, CurrencyConverter, Quote, QuoteHandler, Ticker};
+use finql_data::{Asset, Currency, CurrencyConverter, Quote, Ticker};
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
@@ -219,10 +219,10 @@ async fn quote_tests(market: &mut Market<'_>) {
     insert_fx_quote(0.9, aus, eur, time, market.db()).await.unwrap();
     println!("ok");
     log("read fx quote...");
-    let fx1 = market.db().fx_rate(aus, eur, time).await.unwrap();
+    let fx1 = market.fx_rate(aus, eur, time).await.unwrap();
     println!("ok");
     log("read inverse fx quote...");
-    let fx2 = market.db().fx_rate(eur, aus, time).await.unwrap();
+    let fx2 = market.fx_rate(eur, aus, time).await.unwrap();
     println!("ok");
     log("sanity check fx quotes...");
     if (fx1 * fx2).abs() > 1.0e-10 {

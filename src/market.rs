@@ -10,13 +10,13 @@ use std::error::Error;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
-use finql_data::{DataError};
-use finql_data::QuoteHandler;
+use async_trait::async_trait;
+
+use finql_data::{DataError,QuoteHandler,CurrencyConverter, Currency, CurrencyError};
 
 use crate::calendar::{Calendar, Holiday, NthWeek};
 use crate::market_quotes;
 use crate::market_quotes::MarketQuoteProvider;
-
 
 
 /// Error related to market data object
@@ -54,23 +54,26 @@ impl From<market_quotes::MarketQuoteError> for MarketError {
         Self::MarketQuoteError(error)
     }
 }
+
 impl From<DataError> for MarketError {
     fn from(error: DataError) -> Self {
         Self::DBError(error)
     }
 }
+
+
 /// Container or adaptor to market data
 pub struct Market<'a> {
     calendars: BTreeMap<String, Calendar>,
     /// collection of market data quotes provider
     provider: BTreeMap<String, Box<dyn MarketQuoteProvider>>,
     /// Quotes database
-    db: &'a mut dyn QuoteHandler,
+    db: &'a mut (dyn QuoteHandler + Send),
 }
 
 impl<'a> Market<'a> {
     /// For now, market data statically generated and stored in memory
-    pub fn new(db: &'a mut dyn QuoteHandler) -> Market {
+    pub fn new(db: &'a mut (dyn QuoteHandler + Send)) -> Market {
         Market {
             // Set of default calendars
             calendars: generate_calendars(),
@@ -88,16 +91,16 @@ impl<'a> Market<'a> {
         }
     }
 
-    /// provide reference to database
-    pub fn db(&mut self) -> &mut dyn QuoteHandler {
-        self.db.deref_mut()
-    }
-
     /// Add market data provider
     pub fn add_provider(&mut self, name: String, provider: Box<dyn MarketQuoteProvider>) {
         self.provider.insert(name, provider);
     }
 
+    /// provide reference to database
+    pub fn db(&mut self) -> &mut dyn QuoteHandler {
+        self.db.deref_mut()
+    }
+    
     /// Fetch latest quotes for all active ticker
     /// Returns a list of ticker for which the update failed.
     pub async fn update_quotes(&mut self) -> Result<Vec<usize>, MarketError> {
@@ -138,6 +141,14 @@ impl<'a> Market<'a> {
             ).await?;
         }
         Ok(())
+    }
+}
+
+#[async_trait]
+impl<'a> CurrencyConverter for Market<'a> {
+    /// returns the price of 1 unit of foreign currency in terms of domestic currency
+    async fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError> {
+        self.fx_rate(foreign_currency, domestic_currency, time).await
     }
 }
 
