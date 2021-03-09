@@ -13,11 +13,11 @@ use crate::rates::{Compounding, DiscountError, Discounter, FlatRate};
 use crate::calendar::CalendarProvider;
 
 /// Get all future cash flows with respect to a given date
-pub fn get_cash_flows_after(cash_flows: &Vec<CashFlow>, date: NaiveDate) -> Vec<CashFlow> {
+pub fn get_cash_flows_after(cash_flows: &[CashFlow], date: NaiveDate) -> Vec<CashFlow> {
     let mut new_cash_flows = Vec::new();
     for cf in cash_flows {
         if cf.date > date {
-            new_cash_flows.push(cf.clone());
+            new_cash_flows.push(*cf);
         }
     }
     new_cash_flows
@@ -55,7 +55,7 @@ pub trait FixedIncome {
 /// of the first cash flow. It is assumed that all cash flow are in the same currency,
 /// otherwise a `DiscountError` will be returned.
 pub fn calculate_cash_flows_ytm(
-    cash_flows: &Vec<CashFlow>,
+    cash_flows: &[CashFlow],
     init_cash_flow: &CashFlow,
 ) -> Result<f64, DiscountError> {
     let rate = FlatRate::new(
@@ -67,8 +67,8 @@ pub fn calculate_cash_flows_ytm(
     let init_param = 0.5;
     let solver = Brent::new(0., 0.5, 1e-11);
     let func = FlatRateDiscounter {
-        init_cash_flow: init_cash_flow,
-        cash_flows: cash_flows,
+        init_cash_flow,
+        cash_flows,
         rate,
     };
     let res = Executor::new(func, solver, init_param).max_iters(100).run();
@@ -84,7 +84,7 @@ pub fn calculate_cash_flows_ytm(
 #[derive(Clone)]
 struct FlatRateDiscounter<'a> {
     init_cash_flow: &'a CashFlow,
-    cash_flows: &'a Vec<CashFlow>,
+    cash_flows: &'a [CashFlow],
     rate: FlatRate,
 }
 
@@ -97,11 +97,11 @@ impl<'a> ArgminOp for FlatRateDiscounter<'a> {
     type Jacobian = ();
 
     fn apply(&self, p: &Self::Param) -> Result<Self::Output, Error> {
-        let mut discount_rate = self.rate.clone();
+        let mut discount_rate = self.rate;
         discount_rate.rate = *p;
         let mut sum = self.init_cash_flow.amount.amount;
         let today = self.init_cash_flow.date;
-        for cf in self.cash_flows.clone() {
+        for cf in self.cash_flows {
             if cf.date > today {
                 sum += discount_rate.discount_cash_flow(&cf, today)?.amount;
             }
@@ -116,9 +116,9 @@ impl<'a> Serialize for FlatRateDiscounter<'a> {
     where
         S: Serializer,
     {
-        Err(serde::ser::Error::custom(format!(
-            "serialization is disabled"
-        )))
+        Err(serde::ser::Error::custom(
+            "serialization is disabled".to_string()
+        ))
     }
 }
 
@@ -128,9 +128,9 @@ impl<'de> Deserialize<'de> for FlatRateDiscounter<'de> {
     where
         D: Deserializer<'de>,
     {
-        Err(serde::de::Error::custom(format!(
-            "deserialization is disabled"
-        )))
+        Err(serde::de::Error::custom(
+            "deserialization is disabled".to_string()
+        ))
     }
 }
 

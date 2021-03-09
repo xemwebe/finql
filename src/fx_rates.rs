@@ -115,13 +115,19 @@ impl SimpleCurrencyConverter {
     }
 }
 
+impl Default for SimpleCurrencyConverter{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use chrono::offset::TimeZone;
     use chrono::Utc;
     use std::str::FromStr;
-    use finql_data::quote_handler::QuoteHandler;
+    use finql_data::QuoteHandler;
     use finql_sqlite::SqliteDB;
 
 

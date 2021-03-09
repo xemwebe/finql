@@ -72,7 +72,7 @@ pub trait Discounter {
     /// Discount given cash flow stream
     fn discount_cash_flow_stream(
         &self,
-        cf_stream: &Vec<CashFlow>,
+        cf_stream: &[CashFlow],
         today: NaiveDate,
     ) -> Result<CashAmount, DiscountError> {
         let mut amount = CashAmount {

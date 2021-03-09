@@ -159,17 +159,15 @@ impl MarketDataSource {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use std::str::FromStr;
     use chrono::offset::TimeZone;
     use chrono::{Duration, Utc};
     use rand::Rng;
 
-    use finql_data::asset::Asset;
-    use finql_data::currency::Currency;
-    use finql_data::quote_handler::QuoteHandler;
+    use finql_data::{Asset, Currency, QuoteHandler};
     use finql_sqlite::SqliteDB;
-
-    use super::*;
 
     struct DummyProvider {}
 

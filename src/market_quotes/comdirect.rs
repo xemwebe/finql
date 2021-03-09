@@ -111,7 +111,7 @@ impl Comdirect {
         for record in reader.records() {
             if let Ok(record) = record {
                 if skip_line {
-                    if record.len() >= 1 {
+                    if !record.is_empty() {
                         if let Some(first_field) = record.get(0) {
                             // start with next line
                             if first_field == "Datum" {
@@ -127,7 +127,7 @@ impl Comdirect {
                 }
                 let date_time_str = record
                     .get(0)
-                    .ok_or(MarketQuoteError::FetchFailed("empty field".to_string()))?;
+                    .ok_or_else(|| MarketQuoteError::FetchFailed("empty field".to_string()))?;
                 let date = date_time_from_str(date_time_str, "%d.%m.%Y", 18);
                 if date.is_err() {
                     continue;
@@ -152,6 +152,12 @@ impl Comdirect {
     }
 }
 
+impl Default for Comdirect {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl MarketQuoteProvider for Comdirect {
     /// Fetch latest quote
@@ -163,7 +169,7 @@ impl MarketQuoteProvider for Comdirect {
             id: None,
             ticker: ticker.id.unwrap(),
             price,
-            time: time,
+            time,
             volume: None,
         })
     }

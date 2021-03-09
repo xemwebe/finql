@@ -9,7 +9,6 @@
 //! within a given range of years for fast access.
 
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
-use computus;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
@@ -86,11 +85,11 @@ impl Calendar {
                 Holiday::SingularDay(date) => {
                     let year = date.year();
                     if year >= start && year <= end {
-                        holidays.insert(date.clone());
+                        holidays.insert(*date);
                     }
                 }
                 Holiday::WeekDay(weekday) => {
-                    weekdays.push(weekday.clone());
+                    weekdays.push(*weekday);
                 }
                 Holiday::YearlyDay {
                     month,
@@ -168,8 +167,8 @@ impl Calendar {
             }
         }
         Calendar {
-            holidays: holidays,
-            weekdays: weekdays,
+            holidays,
+            weekdays,
         }
     }
 
@@ -244,7 +243,7 @@ pub fn is_leap_year(year: i32) -> bool {
 /// Calculate the last day of a given month in a given year
 pub fn last_day_of_month(year: i32, month: u32) -> u32 {
     NaiveDate::from_ymd_opt(year, month + 1, 1)
-        .unwrap_or(NaiveDate::from_ymd(year + 1, 1, 1))
+        .unwrap_or_else(|| NaiveDate::from_ymd(year + 1, 1, 1))
         .pred()
         .day()
 }

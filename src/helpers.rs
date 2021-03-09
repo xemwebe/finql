@@ -4,7 +4,7 @@
 pub fn some_equal(opt: &Option<String>, s: &str) -> bool {
     match opt {
         None => false,
-        Some(opt_s) => &opt_s == &s,
+        Some(opt_s) => opt_s == s,
     }
 }
 

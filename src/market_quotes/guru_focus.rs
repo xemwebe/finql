@@ -2,7 +2,6 @@ use super::{MarketQuoteError, MarketQuoteProvider};
 use crate::date_time_helper::{date_time_from_str_american, unix_to_date_time};
 use finql_data::{Quote, Ticker};
 use chrono::{DateTime, Utc};
-use gurufocus_api;
 use async_trait::async_trait;
 
 pub struct GuruFocus {
@@ -25,7 +24,7 @@ impl MarketQuoteProvider for GuruFocus {
             .connector
             .get_quotes(&[&ticker.name])
             .await
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+            .map_err(MarketQuoteError::FetchFailed)?;
 
         let quote: gurufocus_api::Quote = serde_json::from_value(prices)
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
@@ -50,7 +49,7 @@ impl MarketQuoteProvider for GuruFocus {
             .connector
             .get_price_hist(&ticker.name)
             .await
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+            .map_err(MarketQuoteError::FetchFailed)?;
 
         let gf_quotes: Vec<(String, f64)> = serde_json::from_value(gf_quotes)
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;

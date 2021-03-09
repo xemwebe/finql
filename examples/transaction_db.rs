@@ -116,7 +116,7 @@ async fn main() {
     );
     match args[1].as_str() {
         "memory" => {
-            let mut db = SqliteDB::new("sqlite:memory").await.unwrap();
+            let mut db = SqliteDB::new("sqlite::memory:").await.unwrap();
             db.init().await.unwrap();
             transaction_tests(&mut db).await;
         }

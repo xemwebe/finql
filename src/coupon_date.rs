@@ -67,8 +67,8 @@ impl CouponDate {
         let last = crate::calendar::last_day_of_month(2019, month);
         if day > 0 && month > 0 && month <= 12 && day <= last {
             Ok(CouponDate {
-                day: day,
-                month: month,
+                day,
+                month,
             })
         } else {
             Err(CouponDateError::DayToBig)

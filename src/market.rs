@@ -108,15 +108,13 @@ impl<'a> Market<'a> {
         let mut failed_ticker = Vec::new();
         for ticker in tickers {
             let provider = self.provider.get(&ticker.source);
-            if provider.is_some() {
-                if market_quotes::update_ticker(
-                    provider.unwrap().deref(),
-                    &ticker,
-                    self.db.deref_mut(),
-                ).await.is_err()
-                {
-                    failed_ticker.push(ticker.id.unwrap());
-                }
+            if provider.is_some() && market_quotes::update_ticker(
+                provider.unwrap().deref(),
+                &ticker,
+                self.db.deref_mut(),
+            ).await.is_err()
+            {
+                failed_ticker.push(ticker.id.unwrap());
             }
         }
         Ok(failed_ticker)
