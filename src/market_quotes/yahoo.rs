@@ -62,15 +62,14 @@ impl MarketQuoteProvider for Yahoo {
 mod tests {
     use std::str::FromStr;
     use chrono::offset::TimeZone;
-    use tokio_test::block_on;
  
     use finql_data::Currency;
     
     use crate::market_quotes::MarketDataSource;
     use super::*;
  
-    #[test]
-    fn test_yahoo_fetch_quote() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_yahoo_fetch_quote() {
         let yahoo = Yahoo {};
         let ticker = Ticker {
             id: Some(1),
@@ -81,12 +80,12 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let quote = block_on(yahoo.fetch_latest_quote(&ticker)).unwrap();
+        let quote = yahoo.fetch_latest_quote(&ticker).await.unwrap();
         assert!(quote.price != 0.0);
     }
 
-    #[test]
-    fn test_yahoo_fetch_history() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_yahoo_fetch_history() {
         let yahoo = Yahoo {};
         let ticker = Ticker {
             id: Some(1),
@@ -99,7 +98,7 @@ mod tests {
         };
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        let quotes = block_on(yahoo.fetch_quote_history(&ticker, start, end)).unwrap();
+        let quotes = yahoo.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);
     }

@@ -88,15 +88,14 @@ impl MarketQuoteProvider for AlphaVantage {
 mod tests {
     use std::str::FromStr;
     use chrono::offset::TimeZone;
-    use tokio_test::block_on;
 
     use finql_data::Currency;
 
     use super::*;
     use crate::market_quotes::MarketDataSource;
 
-    #[test]
-    fn test_alpha_fetch_quote() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_alpha_fetch_quote() {
         let token = "demo".to_string();
         let alpha = AlphaVantage::new(token);
         let ticker = Ticker {
@@ -108,12 +107,12 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let quote = block_on(alpha.fetch_latest_quote(&ticker)).unwrap();
+        let quote = alpha.fetch_latest_quote(&ticker).await.unwrap();
         assert!(quote.price != 0.0);
     }
 
-    #[test]
-    fn test_alpha_fetch_history() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_alpha_fetch_history() {
         let token = "demo".to_string();
         let alpha = AlphaVantage::new(token);
         let ticker = Ticker {
@@ -127,7 +126,7 @@ mod tests {
         };
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        let quotes = block_on(alpha.fetch_quote_history(&ticker, start, end)).unwrap();
+        let quotes = alpha.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);
     }

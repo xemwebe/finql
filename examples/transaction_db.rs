@@ -5,7 +5,6 @@ use std::str::FromStr;
 use chrono::NaiveDate;
 
 use finql_data::{Asset, Currency, CashFlow, Transaction, TransactionHandler, TransactionType};
-//use finql_postgres::PostgresDB;
 use finql_sqlite::SqliteDB;
 
 async fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {

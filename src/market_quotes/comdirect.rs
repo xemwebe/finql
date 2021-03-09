@@ -195,13 +195,12 @@ impl MarketQuoteProvider for Comdirect {
 mod tests {
     use std::str::FromStr;
     use chrono::offset::TimeZone;
-    use tokio_test::block_on;
     use finql_data::Currency;
     use super::*;
     use crate::market_quotes::MarketDataSource;
     
-    #[test]
-    fn test_comdirect_fetch_quote() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_comdirect_fetch_quote() {
         let codi = Comdirect::new();
         let ticker = Ticker {
             id: Some(1),
@@ -213,12 +212,12 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let quote = block_on(codi.fetch_latest_quote(&ticker)).unwrap();
+        let quote = codi.fetch_latest_quote(&ticker).await.unwrap();
         assert!(quote.price != 0.0);
     }
 
-    #[test]
-    fn test_comdirect_quote_history() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_comdirect_quote_history() {
         let codi = Comdirect::new();
         let ticker = Ticker {
             id: Some(1),
@@ -232,7 +231,7 @@ mod tests {
         };
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        let quotes = block_on(codi.fetch_quote_history(&ticker, start, end)).unwrap();
+        let quotes = codi.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);
     }

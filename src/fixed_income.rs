@@ -140,7 +140,6 @@ mod tests {
     use std::str::FromStr;
     use std::collections::BTreeMap;
     use chrono::{TimeZone, Utc};
-    use tokio_test::block_on;
 
     use finql_data::{Currency, CashAmount, CashFlow};
 
@@ -158,8 +157,8 @@ mod tests {
         assert_fuzzy_eq!(ytm, 0.05, tol);
     }
 
-    #[test]
-    fn cash_amount_arithmetic_sqlite() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn cash_amount_arithmetic_sqlite() {
         let tol = 1e-11;
         let time = Utc.ymd(2020, 4, 6).and_hms_milli(18, 0, 0, 0);
 
@@ -189,28 +188,25 @@ mod tests {
             currency: eur,
         };
         // Simple addition, same currency
-        block_on(tmp.add(eur_amount, time, &mut currency_converter, false)).unwrap();
+        tmp.add(eur_amount, time, &mut currency_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 100.0, tol);
         // Adding optional cash amount
-        block_on(tmp.add_opt(Some(eur2_amount), time, &mut currency_converter, false))
-            .unwrap();
+        tmp.add_opt(Some(eur2_amount), time, &mut currency_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Adding optional cash amount that is none
-        block_on(tmp.add_opt(None, time, &mut currency_converter, false)).unwrap();
+        tmp.add_opt(None, time, &mut currency_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Adding optional foreign cash amount
-        block_on(tmp.add_opt(Some(jpy_amount), time, &mut currency_converter, false))
-            .unwrap();
+        tmp.add_opt(Some(jpy_amount), time, &mut currency_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0 + 7500.0 / fx_rate, tol);
         // Substract foreign cash amount
-        block_on(tmp.sub(jpy_amount, time, &mut currency_converter, false)).unwrap();
+        tmp.sub(jpy_amount, time, &mut currency_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Substract optional None cash amount
-        block_on(tmp.sub_opt(None, time, &mut currency_converter, false)).unwrap();
+        tmp.sub_opt(None, time, &mut currency_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Substract optional cash amount, same currency
-        block_on(tmp.sub_opt(Some(eur_amount), time, &mut currency_converter, false))
-            .unwrap();
+        tmp.sub_opt(Some(eur_amount), time, &mut currency_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 200.0, tol);
 
         // Sum must be in EUR, since tmp was originally in EUR
@@ -219,7 +215,7 @@ mod tests {
         curr_rounding_conventions.insert("JPY".to_string(), 0);
 
         let mut tmp = eur_amount;
-        block_on(tmp.add(jpy_amount, time, &mut currency_converter, false)).unwrap();
+        tmp.add(jpy_amount, time, &mut currency_converter, false).await.unwrap();
         let tmp = tmp.round_by_convention(&curr_rounding_conventions);
         assert_fuzzy_eq!(
             tmp.amount,
@@ -228,7 +224,7 @@ mod tests {
         );
 
         let mut tmp = jpy_amount;
-        block_on(tmp.add(eur_amount, time, &mut currency_converter, false)).unwrap();
+        tmp.add(eur_amount, time, &mut currency_converter, false).await.unwrap();
         // Sum must be in EUR, since tmp was originally in EUR
         assert_eq!(tmp.currency.to_string(), "JPY");
         assert_fuzzy_eq!(tmp.amount, 7500.0 + 100.0 * fx_rate, tol);
@@ -237,7 +233,7 @@ mod tests {
 
         // With automatic rounding according to conventions
         let mut tmp = eur_amount;
-        block_on(tmp.add(jpy_amount, time, &mut currency_converter, true)).unwrap();
+        tmp.add(jpy_amount, time, &mut currency_converter, true).await.unwrap();
         assert_fuzzy_eq!(
             tmp.amount,
             ((100.0 + 7500.0 / fx_rate) * 100.0_f64).round() / 100.0,
@@ -246,12 +242,12 @@ mod tests {
 
         // With automatic rounding according to conventions
         let mut tmp = jpy_amount;
-        block_on(tmp.add(eur_amount, time, &mut currency_converter, true)).unwrap();
+        tmp.add(eur_amount, time, &mut currency_converter, true).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, (7500.0 + 100.0 * fx_rate).round(), tol);
     }
 
-    #[test]
-    fn cash_amount_arithmetic_simple() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn cash_amount_arithmetic_simple() {
         let tol = 1e-11;
         let time = Utc.ymd(2020, 4, 6).and_hms_milli(18, 0, 0, 0);
 
@@ -281,28 +277,25 @@ mod tests {
             currency: eur,
         };
         // Simple addition, same currency
-        block_on(tmp.add(eur_amount, time, &mut fx_converter, false)).unwrap();
+        tmp.add(eur_amount, time, &mut fx_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 100.0, tol);
         // Adding optional cash amount
-        block_on(tmp.add_opt(Some(eur2_amount), time, &mut fx_converter, false))
-            .unwrap();
+        tmp.add_opt(Some(eur2_amount), time, &mut fx_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Adding optional cash amount that is none
-        block_on(tmp.add_opt(None, time, &mut fx_converter, false)).unwrap();
+        tmp.add_opt(None, time, &mut fx_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Adding optional foreign cash amount
-        block_on(tmp.add_opt(Some(jpy_amount), time, &mut fx_converter, false))
-            .unwrap();
+        tmp.add_opt(Some(jpy_amount), time, &mut fx_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0 + 7500.0 / fx_rate, tol);
         // Substract foreign cash amount
-        block_on(tmp.sub(jpy_amount, time, &mut fx_converter, false)).unwrap();
+        tmp.sub(jpy_amount, time, &mut fx_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Substract optional None cash amount
-        block_on(tmp.sub_opt(None, time, &mut fx_converter, false)).unwrap();
+        tmp.sub_opt(None, time, &mut fx_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 300.0, tol);
         // Substract optional cash amount, same currency
-        block_on(tmp.sub_opt(Some(eur_amount), time, &mut fx_converter, false))
-            .unwrap();
+        tmp.sub_opt(Some(eur_amount), time, &mut fx_converter, false).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, 200.0, tol);
 
         // Sum must be in EUR, since tmp was originally in EUR
@@ -311,7 +304,7 @@ mod tests {
         curr_rounding_conventions.insert("JPY".to_string(), 0);
 
         let mut tmp = eur_amount;
-        block_on(tmp.add(jpy_amount, time, &mut fx_converter, false)).unwrap();
+        tmp.add(jpy_amount, time, &mut fx_converter, false).await.unwrap();
         let tmp = tmp.round_by_convention(&curr_rounding_conventions);
         assert_fuzzy_eq!(
             tmp.amount,
@@ -320,7 +313,7 @@ mod tests {
         );
 
         let mut tmp = jpy_amount;
-        block_on(tmp.add(eur_amount, time, &mut fx_converter, false)).unwrap();
+        tmp.add(eur_amount, time, &mut fx_converter, false).await.unwrap();
         // Sum must be in EUR, since tmp was originally in EUR
         assert_eq!(tmp.currency.to_string(), "JPY");
         assert_fuzzy_eq!(tmp.amount, 7500.0 + 100.0 * fx_rate, tol);
@@ -329,7 +322,7 @@ mod tests {
 
         // With automatic rounding according to conventions
         let mut tmp = eur_amount;
-        block_on(tmp.add(jpy_amount, time, &mut fx_converter, true)).unwrap();
+        tmp.add(jpy_amount, time, &mut fx_converter, true).await.unwrap();
         assert_fuzzy_eq!(
             tmp.amount,
             ((100.0 + 7500.0 / fx_rate) * 100.0_f64).round() / 100.0,
@@ -338,7 +331,7 @@ mod tests {
 
         // With automatic rounding according to conventions
         let mut tmp = jpy_amount;
-        block_on(tmp.add(eur_amount, time, &mut fx_converter, true)).unwrap();
+        tmp.add(eur_amount, time, &mut fx_converter, true).await.unwrap();
         assert_fuzzy_eq!(tmp.amount, (7500.0 + 100.0 * fx_rate).round(), tol);
     }
 }

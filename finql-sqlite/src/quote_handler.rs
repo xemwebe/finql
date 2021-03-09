@@ -48,7 +48,7 @@ impl QuoteHandler for SqliteDB {
         let curr = ticker.currency.to_string();
         sqlx::query!(
             "INSERT INTO ticker (name, asset_id, source, priority, currency, factor) 
-            VALUES ($1, $2, $3, $4, $5, $6)",
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             ticker.name,
             asset_id,
             ticker.source,
@@ -257,7 +257,7 @@ impl QuoteHandler for SqliteDB {
         let row = sqlx::query!(
                 "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
                 FROM quotes q, ticker t, assets a 
-                WHERE a.name=$1 AND t.asset_id=a.id AND t.id=q.ticker_id AND q.time<= $2
+                WHERE a.name=? AND t.asset_id=a.id AND t.id=q.ticker_id AND q.time<=?
                 ORDER BY q.time DESC, t.priority ASC LIMIT 1",
                 asset_name, time,
             ).fetch_one(&self.pool).await
@@ -292,7 +292,7 @@ impl QuoteHandler for SqliteDB {
         let row = sqlx::query!(
                 "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
                 FROM quotes q, ticker t
-                WHERE t.asset_id=$1 AND t.id=q.ticker_id AND q.time<= $2
+                WHERE t.asset_id=?1 AND t.id=q.ticker_id AND q.time<= ?2
                 ORDER BY q.time DESC, t.priority ASC LIMIT 1",
                 asset_id, time,
             ).fetch_one(&self.pool).await
@@ -323,7 +323,7 @@ impl QuoteHandler for SqliteDB {
         let t_id = ticker_id as i32;
         for row in sqlx::query!(
                 "SELECT id, price, time, volume FROM quotes 
-                WHERE ticker_id=$1 ORDER BY time ASC;",
+                WHERE ticker_id=?1 ORDER BY time ASC",
                 t_id,
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
@@ -350,8 +350,8 @@ impl QuoteHandler for SqliteDB {
         let id = quote.id.unwrap() as i32;
         let ticker_id = quote.ticker as i32;
         sqlx::query!(
-                "UPDATE quotes SET ticker_id=$2, price=$3, time=$4, volume=$5
-                WHERE id=$1",
+                "UPDATE quotes SET ticker_id=?2, price=?3, time=?4, volume=?5
+                WHERE id=?1",
                 id,
                 ticker_id,
                 quote.price,
@@ -365,7 +365,7 @@ impl QuoteHandler for SqliteDB {
 
     async fn delete_quote(&mut self, id: usize) -> Result<(), DataError> {
         let id = id as i64;
-        sqlx::query!("DELETE FROM quotes WHERE id=$1;", id)
+        sqlx::query!("DELETE FROM quotes WHERE id=?1;", id)
             .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
@@ -374,7 +374,7 @@ impl QuoteHandler for SqliteDB {
     async fn get_rounding_digits(&mut self, currency: Currency) -> i32 {
         let curr = currency.to_string();
         let rows = sqlx::query!(
-            "SELECT digits FROM rounding_digits WHERE currency=$1;",
+            "SELECT digits FROM rounding_digits WHERE currency=?1;",
             curr,
         ).fetch_all(&self.pool).await;
         match rows {
@@ -392,7 +392,7 @@ impl QuoteHandler for SqliteDB {
     async fn set_rounding_digits(&mut self, currency: Currency, digits: i32) -> Result<(), DataError> {
         let curr = currency.to_string();
         let _row = sqlx::query!(
-                "INSERT INTO rounding_digits (currency, digits) VALUES ($1, $2)",
+                "INSERT INTO rounding_digits (currency, digits) VALUES (?1, ?2)",
                 curr, digits,
             ).execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;

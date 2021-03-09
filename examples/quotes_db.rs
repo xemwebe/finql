@@ -4,14 +4,12 @@ use std::fs;
 use std::io::{stdout, Write};
 use std::str::FromStr;
 
-use tokio_test::block_on;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Local, Utc, TimeZone};
 
 use finql_data::{Asset, Currency, CurrencyConverter, Quote, Ticker};
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
-//use finql_postgres::PostgresDB;
 use finql_sqlite::SqliteDB;
 
 /// Given a date and time construct a UTC DateTime, assuming that
@@ -237,7 +235,7 @@ async fn quote_tests(market: &mut Market<'_>) {
     println!("ok");
     log("read rounding convention...");
 
-    let digits = block_on(market.db().get_rounding_digits(xxx));
+    let digits = market.db().get_rounding_digits(xxx).await;
     if digits == 3 {
         println!("ok");
     } else {
@@ -245,7 +243,7 @@ async fn quote_tests(market: &mut Market<'_>) {
     }
 
     log("Check default rounding convention...");
-    let digits = block_on(market.db().get_rounding_digits(eur));
+    let digits = market.db().get_rounding_digits(eur).await;
     if digits == 2 {
         println!("ok");
     } else {
@@ -257,7 +255,7 @@ async fn quote_tests(market: &mut Market<'_>) {
         yahoo.to_string(),
         yahoo.get_provider(String::new()).unwrap(),
     );
-    block_on(market.update_quotes()).unwrap();
+    market.update_quotes().await.unwrap();
     println!("ok");
     println!("\nDone.");
 }
@@ -267,7 +265,7 @@ async fn quote_tests(market: &mut Market<'_>) {
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
     assert!(
-        args.len() >= 1,
+        args.len() >= 2,
         format!("usage: {} <sqlite3 database file path>\n", args[0])
     );
     let path = &args[1];
@@ -276,6 +274,7 @@ async fn main() {
         eprintln!("Please provide another path or remove the file, since a new database will be created.");
     } else {
         let conn = format!("sqlite:{}", path);
+        { let _= fs::File::create(path); }
         let mut db = SqliteDB::new(&conn).await.unwrap();
         db.init().await.unwrap();
         let mut market = Market::new(&mut db);            

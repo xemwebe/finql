@@ -160,7 +160,6 @@ impl MarketDataSource {
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
-    use tokio_test::block_on;
     use chrono::offset::TimeZone;
     use chrono::{Duration, Utc};
     use rand::Rng;
@@ -236,28 +235,28 @@ mod tests {
         ticker
     }
 
-    #[test]
-    fn test_fetch_latest_quote() {
-        let mut db = block_on(SqliteDB::new("sqlite:memory")).unwrap();
-        block_on(db.init()).unwrap();
-        let ticker = block_on(prepare_db(&mut db));
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_fetch_latest_quote() {
+        let mut db = SqliteDB::new("sqlite::memory:").await.unwrap();
+        db.init().await.unwrap();
+        let ticker = prepare_db(&mut db).await;
         let provider = DummyProvider {};
-        block_on(update_ticker(&provider, &ticker, &mut db)).unwrap();
-        let quotes = block_on(db.get_all_quotes_for_ticker(ticker.id.unwrap())).unwrap();
+        update_ticker(&provider, &ticker, &mut db).await.unwrap();
+        let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 1);
         assert_eq!(quotes[0].price, 1.23);
     }
 
-    #[test]
-    fn test_fetch_quote_history() {
-        let mut db = block_on(SqliteDB::new("sqlite:memory")).unwrap();
-        block_on(db.init()).unwrap();
-        let ticker = block_on(prepare_db(&mut db));
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_fetch_quote_history() {
+        let mut db = SqliteDB::new("sqlite::memory:").await.unwrap();
+        db.init().await.unwrap();
+        let ticker = prepare_db(&mut db).await;
         let provider = DummyProvider {};
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        block_on(update_ticker_history(&provider, &ticker, &mut db, start, end)).unwrap();
-        let quotes = block_on(db.get_all_quotes_for_ticker(ticker.id.unwrap())).unwrap();
+        update_ticker_history(&provider, &ticker, &mut db, start, end).await.unwrap();
+        let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 31);
         assert_eq!(quotes[0].price, 1.23);
     }

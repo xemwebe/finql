@@ -81,10 +81,9 @@ mod tests {
     use crate::market_quotes::MarketDataSource;
     use std::env;
     use std::str::FromStr;
-    use tokio_test::block_on;
 
-    #[test]
-    fn test_gf_fetch_quote() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_gf_fetch_quote() {
         let token = env::var("GURUFOCUS_TOKEN").unwrap();
         let gf = GuruFocus::new(token);
         let ticker = Ticker {
@@ -96,12 +95,12 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let quote = block_on(gf.fetch_latest_quote(&ticker)).unwrap();
+        let quote = gf.fetch_latest_quote(&ticker).await.unwrap();
         assert!(quote.price != 0.0);
     }
 
-    #[test]
-    fn test_gf_fetch_history() {
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_gf_fetch_history() {
         let token = env::var("GURUFOCUS_TOKEN").unwrap();
         let gf = GuruFocus::new(token.to_string());
         let ticker = Ticker {
@@ -115,7 +114,7 @@ mod tests {
         };
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        let quotes = block_on(gf.fetch_quote_history(&ticker, start, end)).unwrap();
+        let quotes = gf.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert!(quotes.len() > 15);
         assert!(quotes[0].price != 0.0);
     }
