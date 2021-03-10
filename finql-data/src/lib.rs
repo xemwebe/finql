@@ -39,7 +39,7 @@ impl fmt::Display for DataError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::DataAccessFailure(err) => write!(f, "connection to database failed: {}", err),
-            Self::NotFound(err) => write!(f, "could found request object in database: {}", err),
+            Self::NotFound(err) => write!(f, "could not found request object in database: {}", err),
             Self::UpdateFailed(err) => write!(f, "update of object in database failed: {}", err),
             Self::DeleteFailed(err) => write!(f, "removing object from database failed: {}", err),
             Self::InsertFailed(err) => write!(f, "inserting object to database failed: {}", err),

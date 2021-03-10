@@ -36,13 +36,13 @@ pub async fn insert_fx_quote(
             factor: 1.0,
         })
         .await.unwrap();
-    let _ = quotes.insert_quote(&Quote {
+    quotes.insert_quote(&Quote {
         id: None,
         ticker: ticker_id,
         price: fx_rate,
         time,
         volume: None,
-    });
+    }).await.unwrap();
     // Insert inverse fx quote
     let base_id = quotes
         .insert_asset(&Asset {
@@ -65,13 +65,13 @@ pub async fn insert_fx_quote(
             factor: 1.0,
         })
         .await.unwrap();
-    let _ = quotes.insert_quote(&Quote {
+    quotes.insert_quote(&Quote {
         id: None,
         ticker: ticker_id,
         price: 1.0 / fx_rate,
         time,
         volume: None,
-    });
+    }).await.unwrap();
     Ok(())
 }
 
@@ -127,7 +127,6 @@ mod tests {
     use chrono::offset::TimeZone;
     use chrono::Utc;
     use std::str::FromStr;
-    use finql_data::QuoteHandler;
     use finql_sqlite::SqliteDB;
 
 
@@ -135,7 +134,7 @@ mod tests {
         let time = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
-        let _ = insert_fx_quote(0.9, usd, eur, time, db);
+        insert_fx_quote(0.9, usd, eur, time, db).await.unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -143,11 +142,11 @@ mod tests {
         let mut fx_db = SqliteDB::new("sqlite::memory:").await.unwrap();
         fx_db.init().await.unwrap();
         prepare_db(&mut fx_db).await;
-        let tol = 1.0e-8;
+        let tol = 1.0e-6;
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
         let time = Utc::now();
-        let qv : &mut (dyn QuoteHandler + Send) = &mut fx_db;
+        let qv : &mut dyn CurrencyConverter = &mut fx_db;
         let fx = qv.fx_rate(usd, eur, time).await.unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);
     }

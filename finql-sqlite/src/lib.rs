@@ -86,26 +86,3 @@ impl SqliteDB {
         Ok(())
     }
 }
-
-// impl CurrencyConverter for SqliteDB<'_> {
-//     fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError> {
-//         if foreign_currency == domestic_currency {
-//             return Ok(1.0);
-//         }
-
-//         let (fx_quote, quote_currency) =
-//             self.get_last_quote_before(&foreign_currency.to_string(), time)
-//                 .map_err(|_| CurrencyError::ConversionFailed)?;
-//         if quote_currency == domestic_currency {
-//             return Ok(fx_quote.price);
-//         }
-        
-//         let (fx_quote, quote_currency) =
-//         self.get_last_quote_before(&domestic_currency.to_string(), time)
-//             .map_err(|_| CurrencyError::ConversionFailed)?;
-//         if quote_currency == foreign_currency {
-//             return Ok(1./fx_quote.price);
-//         }
-//         Err(CurrencyError::ConversionFailed)
-//     }
-// }

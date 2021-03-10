@@ -59,14 +59,21 @@ pub trait QuoteHandler: AssetHandler {
 }
 
 #[async_trait]
-impl CurrencyConverter for dyn QuoteHandler + Send {
+impl<T> CurrencyConverter for T
+where T: QuoteHandler + Send 
+{
     async fn fx_rate(&mut self, foreign: Currency, base: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError> {
+        println!("fx_rate called");
         if foreign == base {
             return Ok(1.0);
         } else {
+            println!("foreign unequals domestic");
             let (fx_quote, quote_currency) =
                 self.get_last_quote_before(&format!("{}", foreign), time).await
-                    .map_err(|_| CurrencyError::ConversionFailed)?;
+                    .map_err(|e| {
+                        println!("error is {}", e);
+                        CurrencyError::ConversionFailed
+                    })?;
             if quote_currency == base {
                 return Ok(fx_quote.price);
             }

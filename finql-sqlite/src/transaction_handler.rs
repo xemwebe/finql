@@ -140,7 +140,7 @@ impl TransactionHandler for SqliteDB {
                 "INSERT INTO transactions (trans_type, asset_id, cash_amount, 
                 cash_currency, cash_date, related_trans, position,
                 note) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 transaction.trans_type,
                 transaction.asset,
                 transaction.cash_amount,
@@ -181,7 +181,7 @@ impl TransactionHandler for SqliteDB {
                 "SELECT trans_type, asset_id, 
         cash_amount, cash_currency, cash_date, related_trans, position, note 
         FROM transactions
-        WHERE id=$1", param_id,
+        WHERE id=?1", param_id,
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let transaction = RawTransaction {

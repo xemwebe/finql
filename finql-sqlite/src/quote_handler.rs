@@ -14,8 +14,10 @@ use super::SqliteDB;
 
 /// Convert string to DateTime<Utc>
 pub fn to_time(time: &str) -> Result<DateTime<Utc>, DataError> {
+    // sqlx strips time zone, just add it here again
+    let time = format!("{}+0000",time);
     let time =
-        DateTime::parse_from_rfc3339(time).map_err(|e| DataError::NotFound(e.to_string()))?;
+        DateTime::parse_from_str(&time,"%Y-%m-%d %H:%M:%S%.3f%z").map_err(|e| DataError::NotFound(e.to_string()))?;
     let time: DateTime<Utc> = DateTime::from(time);
     Ok(time)
 }

@@ -7,7 +7,7 @@ use chrono::NaiveDate;
 use finql_data::{Asset, Currency, CashFlow, Transaction, TransactionHandler, TransactionType};
 use finql_sqlite::SqliteDB;
 
-async fn transaction_tests<DB: TransactionHandler>(db: &mut DB) {
+async fn transaction_tests(db: &mut dyn TransactionHandler) {
     print!("Store asset...");
     let asset = Asset::new(
         None,

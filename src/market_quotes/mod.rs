@@ -235,6 +235,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_fetch_latest_quote() {
+        let tol = 1.0e-6;
         let mut db = SqliteDB::new("sqlite::memory:").await.unwrap();
         db.init().await.unwrap();
         let ticker = prepare_db(&mut db).await;
@@ -242,11 +243,12 @@ mod tests {
         update_ticker(&provider, &ticker, &mut db).await.unwrap();
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 1);
-        assert_eq!(quotes[0].price, 1.23);
+        assert_fuzzy_eq!(quotes[0].price, 1.23, tol);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_fetch_quote_history() {
+        let tol = 1.0e-6;
         let mut db = SqliteDB::new("sqlite::memory:").await.unwrap();
         db.init().await.unwrap();
         let ticker = prepare_db(&mut db).await;
@@ -256,6 +258,6 @@ mod tests {
         update_ticker_history(&provider, &ticker, &mut db, start, end).await.unwrap();
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 31);
-        assert_eq!(quotes[0].price, 1.23);
+        assert_fuzzy_eq!(quotes[0].price, 1.23, tol);
     }
 }
