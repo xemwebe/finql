@@ -150,7 +150,25 @@ impl TransactionHandler for SqliteDB {
                 transaction.position,
                 transaction.note,
             ).execute(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;    
+            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+        println!(r#"SELECT id FROM transactions 
+        WHERE 
+        trans_type={}
+        AND asset_id={:?}
+        AND cash_amount={}
+        AND cash_currency={}
+        AND cash_date={}
+        AND related_trans={:?}
+        AND position={:?}
+        AND note={:?}"#,
+        transaction.trans_type,
+        transaction.asset,
+        transaction.cash_amount,
+        transaction.cash_currency,
+        transaction.cash_date,
+        transaction.related_trans,
+        transaction.position,
+        transaction.note);
         let row = sqlx::query!(
                 r#"SELECT id FROM transactions 
                 WHERE 

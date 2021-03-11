@@ -33,5 +33,5 @@ finql-data = { version="^0.1", path="./finql-data"}
 tokio = { version = "1.3", features =  ["full"] }
 rusqlite = "0.24"
 finql-sqlite = { version="^0.2", path="./finql-sqlite" }
-sqlx = { version="0.5", default-features = false, features = [ "runtime-tokio-rustls", "migrate", "postgres", "sqlite" ] }
+sqlx = { version="0.5", default-features = false, features = [ "runtime-tokio-rustls", "migrate", "postgres", "sqlite", "offline"] }
 
