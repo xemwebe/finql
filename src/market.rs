@@ -3,21 +3,21 @@
 /// source, e.g a database, files, or REST service.
 /// Market data consist of non-static data, like interest rates,
 /// asset prices, or foreign exchange rates.
+use std::error::Error;
+use std::fmt;
+use std::ops::Deref;
+use std::sync::Arc;
 
 use chrono::{DateTime, NaiveDate, Utc, Weekday};
 use std::collections::BTreeMap;
-use std::error::Error;
-use std::fmt;
-use std::ops::{Deref, DerefMut};
 
 use async_trait::async_trait;
 
-use finql_data::{DataError,QuoteHandler,CurrencyConverter, Currency, CurrencyError};
+use finql_data::{Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler};
 
 use crate::calendar::{Calendar, Holiday, NthWeek};
 use crate::market_quotes;
 use crate::market_quotes::MarketQuoteProvider;
-
 
 /// Error related to market data object
 #[derive(Debug)]
@@ -61,19 +61,18 @@ impl From<DataError> for MarketError {
     }
 }
 
-
 /// Container or adaptor to market data
-pub struct Market<'a> {
+pub struct Market {
     calendars: BTreeMap<String, Calendar>,
     /// collection of market data quotes provider
-    provider: BTreeMap<String, Box<dyn MarketQuoteProvider>>,
+    provider: BTreeMap<String, Box<dyn MarketQuoteProvider+Sync+Send>>,
     /// Quotes database
-    db: &'a mut (dyn QuoteHandler + Send),
+    db: Arc<Box<dyn QuoteHandler+Sync+Send>>,
 }
 
-impl<'a> Market<'a> {
+impl Market {
     /// For now, market data statically generated and stored in memory
-    pub fn new(db: &'a mut (dyn QuoteHandler + Send)) -> Market {
+    pub fn new(db: Arc<Box<dyn QuoteHandler+Sync+Send>>) -> Market {
         Market {
             // Set of default calendars
             calendars: generate_calendars(),
@@ -92,27 +91,29 @@ impl<'a> Market<'a> {
     }
 
     /// Add market data provider
-    pub fn add_provider(&mut self, name: String, provider: Box<dyn MarketQuoteProvider>) {
+    pub fn add_provider(&mut self, name: String, provider: Box<dyn MarketQuoteProvider+Sync+Send>) {
         self.provider.insert(name, provider);
     }
 
     /// provide reference to database
-    pub fn db(&mut self) -> &mut dyn QuoteHandler {
-        self.db.deref_mut()
+    pub fn db(&self) -> &dyn QuoteHandler {
+        self.db.deref().deref()
     }
-    
     /// Fetch latest quotes for all active ticker
     /// Returns a list of ticker for which the update failed.
-    pub async fn update_quotes(&mut self) -> Result<Vec<usize>, MarketError> {
-        let tickers = self.db.deref_mut().get_all_ticker().await?;
+    pub async fn update_quotes(&self) -> Result<Vec<usize>, MarketError> {
+        let tickers = self.db.get_all_ticker().await?;
         let mut failed_ticker = Vec::new();
         for ticker in tickers {
             let provider = self.provider.get(&ticker.source);
-            if provider.is_some() && market_quotes::update_ticker(
-                provider.unwrap().deref(),
-                &ticker,
-                self.db.deref_mut(),
-            ).await.is_err()
+            if provider.is_some()
+                && market_quotes::update_ticker(
+                    provider.unwrap().deref(),
+                    &ticker,
+                    self.db.deref().deref(),
+                )
+                .await
+                .is_err()
             {
                 failed_ticker.push(ticker.id.unwrap());
             }
@@ -122,7 +123,7 @@ impl<'a> Market<'a> {
 
     /// Fetch latest quotes for all active ticker
     pub async fn update_quote_history(
-        &mut self,
+        &self,
         ticker_id: usize,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
@@ -133,20 +134,36 @@ impl<'a> Market<'a> {
             market_quotes::update_ticker_history(
                 provider.unwrap().deref(),
                 &ticker,
-                self.db.deref_mut(),
+                self.db.deref().deref(),
                 start,
                 end,
-            ).await?;
+            )
+            .await?;
         }
         Ok(())
     }
 }
 
 #[async_trait]
-impl<'a> CurrencyConverter for Market<'a> {
-    /// returns the price of 1 unit of foreign currency in terms of domestic currency
-    async fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError> {
-        self.fx_rate(foreign_currency, domestic_currency, time).await
+impl CurrencyConverter for Market {
+    async fn fx_rate(
+        &self,
+        foreign: Currency,
+        base: Currency,
+        time: DateTime<Utc>,
+    ) -> Result<f64, CurrencyError> {
+        if foreign == base {
+            return Ok(1.0);
+        } else {
+            let (fx_quote, quote_currency) = self.db.deref().deref()
+                .get_last_quote_before(&foreign.to_string(), time)
+                .await
+                .map_err(|_| CurrencyError::ConversionFailed)?;
+            if quote_currency == base {
+                return Ok(fx_quote.price);
+            }
+        }
+        Err(CurrencyError::ConversionFailed)
     }
 }
 

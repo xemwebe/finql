@@ -3,10 +3,11 @@
 use std::fs;
 use std::io::{stdout, Write};
 use std::str::FromStr;
+use std::sync::Arc;
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Local, Utc, TimeZone};
 
-use finql_data::{Asset, Currency, CurrencyConverter, Quote, Ticker};
+use finql_data::{Asset, Currency, CurrencyConverter, Quote, Ticker, QuoteHandler};
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
@@ -35,7 +36,7 @@ fn log(s: &str) {
     stdout().flush().unwrap();
 }
 
-async fn quote_tests(market: &mut Market<'_>) {
+async fn quote_tests(market: &mut Market) {
     // We need some assets the quotes are related
     let basf_id = market
         .db()
@@ -277,7 +278,8 @@ async fn main() {
         { let _= fs::File::create(path); }
         let mut db = SqliteDB::new(&conn).await.unwrap();
         db.init().await.unwrap();
-        let mut market = Market::new(&mut db);            
+        let qh: Arc<Box<dyn QuoteHandler+Sync+Send>> = Arc::new(Box::new(db));
+        let mut market = Market::new(qh);            
         quote_tests(&mut market).await;
         println!("You may have a look at the database for further inspection.");
     }

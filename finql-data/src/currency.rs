@@ -146,7 +146,7 @@ impl Currency {
 #[async_trait]
 pub trait CurrencyConverter {
     /// returns the price of 1 unit of foreign currency in terms of domestic currency
-    async fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError>;
+    async fn fx_rate(&self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError>;
 }
 
 #[cfg(test)]

@@ -1,6 +1,7 @@
 ///! Calculation of fx rates based on currency quotes
 
 use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 use async_trait::async_trait;
 
@@ -13,7 +14,7 @@ pub async fn insert_fx_quote(
     foreign: Currency,
     base: Currency,
     time: DateTime<Utc>,
-    quotes: &mut dyn QuoteHandler,
+    quotes: &dyn QuoteHandler,
 ) -> Result<(), DataError> {
     let foreign_id = quotes
         .insert_asset(&Asset {
@@ -83,7 +84,7 @@ pub struct SimpleCurrencyConverter {
 
 #[async_trait]
 impl CurrencyConverter for SimpleCurrencyConverter {
-    async fn fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, _time: DateTime<Utc>) -> Result<f64, CurrencyError> {
+    async fn fx_rate(&self, foreign_currency: Currency, domestic_currency: Currency, _time: DateTime<Utc>) -> Result<f64, CurrencyError> {
         Ok(self.fx_rates[&foreign_currency.to_string()][&domestic_currency.to_string()])
     }
 }
@@ -124,13 +125,16 @@ impl Default for SimpleCurrencyConverter{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
+    use std::str::FromStr;
+
     use chrono::offset::TimeZone;
     use chrono::Utc;
-    use std::str::FromStr;
+
     use finql_sqlite::SqliteDB;
+    use crate::market::Market;
 
-
-    async fn prepare_db(db: &mut dyn QuoteHandler) {
+    async fn prepare_db(db: &dyn QuoteHandler) {
         let time = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
@@ -141,13 +145,14 @@ mod tests {
     async fn test_get_fx_rate() {
         let mut fx_db = SqliteDB::new("sqlite::memory:").await.unwrap();
         fx_db.init().await.unwrap();
-        prepare_db(&mut fx_db).await;
-        let tol = 1.0e-6;
+        prepare_db(&fx_db).await;
+        let tol = 1.0e-6_f64;
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
         let time = Utc::now();
-        let qv : &mut dyn CurrencyConverter = &mut fx_db;
-        let fx = qv.fx_rate(usd, eur, time).await.unwrap();
+        let qh: Arc<Box<dyn QuoteHandler+Send+Sync>> = Arc::new(Box::new(fx_db));
+        let market = Market::new(qh);
+        let fx = market.fx_rate(usd, eur, time).await.unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);
     }
 }

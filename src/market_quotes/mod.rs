@@ -64,7 +64,7 @@ pub trait MarketQuoteProvider: Send {
 pub async fn update_ticker(
     provider: &dyn MarketQuoteProvider,
     ticker: &Ticker,
-    db: &mut dyn QuoteHandler,
+    db: &dyn QuoteHandler,
 ) -> Result<(), MarketQuoteError> {
     let mut quote = provider.fetch_latest_quote(&ticker).await?;
     quote.price *= ticker.factor;
@@ -76,7 +76,7 @@ pub async fn update_ticker(
 pub async fn update_ticker_history(
     provider: &dyn MarketQuoteProvider,
     ticker: &Ticker,
-    db: &mut dyn QuoteHandler,
+    db: &dyn QuoteHandler,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 ) -> Result<(), MarketQuoteError> {
@@ -142,7 +142,7 @@ impl MarketDataSource {
     pub fn get_provider(
         &self,
         token: String,
-    ) -> Option<Box<dyn MarketQuoteProvider>> {
+    ) -> Option<Box<dyn MarketQuoteProvider+Send+Sync>> {
         match self {
             Self::Yahoo => Some(Box::new(yahoo::Yahoo {})),
             Self::GuruFocus => Some(Box::new(guru_focus::GuruFocus::new(token))),
@@ -208,7 +208,7 @@ mod tests {
         }
     }
 
-    async fn prepare_db(db: &mut dyn QuoteHandler) -> Ticker {
+    async fn prepare_db(db: &dyn QuoteHandler) -> Ticker {
         let asset_id = db
             .insert_asset(&Asset {
                 id: None,
@@ -238,9 +238,9 @@ mod tests {
         let tol = 1.0e-6;
         let mut db = SqliteDB::new("sqlite::memory:").await.unwrap();
         db.init().await.unwrap();
-        let ticker = prepare_db(&mut db).await;
+        let ticker = prepare_db(&db).await;
         let provider = DummyProvider {};
-        update_ticker(&provider, &ticker, &mut db).await.unwrap();
+        update_ticker(&provider, &ticker, &db).await.unwrap();
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 1);
         assert_fuzzy_eq!(quotes[0].price, 1.23, tol);
@@ -251,11 +251,11 @@ mod tests {
         let tol = 1.0e-6;
         let mut db = SqliteDB::new("sqlite::memory:").await.unwrap();
         db.init().await.unwrap();
-        let ticker = prepare_db(&mut db).await;
+        let ticker = prepare_db(&db).await;
         let provider = DummyProvider {};
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        update_ticker_history(&provider, &ticker, &mut db, start, end).await.unwrap();
+        update_ticker_history(&provider, &ticker, &db, start, end).await.unwrap();
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 31);
         assert_fuzzy_eq!(quotes[0].price, 1.23, tol);

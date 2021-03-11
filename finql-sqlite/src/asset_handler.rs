@@ -15,7 +15,7 @@ struct ID { id: Option<i64>, }
 /// Handler for globally available Asset data
 #[async_trait]
 impl AssetHandler for SqliteDB {
-    async fn insert_asset(&mut self, asset: &Asset) -> Result<usize, DataError> {
+    async fn insert_asset(&self, asset: &Asset) -> Result<usize, DataError> {
         sqlx::query!(
                 "INSERT INTO assets (name, wkn, isin, note) VALUES (?1, ?2, ?3, ?4)",
                 asset.name, asset.wkn, asset.isin, asset.note,
@@ -34,7 +34,7 @@ impl AssetHandler for SqliteDB {
     }
 
     async fn insert_asset_if_new(
-        &mut self,
+        &self,
         asset: &Asset,
         rename_asset: bool,
     ) -> Result<usize, DataError> {
@@ -60,7 +60,7 @@ impl AssetHandler for SqliteDB {
         }
     }
 
-    async fn get_asset_id(&mut self, asset: &Asset) -> Option<usize> {
+    async fn get_asset_id(&self, asset: &Asset) -> Option<usize> {
         let id = if let Some(isin) = &asset.isin {
             sqlx::query_as!(ID, "SELECT id FROM assets WHERE isin=?", isin).fetch_one(&self.pool).await
         } else if let Some(wkn) = &asset.wkn {
@@ -75,7 +75,7 @@ impl AssetHandler for SqliteDB {
         }
     }
 
-    async fn get_asset_by_id(&mut self, id: usize) -> Result<Asset, DataError> {
+    async fn get_asset_by_id(&self, id: usize) -> Result<Asset, DataError> {
         let id_param = id as i64;
         let row = sqlx::query!(
                 "SELECT name, wkn, isin, note FROM assets WHERE id=?",
@@ -91,7 +91,7 @@ impl AssetHandler for SqliteDB {
         })
     }
 
-    async fn get_asset_by_isin(&mut self, isin: &str) -> Result<Asset, DataError> {
+    async fn get_asset_by_isin(&self, isin: &str) -> Result<Asset, DataError> {
         let row = sqlx::query!(
                 "SELECT id, name, wkn, note FROM assets WHERE isin=?",
                 isin,
@@ -107,7 +107,7 @@ impl AssetHandler for SqliteDB {
         })
     }
 
-    async fn get_all_assets(&mut self) -> Result<Vec<Asset>, DataError> {
+    async fn get_all_assets(&self) -> Result<Vec<Asset>, DataError> {
         let mut assets = Vec::new();
         for row in sqlx::query!("SELECT id, name, wkn, isin, note FROM assets ORDER BY name")
             .fetch_all(&self.pool).await
@@ -125,7 +125,7 @@ impl AssetHandler for SqliteDB {
         Ok(assets)
     }
 
-    async fn update_asset(&mut self, asset: &Asset) -> Result<(), DataError> {
+    async fn update_asset(&self, asset: &Asset) -> Result<(), DataError> {
         if asset.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -141,7 +141,7 @@ impl AssetHandler for SqliteDB {
         Ok(())
     }
 
-    async fn delete_asset(&mut self, id: usize) -> Result<(), DataError> {
+    async fn delete_asset(&self, id: usize) -> Result<(), DataError> {
         let id = id as i32;
         sqlx::query!("DELETE FROM assets WHERE id=?;", id)
             .execute(&self.pool).await
@@ -149,7 +149,7 @@ impl AssetHandler for SqliteDB {
         Ok(())
     }
 
-    async fn get_all_currencies(&mut self) -> Result<Vec<Currency>, DataError> {
+    async fn get_all_currencies(&self) -> Result<Vec<Currency>, DataError> {
         let mut currencies = Vec::new();
         for row in sqlx::query!("SELECT name FROM assets WHERE isin IS NULL AND wkn IS NULL AND length(name)=3")
             .fetch_all(&self.pool).await

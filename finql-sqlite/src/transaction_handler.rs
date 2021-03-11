@@ -134,7 +134,7 @@ impl RawTransaction {
 #[async_trait]
 impl TransactionHandler for SqliteDB {
     // insert, get, update and delete for transactions
-    async fn insert_transaction(&mut self, transaction: &Transaction) -> Result<usize, DataError> {
+    async fn insert_transaction(&self, transaction: &Transaction) -> Result<usize, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
         sqlx::query!(
                 "INSERT INTO transactions (trans_type, asset_id, cash_amount, 
@@ -175,7 +175,7 @@ impl TransactionHandler for SqliteDB {
         Ok(row.id as usize)
     }
 
-    async fn get_transaction_by_id(&mut self, id: usize) -> Result<Transaction, DataError> {
+    async fn get_transaction_by_id(&self, id: usize) -> Result<Transaction, DataError> {
         let param_id = id as i32;
         let row = sqlx::query!(
                 "SELECT trans_type, asset_id, 
@@ -198,7 +198,7 @@ impl TransactionHandler for SqliteDB {
         Ok(transaction.to_transaction().await?)
     }
 
-    async fn get_all_transactions(&mut self) -> Result<Vec<Transaction>, DataError> {
+    async fn get_all_transactions(&self) -> Result<Vec<Transaction>, DataError> {
         let mut transactions = Vec::new();
         for row in sqlx::query!(
                 "SELECT id, trans_type, asset_id, 
@@ -223,7 +223,7 @@ impl TransactionHandler for SqliteDB {
         Ok(transactions)
     }
 
-    async fn update_transaction(&mut self, transaction: &Transaction) -> Result<(), DataError> {
+    async fn update_transaction(&self, transaction: &Transaction) -> Result<(), DataError> {
         if transaction.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -256,7 +256,7 @@ impl TransactionHandler for SqliteDB {
         Ok(())
     }
 
-    async fn delete_transaction(&mut self, id: usize) -> Result<(), DataError> {
+    async fn delete_transaction(&self, id: usize) -> Result<(), DataError> {
         let id = id as i64;
         sqlx::query!("DELETE FROM transactions WHERE id=?", id)
             .execute(&self.pool).await

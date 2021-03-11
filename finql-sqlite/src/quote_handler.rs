@@ -5,9 +5,8 @@ use std::str::FromStr;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc, Local, TimeZone};
 use async_trait::async_trait;
 
-use finql_data::Currency;
-use finql_data::{DataError, QuoteHandler};
-use finql_data::{Quote, Ticker};
+use finql_data::{DataError, QuoteHandler, 
+    Currency, Quote, Ticker};
 
 use super::SqliteDB;
 
@@ -45,7 +44,7 @@ pub fn make_time(
 #[async_trait]
 impl QuoteHandler for SqliteDB {
     // insert, get, update and delete for market data sources
-    async fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
+    async fn insert_ticker(&self, ticker: &Ticker) -> Result<usize, DataError> {
         let asset_id = ticker.asset as i64;
         let curr = ticker.currency.to_string();
         sqlx::query!(
@@ -68,7 +67,7 @@ impl QuoteHandler for SqliteDB {
         Ok(row.id as usize)
     }
 
-    async fn get_ticker_id(&mut self, ticker: &str) -> Option<usize> {
+    async fn get_ticker_id(&self, ticker: &str) -> Option<usize> {
         let row = sqlx::query!("SELECT id FROM ticker WHERE name=?", ticker)
             .fetch_one(&self.pool).await;
         match row {
@@ -80,14 +79,14 @@ impl QuoteHandler for SqliteDB {
         }
     }
 
-    async fn insert_if_new_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
+    async fn insert_if_new_ticker(&self, ticker: &Ticker) -> Result<usize, DataError> {
          match self.get_ticker_id(&ticker.name).await {
              Some(id) => Ok(id),
              None => self.insert_ticker(ticker).await,
          }
     }
 
-    async fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
+    async fn get_ticker_by_id(&self, id: usize) -> Result<Ticker, DataError> {
         let id_param = id as i32;
         let row = sqlx::query!(
                 "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=?",
@@ -111,7 +110,7 @@ impl QuoteHandler for SqliteDB {
         })
     }
 
-    async fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError> {
+    async fn get_all_ticker(&self) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
                 "SELECT id, name, asset_id, priority, source, currency, factor FROM ticker",
@@ -139,7 +138,7 @@ impl QuoteHandler for SqliteDB {
     }
 
     async fn get_all_ticker_for_source(
-        &mut self,
+        &self,
         source: &str,
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
@@ -169,7 +168,7 @@ impl QuoteHandler for SqliteDB {
     }
 
     async fn get_all_ticker_for_asset(
-        &mut self,
+        &self,
         asset_id: usize,
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
@@ -198,7 +197,7 @@ impl QuoteHandler for SqliteDB {
         Ok(all_ticker)
     }
 
-    async fn update_ticker(&mut self, ticker: &Ticker) -> Result<(), DataError> {
+    async fn update_ticker(&self, ticker: &Ticker) -> Result<(), DataError> {
         if ticker.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -223,7 +222,7 @@ impl QuoteHandler for SqliteDB {
         Ok(())
     }
 
-    async fn delete_ticker(&mut self, id: usize) -> Result<(), DataError> {
+    async fn delete_ticker(&self, id: usize) -> Result<(), DataError> {
         let id = id as i64;
         sqlx::query!("DELETE FROM ticker WHERE id=?", id)
             .execute(&self.pool).await
@@ -232,7 +231,7 @@ impl QuoteHandler for SqliteDB {
     }
 
     // insert, get, update and delete for market data sources
-    async fn insert_quote(&mut self, quote: &Quote) -> Result<usize, DataError> {
+    async fn insert_quote(&self, quote: &Quote) -> Result<usize, DataError> {
         let ticker_id = quote.ticker as i64;
         sqlx::query!(
                 "INSERT INTO quotes (ticker_id, price, time, volume) 
@@ -252,7 +251,7 @@ impl QuoteHandler for SqliteDB {
     }
 
     async fn get_last_quote_before(
-        &mut self,
+        &self,
         asset_name: &str,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError> {
@@ -286,7 +285,7 @@ impl QuoteHandler for SqliteDB {
     }
 
     async fn get_last_quote_before_by_id(
-        &mut self,
+        &self,
         asset_id: usize,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError> {
@@ -320,7 +319,7 @@ impl QuoteHandler for SqliteDB {
         ))
     }
 
-    async fn get_all_quotes_for_ticker(&mut self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {
+    async fn get_all_quotes_for_ticker(&self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {
         let mut quotes = Vec::new();
         let t_id = ticker_id as i32;
         for row in sqlx::query!(
@@ -343,7 +342,7 @@ impl QuoteHandler for SqliteDB {
         Ok(quotes)
     }
 
-    async fn update_quote(&mut self, quote: &Quote) -> Result<(), DataError> {
+    async fn update_quote(&self, quote: &Quote) -> Result<(), DataError> {
         if quote.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -365,7 +364,7 @@ impl QuoteHandler for SqliteDB {
         Ok(())
     }
 
-    async fn delete_quote(&mut self, id: usize) -> Result<(), DataError> {
+    async fn delete_quote(&self, id: usize) -> Result<(), DataError> {
         let id = id as i64;
         sqlx::query!("DELETE FROM quotes WHERE id=?1;", id)
             .execute(&self.pool).await
@@ -373,7 +372,7 @@ impl QuoteHandler for SqliteDB {
         Ok(())
     }
 
-    async fn get_rounding_digits(&mut self, currency: Currency) -> i32 {
+    async fn get_rounding_digits(&self, currency: Currency) -> i32 {
         let curr = currency.to_string();
         let rows = sqlx::query!(
             "SELECT digits FROM rounding_digits WHERE currency=?1;",
@@ -391,7 +390,7 @@ impl QuoteHandler for SqliteDB {
         }
     }
 
-    async fn set_rounding_digits(&mut self, currency: Currency, digits: i32) -> Result<(), DataError> {
+    async fn set_rounding_digits(&self, currency: Currency, digits: i32) -> Result<(), DataError> {
         let curr = currency.to_string();
         let _row = sqlx::query!(
                 "INSERT INTO rounding_digits (currency, digits) VALUES (?1, ?2)",

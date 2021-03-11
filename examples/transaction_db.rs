@@ -130,6 +130,7 @@ async fn main() {
                     eprintln!("Please provide another path or remove the file, since a new database will be created.");
                 } else {
                     let conn = format!("sqlite:{}", path);
+                    { let _= fs::File::create(path); }
                     let mut db = SqliteDB::new(&conn).await.unwrap();
                     db.init().await.unwrap();
                     transaction_tests(&mut db).await;
