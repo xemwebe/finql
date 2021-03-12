@@ -129,7 +129,7 @@ impl RawTransaction {
 #[async_trait]
 impl TransactionHandler for PostgresDB {
     // insert, get, update and delete for transactions
-    async fn insert_transaction(&mut self, transaction: &Transaction) -> Result<usize, DataError> {
+    async fn insert_transaction(&self, transaction: &Transaction) -> Result<usize, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
         let row = sqlx::query!(
                 "INSERT INTO transactions (trans_type, asset_id, cash_amount, 
@@ -150,7 +150,7 @@ impl TransactionHandler for PostgresDB {
         Ok(id as usize)
     }
 
-    async fn get_transaction_by_id(&mut self, id: usize) -> Result<Transaction, DataError> {
+    async fn get_transaction_by_id(&self, id: usize) -> Result<Transaction, DataError> {
         let row = sqlx::query!(
                 "SELECT trans_type, asset_id, 
         cash_amount, cash_currency, cash_date, related_trans, position, note 
@@ -172,7 +172,7 @@ impl TransactionHandler for PostgresDB {
         Ok(transaction.to_transaction().await?)
     }
 
-    async fn get_all_transactions(&mut self) -> Result<Vec<Transaction>, DataError> {
+    async fn get_all_transactions(&self) -> Result<Vec<Transaction>, DataError> {
         let mut transactions = Vec::new();
         for row in sqlx::query!(
                 "SELECT id, trans_type, asset_id, 
@@ -197,7 +197,7 @@ impl TransactionHandler for PostgresDB {
         Ok(transactions)
     }
 
-    async fn update_transaction(&mut self, transaction: &Transaction) -> Result<(), DataError> {
+    async fn update_transaction(&self, transaction: &Transaction) -> Result<(), DataError> {
         if transaction.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -230,7 +230,7 @@ impl TransactionHandler for PostgresDB {
         Ok(())
     }
 
-    async fn delete_transaction(&mut self, id: usize) -> Result<(), DataError> {
+    async fn delete_transaction(&self, id: usize) -> Result<(), DataError> {
         sqlx::query!("DELETE FROM transactions WHERE id=$1;", (id as i32))
             .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;

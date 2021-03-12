@@ -13,7 +13,7 @@ use super::PostgresDB;
 #[async_trait]
 impl QuoteHandler for PostgresDB {
     // insert, get, update and delete for market data sources
-    async fn insert_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
+    async fn insert_ticker(&self, ticker: &Ticker) -> Result<usize, DataError> {
         let row = sqlx::query!(
                 "INSERT INTO ticker (name, asset_id, source, priority, currency, factor) 
                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
@@ -29,7 +29,7 @@ impl QuoteHandler for PostgresDB {
         Ok(id as usize)
     }
 
-    async fn get_ticker_id(&mut self, ticker: &str) -> Option<usize> {
+    async fn get_ticker_id(&self, ticker: &str) -> Option<usize> {
         let row = sqlx::query!("SELECT id FROM ticker WHERE name=$1", ticker)
             .fetch_one(&self.pool).await;
         match row {
@@ -41,14 +41,14 @@ impl QuoteHandler for PostgresDB {
         }
     }
 
-    async fn insert_if_new_ticker(&mut self, ticker: &Ticker) -> Result<usize, DataError> {
+    async fn insert_if_new_ticker(&self, ticker: &Ticker) -> Result<usize, DataError> {
         match self.get_ticker_id(&ticker.name).await {
             Some(id) => Ok(id),
             None => self.insert_ticker(ticker).await,
         }
     }
 
-    async fn get_ticker_by_id(&mut self, id: usize) -> Result<Ticker, DataError> {
+    async fn get_ticker_by_id(&self, id: usize) -> Result<Ticker, DataError> {
         let row = sqlx::query!(
                 "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=$1",
                 (id as i32),
@@ -71,7 +71,7 @@ impl QuoteHandler for PostgresDB {
         })
     }
 
-    async fn get_all_ticker(&mut self) -> Result<Vec<Ticker>, DataError> {
+    async fn get_all_ticker(&self) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
                 "SELECT id, name, asset_id, priority, source, currency, factor FROM ticker",
@@ -99,7 +99,7 @@ impl QuoteHandler for PostgresDB {
     }
 
     async fn get_all_ticker_for_source(
-        &mut self,
+        &self,
         source: &str,
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
@@ -129,7 +129,7 @@ impl QuoteHandler for PostgresDB {
     }
 
     async fn get_all_ticker_for_asset(
-        &mut self,
+        &self,
         asset_id: usize,
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
@@ -159,7 +159,7 @@ impl QuoteHandler for PostgresDB {
     }
 
 
-    async fn update_ticker(&mut self, ticker: &Ticker) -> Result<(), DataError> {
+    async fn update_ticker(&self, ticker: &Ticker) -> Result<(), DataError> {
         if ticker.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -182,7 +182,7 @@ impl QuoteHandler for PostgresDB {
         Ok(())
     }
 
-    async fn delete_ticker(&mut self, id: usize) -> Result<(), DataError> {
+    async fn delete_ticker(&self, id: usize) -> Result<(), DataError> {
         sqlx::query!("DELETE FROM ticker WHERE id=$1;", (id as i32))
             .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
@@ -190,7 +190,7 @@ impl QuoteHandler for PostgresDB {
     }
 
     // insert, get, update and delete for market data sources
-    async fn insert_quote(&mut self, quote: &Quote) -> Result<usize, DataError> {
+    async fn insert_quote(&self, quote: &Quote) -> Result<usize, DataError> {
         let row = sqlx::query!(
                 "INSERT INTO quotes (ticker_id, price, time, volume) 
                 VALUES ($1, $2, $3, $4) RETURNING id",
@@ -205,7 +205,7 @@ impl QuoteHandler for PostgresDB {
     }
 
     async fn get_last_quote_before(
-        &mut self,
+        &self,
         asset_name: &str,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError> {
@@ -239,7 +239,7 @@ impl QuoteHandler for PostgresDB {
     }
 
     async fn get_last_quote_before_by_id(
-        &mut self,
+        &self,
         asset_id: usize,
         time: DateTime<Utc>,
     ) -> Result<(Quote, Currency), DataError> {
@@ -272,7 +272,7 @@ impl QuoteHandler for PostgresDB {
         ))
     }
 
-    async fn get_all_quotes_for_ticker(&mut self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {
+    async fn get_all_quotes_for_ticker(&self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {
         let mut quotes = Vec::new();
         for row in sqlx::query!(
                 "SELECT id, price, time, volume FROM quotes 
@@ -294,7 +294,7 @@ impl QuoteHandler for PostgresDB {
         Ok(quotes)
     }
 
-    async fn update_quote(&mut self, quote: &Quote) -> Result<(), DataError> {
+    async fn update_quote(&self, quote: &Quote) -> Result<(), DataError> {
         if quote.id.is_none() {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
@@ -315,14 +315,14 @@ impl QuoteHandler for PostgresDB {
         Ok(())
     }
 
-    async fn delete_quote(&mut self, id: usize) -> Result<(), DataError> {
+    async fn delete_quote(&self, id: usize) -> Result<(), DataError> {
         sqlx::query!("DELETE FROM quotes WHERE id=$1;", (id as i32))
             .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
 
-    async fn get_rounding_digits(&mut self, currency: Currency) -> i32 {
+    async fn get_rounding_digits(&self, currency: Currency) -> i32 {
         let rows = sqlx::query!(
             "SELECT digits FROM rounding_digits WHERE currency=$1;",
             currency.to_string(),
@@ -340,7 +340,7 @@ impl QuoteHandler for PostgresDB {
         }
     }
 
-    async fn set_rounding_digits(&mut self, currency: Currency, digits: i32) -> Result<(), DataError> {
+    async fn set_rounding_digits(&self, currency: Currency, digits: i32) -> Result<(), DataError> {
         let _row = sqlx::query!(
                 "INSERT INTO rounding_digits (currency, digits) VALUES ($1, $2)",
                 currency.to_string(), digits,
