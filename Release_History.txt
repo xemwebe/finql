@@ -1,3 +1,15 @@
+Version 0.9
+  * Move to sqlx as database access abstraction layer. With sqlx, database access is now fully
+    async. Also, database connections are made via a pool of connections. Thanks to using
+    the query! macro of sqlx, SQL queries are now checkt for correct syntax and types used
+    at compile time. Database instances no longer need to be of mutable.
+  * Sqlite and PostgreSQL are still supported, but could no longer be used in the same
+    build. The (mis-)use of an in-memory sqlite database as cache for fx rates or the like is 
+    no longer required due to the CurrencyConverter trait, therefore, using both sqlite
+    and PostgreSQL in the same build has lost much of its appeal. 
+  * Due to compile-time checks of SQL queries the build process has become more complex. See 
+    the Readme.md files of finql, finql-sqlite and finql-postgres for advice
+
 Version 0.8
   * major refactoring of data handler: data handler has been moved to separate sub crate,
     same for sqlite and postgres adaptors. Therefore, it's up to the user if she wants to include
