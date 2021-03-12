@@ -50,6 +50,7 @@ impl SqliteDB {
                 related_trans INTEGER,
                 position REAL,
                 note TEXT,
+                time_stamp INTEGER NOT NULL,
                 FOREIGN KEY(asset_id) REFERENCES assets(id),
                 FOREIGN KEY(related_trans) REFERENCES transactions(id)
             )").execute(&self.pool).await?;

@@ -136,11 +136,12 @@ impl TransactionHandler for SqliteDB {
     // insert, get, update and delete for transactions
     async fn insert_transaction(&self, transaction: &Transaction) -> Result<usize, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
+        let time_stamp = chrono::offset::Utc::now().timestamp_nanos();
         sqlx::query!(
                 "INSERT INTO transactions (trans_type, asset_id, cash_amount, 
                 cash_currency, cash_date, related_trans, position,
-                note) 
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                note, time_stamp) 
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                 transaction.trans_type,
                 transaction.asset,
                 transaction.cash_amount,
@@ -149,45 +150,22 @@ impl TransactionHandler for SqliteDB {
                 transaction.related_trans,
                 transaction.position,
                 transaction.note,
+                time_stamp
             ).execute(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        println!(r#"SELECT id FROM transactions 
-        WHERE 
-        trans_type={}
-        AND asset_id={:?}
-        AND cash_amount={}
-        AND cash_currency={}
-        AND cash_date={}
-        AND related_trans={:?}
-        AND position={:?}
-        AND note={:?}"#,
-        transaction.trans_type,
-        transaction.asset,
-        transaction.cash_amount,
-        transaction.cash_currency,
-        transaction.cash_date,
-        transaction.related_trans,
-        transaction.position,
-        transaction.note);
+            .map_err(|e| DataError::InsertFailed(e.to_string()))?;      
         let row = sqlx::query!(
                 r#"SELECT id FROM transactions 
                 WHERE 
                 trans_type=?
-                AND asset_id=?
                 AND cash_amount=?
                 AND cash_currency=?
                 AND cash_date=?
-                AND related_trans=?
-                AND position=?
-                AND note=?"#,
+                AND time_stamp=?"#,
                 transaction.trans_type,
-                transaction.asset,
                 transaction.cash_amount,
                 transaction.cash_currency,
                 transaction.cash_date,
-                transaction.related_trans,
-                transaction.position,
-                transaction.note,
+                time_stamp,
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok(row.id as usize)

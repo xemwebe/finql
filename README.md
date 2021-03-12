@@ -60,4 +60,6 @@ export DATABASE_URL="sqlite:<absolute_path>/finql-sqlite/data/test.db"
 
 Alternatively, you could follow the instructions on 
 https://docs.rs/sqlx/0.5.1/sqlx/macro.query.html#offline-mode-requires-the-offline-feature.
-This requires some preparation, but without the necessity to have a live database connection.
+This requires some preparation, but without the necessity to have a live database connection. Try 
+this approach also if you want to compile more than one database adapter (e.g. finql-sqlite 
+and finql-postgres).

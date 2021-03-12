@@ -10,6 +10,16 @@
       "nullable": []
     }
   },
+  "05bac0434b2b4a97ea9587291364d4b769772596bbf51f659d329c675b3e30eb": {
+    "query": "CREATE TABLE IF NOT EXISTS transactions (\n                id INTEGER PRIMARY KEY,\n                trans_type TEXT NOT NULL,\n                asset_id INTEGER,\n                cash_amount REAL NOT NULL,\n                cash_currency TEXT NOT NULL,\n                cash_date TEXT NOT NULL,\n                related_trans INTEGER,\n                position REAL,\n                note TEXT,\n                time_stamp INTEGER NOT NULL,\n                FOREIGN KEY(asset_id) REFERENCES assets(id),\n                FOREIGN KEY(related_trans) REFERENCES transactions(id)\n            )",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": []
+    }
+  },
   "08dc5d580f4e0ec42aa78837af1ed110b3a29768ba2a37d759cf5da635b66f52": {
     "query": "SELECT id, name, wkn, note FROM assets WHERE isin=?",
     "describe": {
@@ -66,16 +76,6 @@
   },
   "0c9e8192a07199a1834eab312334a3014f4695cfadcdeeb18c6b25d9429c5fed": {
     "query": "DROP TABLE IF EXISTS transactions",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 0
-      },
-      "nullable": []
-    }
-  },
-  "1021d13828a7045aee8fbf475c7ba0b6e681f702c04a33047058e94705c329f6": {
-    "query": "CREATE TABLE IF NOT EXISTS transactions (\n                id INTEGER PRIMARY KEY,\n                trans_type TEXT NOT NULL,\n                asset_id INTEGER,\n                cash_amount REAL NOT NULL,\n                cash_currency TEXT NOT NULL,\n                cash_date TEXT NOT NULL,\n                related_trans INTEGER,\n                position REAL,\n                note TEXT,\n                FOREIGN KEY(asset_id) REFERENCES assets(id),\n                FOREIGN KEY(related_trans) REFERENCES transactions(id)\n            )",
     "describe": {
       "columns": [],
       "parameters": {
@@ -406,24 +406,6 @@
       ]
     }
   },
-  "52cab6628c1b860795891ec9df6063a5d2a5f96c1a5436b6674d856a63d1d560": {
-    "query": "SELECT id FROM transactions \n                WHERE \n                trans_type=?\n                AND asset_id=?\n                AND cash_amount=?\n                AND cash_currency=?\n                AND cash_date=?\n                AND related_trans=?\n                AND position=?\n                AND note=?",
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        }
-      ],
-      "parameters": {
-        "Right": 8
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "625df8d5eac7ec128ebf22096f4b4674aa39b7b675db2f2c9612d5549862b84e": {
     "query": "INSERT INTO quotes (ticker_id, price, time, volume) \n                VALUES (?, ?, ?, ?)",
     "describe": {
@@ -676,16 +658,6 @@
       ]
     }
   },
-  "b3fd058b75eb2268266a214f4b14e10edb0df816c102258d98c5c6bac27c542e": {
-    "query": "INSERT INTO transactions (trans_type, asset_id, cash_amount, \n                cash_currency, cash_date, related_trans, position,\n                note) \n                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 8
-      },
-      "nullable": []
-    }
-  },
   "b43004a4421651c40e4af0e172c95c21dc86d26e1441a60d99a60478c680edd2": {
     "query": "DELETE FROM transactions WHERE id=?",
     "describe": {
@@ -714,6 +686,24 @@
         "Right": 0
       },
       "nullable": []
+    }
+  },
+  "c3a2330b5f23f1c2afc8b3cfef3609459bee3e09c360a3f93218ee2c9ff3a4aa": {
+    "query": "SELECT id FROM transactions \n                WHERE \n                trans_type=?\n                AND cash_amount=?\n                AND cash_currency=?\n                AND cash_date=?\n                AND time_stamp=?",
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 5
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "cb82578b78eeeea5b249f94229a0f66762a9cd2688d886c5b408fec9393484d0": {
@@ -814,6 +804,16 @@
       "columns": [],
       "parameters": {
         "Right": 0
+      },
+      "nullable": []
+    }
+  },
+  "ea62043d5db36607dc4f35788963d43fa3d56236ccfe9b1c60cb21ac75cbc1de": {
+    "query": "INSERT INTO transactions (trans_type, asset_id, cash_amount, \n                cash_currency, cash_date, related_trans, position,\n                note, time_stamp) \n                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 9
       },
       "nullable": []
     }
