@@ -1,6 +1,6 @@
 [package]
 name = "finql-data"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Mark Beinker <mwb@quantlink.de>"]
 edition = "2018"
 description = "Internal crate used by finql implementing an async database abstraction layer"
