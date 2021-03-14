@@ -31,7 +31,7 @@ const TAX: &str = "t";
 const FEE: &str = "f";
 
 impl RawTransaction {
-    pub async fn to_transaction(&self) -> Result<Transaction, DataError> {
+    pub fn to_transaction(&self) -> Result<Transaction, DataError> {
         let currency = Currency::from_str(&self.cash_currency)
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id = self.id.map(|x| x as usize);
@@ -169,7 +169,7 @@ impl TransactionHandler for PostgresDB {
             position: row.position,
             note: row.note,
         };
-        Ok(transaction.to_transaction().await?)
+        Ok(transaction.to_transaction()?)
     }
 
     async fn get_all_transactions(&self) -> Result<Vec<Transaction>, DataError> {
@@ -192,7 +192,7 @@ impl TransactionHandler for PostgresDB {
                 position: row.position,
                 note: row.note,
             };
-            transactions.push(transaction.to_transaction().await?);
+            transactions.push(transaction.to_transaction()?);
         }
         Ok(transactions)
     }
