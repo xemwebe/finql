@@ -1,5 +1,6 @@
 use std::fmt;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use async_trait::async_trait;
@@ -142,15 +143,15 @@ impl MarketDataSource {
     pub fn get_provider(
         &self,
         token: String,
-    ) -> Option<Box<dyn MarketQuoteProvider+Send+Sync>> {
+    ) -> Option<Arc<dyn MarketQuoteProvider+Send+Sync>> {
         match self {
-            Self::Yahoo => Some(Box::new(yahoo::Yahoo {})),
-            Self::GuruFocus => Some(Box::new(guru_focus::GuruFocus::new(token))),
-            Self::EodHistData => Some(Box::new(
+            Self::Yahoo => Some(Arc::new(yahoo::Yahoo {})),
+            Self::GuruFocus => Some(Arc::new(guru_focus::GuruFocus::new(token))),
+            Self::EodHistData => Some(Arc::new(
                 eod_historical_data::EODHistData::new(token))),
-            Self::AlphaVantage => Some(Box::new(
+            Self::AlphaVantage => Some(Arc::new(
                 alpha_vantage::AlphaVantage::new(token))),
-            Self::Comdirect => Some(Box::new(comdirect::Comdirect::new())),
+            Self::Comdirect => Some(Arc::new(comdirect::Comdirect::new())),
             _ => None,
         }
     }

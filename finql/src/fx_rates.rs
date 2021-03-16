@@ -150,7 +150,7 @@ mod tests {
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
         let time = Utc::now();
-        let qh: Arc<Box<dyn QuoteHandler+Send+Sync>> = Arc::new(Box::new(fx_db));
+        let qh: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(fx_db);
         let market = Market::new(qh);
         let fx = market.fx_rate(usd, eur, time).await.unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);

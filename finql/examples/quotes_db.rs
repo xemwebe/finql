@@ -278,7 +278,7 @@ async fn main() {
         { let _= fs::File::create(path); }
         let mut db = SqliteDB::new(&conn).await.unwrap();
         db.init().await.unwrap();
-        let qh: Arc<Box<dyn QuoteHandler+Sync+Send>> = Arc::new(Box::new(db));
+        let qh: Arc<dyn QuoteHandler+Sync+Send> = Arc::new(db);
         let mut market = Market::new(qh);            
         quote_tests(&mut market).await;
         println!("You may have a look at the database for further inspection.");

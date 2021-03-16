@@ -65,14 +65,14 @@ impl From<DataError> for MarketError {
 pub struct Market {
     calendars: BTreeMap<String, Calendar>,
     /// collection of market data quotes provider
-    provider: BTreeMap<String, Box<dyn MarketQuoteProvider+Sync+Send>>,
+    provider: BTreeMap<String, Arc<dyn MarketQuoteProvider+Sync+Send>>,
     /// Quotes database
-    db: Arc<Box<dyn QuoteHandler+Sync+Send>>,
+    db: Arc<dyn QuoteHandler+Sync+Send>,
 }
 
 impl Market {
     /// For now, market data statically generated and stored in memory
-    pub fn new(db: Arc<Box<dyn QuoteHandler+Sync+Send>>) -> Market {
+    pub fn new(db: Arc<dyn QuoteHandler+Sync+Send>) -> Market {
         Market {
             // Set of default calendars
             calendars: generate_calendars(),
@@ -91,13 +91,13 @@ impl Market {
     }
 
     /// Add market data provider
-    pub fn add_provider(&mut self, name: String, provider: Box<dyn MarketQuoteProvider+Sync+Send>) {
+    pub fn add_provider(&mut self, name: String, provider: Arc<dyn MarketQuoteProvider+Sync+Send>) {
         self.provider.insert(name, provider);
     }
 
     /// provide reference to database
     pub fn db(&self) -> &dyn QuoteHandler {
-        self.db.deref().deref()
+        self.db.deref()
     }
     /// Fetch latest quotes for all active ticker
     /// Returns a list of ticker for which the update failed.
