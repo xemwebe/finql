@@ -1,6 +1,7 @@
 ///! Calculation of fx rates based on currency quotes
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use async_trait::async_trait;
@@ -14,7 +15,7 @@ pub async fn insert_fx_quote(
     foreign: Currency,
     base: Currency,
     time: DateTime<Utc>,
-    quotes: &dyn QuoteHandler,
+    quotes: Arc<dyn QuoteHandler+Send+Sync>,
 ) -> Result<(), DataError> {
     let foreign_id = quotes
         .insert_asset(&Asset {
@@ -134,7 +135,7 @@ mod tests {
     use finql_sqlite::SqliteDB;
     use crate::market::Market;
 
-    async fn prepare_db(db: &dyn QuoteHandler) {
+    async fn prepare_db(db: Arc<dyn QuoteHandler+Send+Sync>) {
         let time = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();

@@ -62,10 +62,10 @@ pub trait MarketQuoteProvider: Send {
     ) -> Result<Vec<Quote>, MarketQuoteError>;
 }
 
-pub async fn update_ticker(
+pub async fn update_ticker<'a>(
     provider: &dyn MarketQuoteProvider,
     ticker: &Ticker,
-    db: &dyn QuoteHandler,
+    db: Arc<dyn QuoteHandler+Send+Sync+'a>,
 ) -> Result<(), MarketQuoteError> {
     let mut quote = provider.fetch_latest_quote(&ticker).await?;
     quote.price *= ticker.factor;
@@ -74,10 +74,11 @@ pub async fn update_ticker(
     Ok(())
 }
 
-pub async fn update_ticker_history(
+
+pub async fn update_ticker_history<'a>(
     provider: &dyn MarketQuoteProvider,
     ticker: &Ticker,
-    db: &dyn QuoteHandler,
+    db: Arc<dyn QuoteHandler+Send+Sync+'a>,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 ) -> Result<(), MarketQuoteError> {
@@ -209,7 +210,7 @@ mod tests {
         }
     }
 
-    async fn prepare_db(db: &dyn QuoteHandler) -> Ticker {
+    async fn prepare_db(db: Arc<dyn QuoteHandler+Send+Sync>) -> Ticker {
         let asset_id = db
             .insert_asset(&Asset {
                 id: None,

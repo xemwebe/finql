@@ -81,6 +81,10 @@ impl Market {
         }
     }
 
+    pub fn db(&self) -> Arc<dyn QuoteHandler+Sync+Send> {
+        self.db.clone()
+    }
+
     /// Get calendar from market
     pub fn get_calendar(&self, name: &str) -> Result<&Calendar, MarketError> {
         if self.calendars.contains_key(name) {
@@ -95,10 +99,6 @@ impl Market {
         self.provider.insert(name, provider);
     }
 
-    /// provide reference to database
-    pub fn db(&self) -> &dyn QuoteHandler {
-        self.db.deref()
-    }
     /// Fetch latest quotes for all active ticker
     /// Returns a list of ticker for which the update failed.
     pub async fn update_quotes(&self) -> Result<Vec<usize>, MarketError> {
@@ -110,7 +110,7 @@ impl Market {
                 && market_quotes::update_ticker(
                     provider.unwrap().deref(),
                     &ticker,
-                    self.db.deref().deref(),
+                    self.db.clone(),
                 )
                 .await
                 .is_err()
@@ -134,7 +134,7 @@ impl Market {
             market_quotes::update_ticker_history(
                 provider.unwrap().deref(),
                 &ticker,
-                self.db.deref().deref(),
+                self.db.clone(),
                 start,
                 end,
             )
