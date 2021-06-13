@@ -8,7 +8,7 @@ pub struct AssetCategory {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Asset {
     pub id: Option<usize>,
     pub name: String,
