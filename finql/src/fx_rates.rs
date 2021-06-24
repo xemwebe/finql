@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::RwLock;
 
 use chrono::{DateTime, Utc};
 use async_trait::async_trait;
@@ -80,40 +81,39 @@ pub async fn insert_fx_quote(
 
 /// Currency converter based of stored list of exchange rates, ignoring dates
 pub struct SimpleCurrencyConverter {
-    fx_rates: HashMap<String,HashMap<String,f64>>,
+    fx_rates: RwLock<HashMap<String,f64>>,
 }
 
 #[async_trait]
 impl CurrencyConverter for SimpleCurrencyConverter {
     async fn fx_rate(&self, foreign_currency: Currency, domestic_currency: Currency, _time: DateTime<Utc>) -> Result<f64, CurrencyError> {
-        Ok(self.fx_rates[&foreign_currency.to_string()][&domestic_currency.to_string()])
+        let currency_string = format!("{}/{}", &foreign_currency.to_string(), &domestic_currency.to_string());
+        if let Ok(fx_store) = self.fx_rates.read() {
+            if fx_store.contains_key(&currency_string) {
+                Ok(fx_store[&currency_string])
+            } else {
+                Err(CurrencyError::ConversionFailed)
+            }
+        } else {
+            Err(CurrencyError::ConversionFailed)
+        }
     }
 }
 
 impl SimpleCurrencyConverter {
     /// Create new container
     pub fn new() -> SimpleCurrencyConverter {
-        SimpleCurrencyConverter{ fx_rates: HashMap::new() }
-    }
-
-    /// Insert or update the price of 1 unit of foreign currency in terms of domestic currency
-    fn insert_fx_rate_one(&mut self, foreign_currency: Currency, domestic_currency: Currency, fx_rate: f64) {
-        let for_key = foreign_currency.to_string();
-        let dom_key = domestic_currency.to_string();
-        match self.fx_rates.get_mut(&for_key) {
-            Some(fx) => { fx.insert(dom_key, fx_rate); },
-            None => {
-                let mut new_map = HashMap::new();
-                new_map.insert(dom_key, fx_rate);
-                self.fx_rates.insert(for_key, new_map);
-            }
-        }
+        SimpleCurrencyConverter{ fx_rates: RwLock::new(HashMap::new()) }
     }
 
     /// Insert or update the price of 1 unit of foreign currency in terms of domestic currency and its inverse rate
     pub fn insert_fx_rate(&mut self, foreign_currency: Currency, domestic_currency: Currency, fx_rate: f64) {
-        self.insert_fx_rate_one(foreign_currency, domestic_currency, fx_rate);
-        self.insert_fx_rate_one(domestic_currency, foreign_currency, 1./fx_rate);
+        let for_key = foreign_currency.to_string();
+        let dom_key = domestic_currency.to_string();
+        if let Ok(mut fx_store) = self.fx_rates.write() {
+            fx_store.insert(format!("{}/{}", for_key, dom_key), fx_rate);
+            fx_store.insert(format!("{}/{}", for_key, dom_key), 1./fx_rate);            
+        }
     }
 }
 
