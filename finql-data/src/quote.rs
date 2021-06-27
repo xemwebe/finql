@@ -1,4 +1,5 @@
 ///! Implementation of a container for basic asset data
+use std::cmp::Ordering;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -24,6 +25,27 @@ pub struct Quote {
     pub time: DateTime<Utc>,
     pub volume: Option<f64>,
 }
+
+impl Ord for Quote {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.time, &self.ticker).cmp(&(other.time, &other.ticker))
+    }
+}
+
+impl PartialOrd for Quote {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Quote {
+    fn eq(&self, other: &Self) -> bool {
+        (self.time, &self.ticker) == (other.time, &other.ticker)
+    }
+}
+
+impl Eq for Quote { }
+
 
 impl DataItem for Quote {
     // get id or return error if id hasn't been set yet

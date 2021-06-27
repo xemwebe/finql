@@ -50,7 +50,7 @@ impl fmt::Display for MarketQuoteError {
 
 /// General interface for market data quotes provider
 #[async_trait]
-pub trait MarketQuoteProvider: Send {
+pub trait MarketQuoteProvider: Send+Sync {
     /// Fetch latest quote
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError>;
     /// Fetch historic quotes between start and end date
@@ -63,7 +63,7 @@ pub trait MarketQuoteProvider: Send {
 }
 
 pub async fn update_ticker<'a>(
-    provider: &dyn MarketQuoteProvider,
+    provider: &(dyn MarketQuoteProvider + Send + Sync),
     ticker: &Ticker,
     db: Arc<dyn QuoteHandler+Send+Sync+'a>,
 ) -> Result<(), MarketQuoteError> {
@@ -76,7 +76,7 @@ pub async fn update_ticker<'a>(
 
 
 pub async fn update_ticker_history<'a>(
-    provider: &dyn MarketQuoteProvider,
+    provider: &(dyn MarketQuoteProvider + Send + Sync),
     ticker: &Ticker,
     db: Arc<dyn QuoteHandler+Send+Sync+'a>,
     start: DateTime<Utc>,
