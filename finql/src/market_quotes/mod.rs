@@ -156,6 +156,12 @@ impl MarketDataSource {
             _ => None,
         }
     }
+
+    pub fn extern_sources() -> Vec<String> {
+        let v: Vec<String> = vec!["yahoo", "gurufocus", "eodhistdata", "alpha_vantage", "comdirect"]
+            .into_iter().map(|x| x.to_string()).collect();
+        v
+    }
 }
 
 
