@@ -112,7 +112,7 @@ impl SimpleCurrencyConverter {
         let dom_key = domestic_currency.to_string();
         if let Ok(mut fx_store) = self.fx_rates.write() {
             fx_store.insert(format!("{}/{}", for_key, dom_key), fx_rate);
-            fx_store.insert(format!("{}/{}", for_key, dom_key), 1./fx_rate);            
+            fx_store.insert(format!("{}/{}", dom_key, for_key), 1./fx_rate);            
         }
     }
 }
