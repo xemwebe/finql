@@ -1,3 +1,11 @@
+Version 0.10
+  * Ordering for quotes: Implementation of traits Ord, PartialOrd, PartialEq and Eq. Quotes 
+    are ordered by time and than by ticker id. This allows to use standard methods to sort
+    quotes for time series analysis.
+  * Improved async support: QuoteHandler, MarketQuoteProvider and CurrencyConverter are now 
+    Send+Sync. Since is a breaking change (e.g. some functions expecting now Arc<QuoteHandler> 
+    instead of &QuoteHandler), the version number is increased to 0.10.
+
 Version 0.9
   * Move to sqlx as database access abstraction layer. With sqlx, database access is now fully
     async. Also, database connections are made via a pool of connections. Thanks to using

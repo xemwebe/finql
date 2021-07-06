@@ -267,7 +267,7 @@ async fn main() {
     let args: Vec<String> = std::env::args().collect();
     assert!(
         args.len() >= 2,
-        format!("usage: {} <sqlite3 database file path>\n", args[0])
+        "usage: quotes_db <sqlite3 database file path>\n"
     );
     let path = &args[1];
     if fs::metadata(path).is_ok() {

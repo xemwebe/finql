@@ -1,6 +1,6 @@
 [package]
 name = "finql-sqlite"
-version = "0.2.5"
+version = "0.3.0"
 authors = ["Mark Beinker <mwb@quantlink.de>"]
 edition = "2018"
 description = "Internal crate used by finql implementing the sqlite adaptor"
@@ -10,6 +10,6 @@ repository = "https://github.com/xemwebe/finql"
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "sqlite", "macros", "chrono", "offline" ] }
-finql-data = {version = "0.1", path = "../finql-data" }
+finql-data = {version = "0.2", path = "../finql-data" }
 async-trait = "0.1"
 futures = "0.3"

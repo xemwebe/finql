@@ -28,7 +28,6 @@ impl CashAmount {
     ) -> Result<&mut Self, CurrencyError> {
         if self.currency == cash_amount.currency {
             self.amount += cash_amount.amount;
-            Ok(self)
         } else {
             let fx_rate = currency_converter.fx_rate(cash_amount.currency, self.currency, time).await?;
             self.amount += fx_rate * cash_amount.amount;
@@ -36,8 +35,8 @@ impl CashAmount {
                 let digits = self.currency.rounding_digits();
                 self.amount = round2digits(self.amount, digits);
             }
-            Ok(self)
         }
+        Ok(self)
     }
 
     pub async fn add_opt(
@@ -62,7 +61,6 @@ impl CashAmount {
     ) -> Result<&mut Self, CurrencyError> {
         if self.currency == cash_amount.currency {
             self.amount -= cash_amount.amount;
-            Ok(self)
         } else {
             let fx_rate = currency_converter.fx_rate(cash_amount.currency, self.currency, time).await?;
             self.amount -= fx_rate * cash_amount.amount;
@@ -70,8 +68,8 @@ impl CashAmount {
                 let digits = self.currency.rounding_digits();
                 self.amount = round2digits(self.amount, digits);
             }
-            Ok(self)
         }
+        Ok(self)
     }
 
     pub async fn sub_opt(
