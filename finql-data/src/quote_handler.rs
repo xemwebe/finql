@@ -2,6 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use async_trait::async_trait;
+use std::sync::Arc;
 
 use super::AssetHandler;
 use super::DataError;
@@ -11,6 +12,8 @@ use crate::quote::{Quote, Ticker};
 /// Handler for globally available market quotes data
 #[async_trait]
 pub trait QuoteHandler: AssetHandler {
+    fn into_arc_dispatch(self: Arc<Self>) -> Arc<dyn AssetHandler+Send+Sync>;
+
     // insert, get, update and delete for market data sources
     async fn insert_ticker(&self, ticker: &Ticker) -> Result<usize, DataError>;
     async fn get_ticker_id(&self, ticker: &str) -> Option<usize>;
@@ -51,6 +54,7 @@ pub trait QuoteHandler: AssetHandler {
     async fn get_all_quotes_for_ticker(&self, ticker_id: usize) -> Result<Vec<Quote>, DataError>;
     async fn update_quote(&self, quote: &Quote) -> Result<(), DataError>;
     async fn delete_quote(&self, id: usize) -> Result<(), DataError>;
+    async fn remove_duplicates(&self) -> Result<(), DataError>;
 
     // Get and set cash rounding conventions by currency
     // This method never throws, if currency could not be found in table, return 2 by default instead

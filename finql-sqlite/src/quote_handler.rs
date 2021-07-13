@@ -372,6 +372,26 @@ impl QuoteHandler for SqliteDB {
         Ok(())
     }
 
+
+    async fn remove_duplicates(&self) -> Result<(), DataError> {
+        sqlx::query!("
+            delete from quotes q 
+            where q.id in
+            (select q2.id
+            from 
+                quotes q1,
+                quotes q2
+            where 
+                q1.id < q2.id
+            and q1.ticker_id = q2.ticker_id 
+            and q1.time = q2.time
+            and q1.price = q2.price) 
+            ")
+            .execute(&self.pool).await
+            .map_err(|e| DataError::DeleteFailed(e.to_string()))?;
+        Ok(())
+    }
+
     async fn get_rounding_digits(&self, currency: Currency) -> i32 {
         let curr = currency.to_string();
         let rows = sqlx::query!(

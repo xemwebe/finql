@@ -2,9 +2,10 @@
 use std::str::FromStr;
 use chrono::{DateTime, Utc};
 use async_trait::async_trait;
+use std::sync::Arc;
 
 use finql_data::currency::Currency;
-use finql_data::{DataError, QuoteHandler};
+use finql_data::{DataError, QuoteHandler, AssetHandler};
 use finql_data::quote::{Quote, Ticker};
 
 use super::PostgresDB;
@@ -12,6 +13,10 @@ use super::PostgresDB;
 /// PostgreSQL implementation of quote handler
 #[async_trait]
 impl QuoteHandler for PostgresDB {
+    fn into_arc_dispatch(self: Arc<Self>) -> Arc<dyn AssetHandler + Send + Sync> {
+        self
+    }
+
     // insert, get, update and delete for market data sources
     async fn insert_ticker(&self, ticker: &Ticker) -> Result<usize, DataError> {
         let row = sqlx::query!(
@@ -319,6 +324,25 @@ impl QuoteHandler for PostgresDB {
         sqlx::query!("DELETE FROM quotes WHERE id=$1;", (id as i32))
             .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn remove_duplicates(&self) -> Result<(), DataError> {
+        sqlx::query!("
+            delete from quotes q 
+            where q.id in
+            (select q2.id
+            from 
+                quotes q1,
+                quotes q2
+            where 
+                q1.id < q2.id
+            and q1.ticker_id = q2.ticker_id 
+            and q1.time = q2.time
+            and q1.price = q2.price) 
+            ")
+            .execute(&self.pool).await
+            .map_err(|e| DataError::DeleteFailed(e.to_string()))?;
         Ok(())
     }
 
