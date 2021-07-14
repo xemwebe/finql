@@ -144,14 +144,14 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_get_fx_rate() {
-        let mut fx_db = SqliteDB::new("sqlite::memory:").await.unwrap();
+        let fx_db = SqliteDB::new("sqlite::memory:").await.unwrap();
         fx_db.init().await.unwrap();
-        prepare_db(&fx_db).await;
+        let qh: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(fx_db);
+        prepare_db(qh.clone()).await;
         let tol = 1.0e-6_f64;
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
         let time = Utc::now();
-        let qh: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(fx_db);
         let market = Market::new(qh);
         let fx = market.fx_rate(usd, eur, time).await.unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);

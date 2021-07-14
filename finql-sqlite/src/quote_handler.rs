@@ -4,8 +4,9 @@ use std::str::FromStr;
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc, Local, TimeZone};
 use async_trait::async_trait;
+use std::sync::Arc;
 
-use finql_data::{DataError, QuoteHandler, 
+use finql_data::{DataError, QuoteHandler, AssetHandler,
     Currency, Quote, Ticker};
 
 use super::SqliteDB;
@@ -43,6 +44,10 @@ pub fn make_time(
 /// Sqlite implementation of quote handler
 #[async_trait]
 impl QuoteHandler for SqliteDB {
+    fn into_arc_dispatch(self: Arc<Self>) -> Arc<dyn AssetHandler + Send + Sync> {
+        self
+    }
+
     // insert, get, update and delete for market data sources
     async fn insert_ticker(&self, ticker: &Ticker) -> Result<usize, DataError> {
         let asset_id = ticker.asset as i64;
@@ -375,8 +380,8 @@ impl QuoteHandler for SqliteDB {
 
     async fn remove_duplicates(&self) -> Result<(), DataError> {
         sqlx::query!("
-            delete from quotes q 
-            where q.id in
+            delete from quotes 
+            where id in
             (select q2.id
             from 
                 quotes q1,

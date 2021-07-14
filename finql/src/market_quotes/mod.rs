@@ -244,11 +244,11 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_fetch_latest_quote() {
         let tol = 1.0e-6;
-        let mut db = SqliteDB::new("sqlite::memory:").await.unwrap();
+        let db = Arc::new(SqliteDB::new("sqlite::memory:").await.unwrap());
         db.init().await.unwrap();
-        let ticker = prepare_db(&db).await;
+        let ticker = prepare_db(db.clone()).await;
         let provider = DummyProvider {};
-        update_ticker(&provider, &ticker, &db).await.unwrap();
+        update_ticker(&provider, &ticker, db.clone()).await.unwrap();
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 1);
         assert_fuzzy_eq!(quotes[0].price, 1.23, tol);
@@ -257,13 +257,13 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_fetch_quote_history() {
         let tol = 1.0e-6;
-        let mut db = SqliteDB::new("sqlite::memory:").await.unwrap();
+        let db = Arc::new(SqliteDB::new("sqlite::memory:").await.unwrap());
         db.init().await.unwrap();
-        let ticker = prepare_db(&db).await;
+        let ticker = prepare_db(db.clone()).await;
         let provider = DummyProvider {};
         let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        update_ticker_history(&provider, &ticker, &db, start, end).await.unwrap();
+        update_ticker_history(&provider, &ticker, db.clone(), start, end).await.unwrap();
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 31);
         assert_fuzzy_eq!(quotes[0].price, 1.23, tol);

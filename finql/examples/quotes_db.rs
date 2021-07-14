@@ -276,7 +276,7 @@ async fn main() {
     } else {
         let conn = format!("sqlite:{}", path);
         { let _= fs::File::create(path); }
-        let mut db = SqliteDB::new(&conn).await.unwrap();
+        let db = SqliteDB::new(&conn).await.unwrap();
         db.init().await.unwrap();
         let qh: Arc<dyn QuoteHandler+Sync+Send> = Arc::new(db);
         let mut market = Market::new(qh);            

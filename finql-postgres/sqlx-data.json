@@ -161,6 +161,16 @@
       "nullable": []
     }
   },
+  "29d7dcc2b8042e655051f273e0124f2688268fe7ec524e315556e4b6b0520819": {
+    "query": "\n            delete from quotes q \n            where q.id in\n            (select q2.id\n            from \n                quotes q1,\n                quotes q2\n            where \n                q1.id < q2.id\n            and q1.ticker_id = q2.ticker_id \n            and q1.time = q2.time\n            and q1.price = q2.price) \n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
   "3011fb4bb3ab347fadcdca73d76f18ad8cb241e3778c9e379c6b379e1952b0aa": {
     "query": "CREATE TABLE IF NOT EXISTS rounding_digits (\n                id SERIAL PRIMARY KEY,\n                currency TEXT NOT NULL UNIQUE,\n                digits INT NOT NULL\n            )",
     "describe": {

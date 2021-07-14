@@ -19,7 +19,7 @@ impl SqliteDB {
     }
 
     /// Clean database by dropping all tables and than run init
-    pub async fn clean(&mut self) -> Result<(), sqlx::Error> {
+    pub async fn clean(&self) -> Result<(), sqlx::Error> {
         sqlx::query!("DROP TABLE IF EXISTS transactions").execute(&self.pool).await?;
         sqlx::query!("DROP TABLE IF EXISTS quotes").execute(&self.pool).await?;
         sqlx::query!("DROP TABLE IF EXISTS ticker").execute(&self.pool).await?;
@@ -29,7 +29,7 @@ impl SqliteDB {
     }
 
     /// Initialize new database by creating table, fill
-    pub async fn init(&mut self) -> Result<(), sqlx::Error> {
+    pub async fn init(&self) -> Result<(), sqlx::Error> {
         sqlx::query!(
             "CREATE TABLE IF NOT EXISTS assets (
                 id INTEGER PRIMARY KEY,

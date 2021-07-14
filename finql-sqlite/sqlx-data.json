@@ -818,6 +818,16 @@
       "nullable": []
     }
   },
+  "ed43c4555210fe93e28311283a49e70a637a92f214aab44806d584a472ffac68": {
+    "query": "\n            delete from quotes \n            where id in\n            (select q2.id\n            from \n                quotes q1,\n                quotes q2\n            where \n                q1.id < q2.id\n            and q1.ticker_id = q2.ticker_id \n            and q1.time = q2.time\n            and q1.price = q2.price) \n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": []
+    }
+  },
   "f1b76cf12cd213027fd62a546e6ad716e78484497a108dce3e2a07c5510cac8c": {
     "query": "SELECT id, name, wkn, isin, note FROM assets ORDER BY name",
     "describe": {
