@@ -5,31 +5,11 @@ use std::io::{stdout, Write};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use chrono::{DateTime, NaiveDate, NaiveDateTime, Local, Utc, TimeZone};
-
-use finql_data::{Asset, Currency, CurrencyConverter, Quote, Ticker, QuoteHandler};
+use finql_data::{Asset, Currency, CurrencyConverter, Quote, Ticker, QuoteHandler, date_time_helper::make_time};
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
 use finql_sqlite::SqliteDB;
-
-/// Given a date and time construct a UTC DateTime, assuming that
-/// the date belongs to local time zone
-pub fn make_time(
-    year: i32,
-    month: u32,
-    day: u32,
-    hour: u32,
-    minute: u32,
-    second: u32,
-) -> Option<DateTime<Utc>> {
-    let time: NaiveDateTime = NaiveDate::from_ymd(year, month, day).and_hms(hour, minute, second);
-    let time = Local.from_local_datetime(&time).single();
-    match time {
-        Some(time) => Some(DateTime::from(time)),
-        None => None,
-    }
-}
 
 fn log(s: &str) {
     print!("{}", s);

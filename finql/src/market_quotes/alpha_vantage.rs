@@ -4,10 +4,9 @@ use tokio_compat_02::FutureExt;
 
 use alpha_vantage as alpha;
 
-use finql_data::{Quote, Ticker};
+use finql_data::{Quote, Ticker, date_time_helper::date_time_from_str_standard};
 
 use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::date_time_helper::date_time_from_str_standard;
 
 pub struct AlphaVantage {
     connector: alpha::user::APIKey,

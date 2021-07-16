@@ -1,7 +1,6 @@
 /// A tool to fetch prices by parsing comdirect web page
 use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::date_time_helper::date_time_from_str;
-use finql_data::{Quote, Ticker};
+use finql_data::{Quote, Ticker, date_time_helper::date_time_from_str};
 use chrono::{DateTime, Utc};
 use scraper::{Html, Selector};
 use async_trait::async_trait;

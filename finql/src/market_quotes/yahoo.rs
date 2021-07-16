@@ -1,6 +1,5 @@
 use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::date_time_helper::unix_to_date_time;
-use finql_data::{Quote, Ticker};
+use finql_data::{Quote, Ticker, date_time_helper::unix_to_date_time};
 use chrono::{DateTime, Utc};
 use yahoo_finance_api as yahoo;
 use async_trait::async_trait;

@@ -1,10 +1,9 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use eodhistoricaldata_api as eod_api;
-use finql_data::{Quote, Ticker};
+use finql_data::{Quote, Ticker, date_time_helper::{date_time_from_str_standard, unix_to_date_time}};
 
 use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::date_time_helper::{date_time_from_str_standard, unix_to_date_time};
 
 pub struct EODHistData {
     connector: eod_api::EodHistConnector,

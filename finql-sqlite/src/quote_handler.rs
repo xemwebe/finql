@@ -2,44 +2,13 @@
 
 use std::str::FromStr;
 
-use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc, Local, TimeZone};
+use chrono::{DateTime, Utc};
 use async_trait::async_trait;
 use std::sync::Arc;
 
 use finql_data::{DataError, QuoteHandler, AssetHandler,
-    Currency, Quote, Ticker};
-
+    Currency, Quote, Ticker, date_time_helper::to_time};
 use super::SqliteDB;
-
-
-/// Convert string to DateTime<Utc>
-pub fn to_time(time: &str) -> Result<DateTime<Utc>, DataError> {
-    // sqlx strips time zone, just add it here again
-    let time = format!("{}+0000",time);
-    let time =
-        DateTime::parse_from_str(&time,"%Y-%m-%d %H:%M:%S%.3f%z").map_err(|e| DataError::NotFound(e.to_string()))?;
-    let time: DateTime<Utc> = DateTime::from(time);
-    Ok(time)
-}
-
-/// Given a date and time construct a UTC DateTime, assuming that
-/// the date belongs to local time zone
-pub fn make_time(
-    year: i32,
-    month: u32,
-    day: u32,
-    hour: u32,
-    minute: u32,
-    second: u32,
-) -> Option<DateTime<Utc>> {
-    let time: NaiveDateTime = NaiveDate::from_ymd(year, month, day).and_hms(hour, minute, second);
-    let time = Local.from_local_datetime(&time).single();
-    match time {
-        Some(time) => Some(DateTime::from(time)),
-        None => None,
-    }
-}
-
 
 /// Sqlite implementation of quote handler
 #[async_trait]
@@ -282,7 +251,7 @@ impl QuoteHandler for SqliteDB {
                 id: Some(id as usize),
                 ticker: ticker as usize,
                 price: price.into(),
-                time: to_time(&time)?,
+                time: to_time(&time, 0).map_err(|e| DataError::NotFound(e.to_string()))?,
                 volume: volume.map(|x| x as f64),
             },
             currency,
@@ -317,7 +286,7 @@ impl QuoteHandler for SqliteDB {
                 id: Some(id as usize),
                 ticker: ticker as usize,
                 price: price.into(),
-                time: to_time(&time)?,
+                time: to_time(&time, 0).map_err(|e| DataError::NotFound(e.to_string()))?,
                 volume: volume.map(|x| x as f64),
             },
             currency,
@@ -340,7 +309,7 @@ impl QuoteHandler for SqliteDB {
                 id: Some(id as usize),
                 ticker: ticker_id,
                 price: row.price.into(),
-                time: to_time(&time)?,
+                time: to_time(&time, 0).map_err(|e| DataError::NotFound(e.to_string()))?,
                 volume: row.volume.map(|x| x as f64),
             });
         }

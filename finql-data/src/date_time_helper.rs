@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use std::time::{Duration, UNIX_EPOCH};
 
 /// Create UTC time set is given as UNIX epoch timestamp (i.e seconds since 1st Jan 1970)
@@ -50,6 +50,35 @@ pub fn date_time_from_str(
     let time = Local.from_local_datetime(&time).single().unwrap();
     Ok(DateTime::from(time))
 }
+
+/// Convert string with added time zone (by default 0) to DateTime<Utc>
+pub fn to_time(time: &str, zone: i32) -> Result<DateTime<Utc>, chrono::format::ParseError> {
+    // sqlx strips time zone, just add it here again
+    let time = format!("{}{:+05}",time, zone);
+    let time =
+        DateTime::parse_from_str(&time,"%Y-%m-%d %H:%M:%S%.3f%z")?;
+    let time: DateTime<Utc> = DateTime::from(time);
+    Ok(time)
+}
+
+/// Given a date and time construct a UTC DateTime, assuming that
+/// the date belongs to local time zone
+pub fn make_time(
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
+) -> Option<DateTime<Utc>> {
+    let time: NaiveDateTime = NaiveDate::from_ymd(year, month, day).and_hms(hour, minute, second);
+    let time = Local.from_local_datetime(&time).single();
+    match time {
+        Some(time) => Some(DateTime::from(time)),
+        None => None,
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
