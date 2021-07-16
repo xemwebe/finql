@@ -107,38 +107,36 @@ impl Comdirect {
             .from_reader(text.as_bytes());
         let mut skip_line = true;
         let mut quotes = Vec::new();
-        for record in reader.records() {
-            if let Ok(record) = record {
-                if skip_line {
-                    if !record.is_empty() {
-                        if let Some(first_field) = record.get(0) {
-                            // start with next line
-                            if first_field == "Datum" {
-                                skip_line = false;
-                            }
+        for record in reader.records().flatten() {
+            if skip_line {
+                if !record.is_empty() {
+                    if let Some(first_field) = record.get(0) {
+                        // start with next line
+                        if first_field == "Datum" {
+                            skip_line = false;
                         }
                     }
-                    continue;
                 }
-                let close = Self::num_opt(record.get(3));
-                if close.is_none() {
-                    continue;
-                }
-                let date_time_str = record
-                    .get(0)
-                    .ok_or_else(|| MarketQuoteError::FetchFailed("empty field".to_string()))?;
-                let date = date_time_from_str(date_time_str, "%d.%m.%Y", 18);
-                if date.is_err() {
-                    continue;
-                }
-                quotes.push(ComdirectQuote {
-                    date: date.unwrap(),
-                    high: Self::num_opt(record.get(1)),
-                    low: Self::num_opt(record.get(2)),
-                    close: close.unwrap(),
-                    volume: Self::num_opt(record.get(4)),
-                });
+                continue;
             }
+            let close = Self::num_opt(record.get(3));
+            if close.is_none() {
+                continue;
+            }
+            let date_time_str = record
+                .get(0)
+                .ok_or_else(|| MarketQuoteError::FetchFailed("empty field".to_string()))?;
+            let date = date_time_from_str(date_time_str, "%d.%m.%Y", 18);
+            if date.is_err() {
+                continue;
+            }
+            quotes.push(ComdirectQuote {
+                date: date.unwrap(),
+                high: Self::num_opt(record.get(1)),
+                low: Self::num_opt(record.get(2)),
+                close: close.unwrap(),
+                volume: Self::num_opt(record.get(4)),
+            });
         }
         Ok(quotes)
     }

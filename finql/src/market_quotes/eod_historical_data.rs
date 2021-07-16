@@ -57,10 +57,7 @@ impl MarketQuoteProvider for EODHistData {
         let mut quotes = Vec::new();
         for quote in &eod_quotes {
             let time = date_time_from_str_standard(&quote.date, 18)?;
-            let volume = match quote.volume {
-                Some(vol) => Some(vol as f64),
-                None => None,
-            };
+            let volume = quote.volume.map(|vol| vol as f64);
             if let Some(price) = quote.close {
                 quotes.push(Quote {
                     id: None,
