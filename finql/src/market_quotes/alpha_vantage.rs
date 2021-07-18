@@ -4,7 +4,7 @@ use tokio_compat_02::FutureExt;
 
 use alpha_vantage as alpha;
 
-use finql_data::{Quote, Ticker, date_time_helper::date_time_from_str_standard};
+use finql_data::{CashFlow, Quote, Ticker, date_time_helper::date_time_from_str_standard};
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
@@ -80,6 +80,16 @@ impl MarketQuoteProvider for AlphaVantage {
             }
         }
         Ok(quotes)
+    }
+
+    /// Fetch historic dividend payments between start and end date
+    async fn fetch_dividend_history(
+        &self,
+        ticker: &Ticker,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<CashFlow>, MarketQuoteError> {
+        Err(MarketQuoteError::FetchFailed("Alpha Vantage interface does not support fetching dividends".to_string()))
     }
 }
 

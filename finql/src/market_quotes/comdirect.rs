@@ -1,6 +1,6 @@
 /// A tool to fetch prices by parsing comdirect web page
 use super::{MarketQuoteError, MarketQuoteProvider};
-use finql_data::{Quote, Ticker, date_time_helper::date_time_from_str};
+use finql_data::{CashFlow, Quote, Ticker, date_time_helper::date_time_from_str};
 use chrono::{DateTime, Utc};
 use scraper::{Html, Selector};
 use async_trait::async_trait;
@@ -191,6 +191,16 @@ impl MarketQuoteProvider for Comdirect {
             })
         }
         Ok(quotes)
+    }
+
+    /// Fetch historic dividend payments between start and end date
+    async fn fetch_dividend_history(
+        &self,
+        ticker: &Ticker,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<CashFlow>, MarketQuoteError> {
+        Err(MarketQuoteError::FetchFailed("Comdirect interface does not support fetching dividends".to_string()))
     }
 }
 

@@ -1,5 +1,5 @@
 use super::{MarketQuoteError, MarketQuoteProvider};
-use finql_data::{Quote, Ticker, date_time_helper::unix_to_date_time};
+use finql_data::{CashFlow, Quote, Ticker, date_time_helper::unix_to_date_time};
 use chrono::{DateTime, Utc};
 use yahoo_finance_api as yahoo;
 use async_trait::async_trait;
@@ -54,6 +54,30 @@ impl MarketQuoteProvider for Yahoo {
             })
         }
         Ok(quotes)
+    }
+    
+    /// Fetch historic dividend payments between start and end date
+    async fn fetch_dividend_history(
+        &self,
+        ticker: &Ticker,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<CashFlow>, MarketQuoteError> {
+        let yahoo = yahoo::YahooConnector::new();
+        let response = yahoo
+            .get_quote_history(&ticker.name, start, end)
+            .await
+            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+        let yahoo_dividends = response
+            .dividends()
+            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+        let mut dividends = Vec::new();
+        for dividend in &yahoo_dividends {
+            let amount = dividend.amount;
+            let time = unix_to_date_time(dividend.date);
+            dividends.push(CashFlow::new(amount, ticker.currency, time.naive_local().date()));
+        }
+        Ok(dividends)
     }
 }
 

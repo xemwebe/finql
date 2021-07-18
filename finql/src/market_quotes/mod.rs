@@ -6,8 +6,7 @@ use chrono::{DateTime, Utc};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use finql_data::QuoteHandler;
-use finql_data::quote::{Quote, Ticker};
+use finql_data::{QuoteHandler, CashFlow, Quote, Ticker};
 
 
 pub mod alpha_vantage;
@@ -60,6 +59,14 @@ pub trait MarketQuoteProvider: Send+Sync {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<Quote>, MarketQuoteError>;
+
+    /// Fetch historic dividends (if any), returning a vector of cash flows, each cash flow representing a dividend payment per single stock
+    async fn fetch_dividend_history(
+        &self,
+        ticker: &Ticker,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<CashFlow>, MarketQuoteError>;
 }
 
 pub async fn update_ticker<'a>(
