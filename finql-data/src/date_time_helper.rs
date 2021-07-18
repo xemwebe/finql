@@ -1,6 +1,17 @@
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use std::time::{Duration, UNIX_EPOCH};
 
+
+/// Convert NaiveDate to DateTime at the given hour, assuming local time zone 
+pub fn naive_date_to_date_time(
+    date: &NaiveDate,
+    hour: u32
+) -> DateTime<Utc> {
+    let time = date.and_hms_milli(hour, 0, 0, 0);
+    let time = Local.from_local_datetime(&time).single().unwrap();
+    DateTime::from(time)
+}
+
 /// Create UTC time set is given as UNIX epoch timestamp (i.e seconds since 1st Jan 1970)
 pub fn unix_to_date_time(seconds: u64) -> DateTime<Utc> {
     // Creates a new SystemTime from the specified number of whole seconds
@@ -46,10 +57,10 @@ pub fn date_time_from_str(
     format: &str,
     hour: u32,
 ) -> Result<DateTime<Utc>, chrono::format::ParseError> {
-    let time = NaiveDate::parse_from_str(date_str, format)?.and_hms_milli(hour, 0, 0, 0);
-    let time = Local.from_local_datetime(&time).single().unwrap();
-    Ok(DateTime::from(time))
+    let date = NaiveDate::parse_from_str(date_str, format)?;
+    Ok(naive_date_to_date_time(&date, hour))
 }
+
 
 /// Convert string with added time zone (by default 0) to DateTime<Utc>
 pub fn to_time(time: &str, zone: i32) -> Result<DateTime<Utc>, chrono::format::ParseError> {

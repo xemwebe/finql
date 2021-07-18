@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use eodhistoricaldata_api as eod_api;
-use finql_data::{Quote, Ticker, date_time_helper::{date_time_from_str_standard, unix_to_date_time}};
+use finql_data::{CashFlow, Quote, Ticker, date_time_helper::{date_time_from_str_standard, unix_to_date_time}};
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
@@ -69,6 +69,16 @@ impl MarketQuoteProvider for EODHistData {
             }
         }
         Ok(quotes)
+    }
+
+    /// Fetch historic dividend payments between start and end date
+    async fn fetch_dividend_history(
+        &self,
+        ticker: &Ticker,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<CashFlow>, MarketQuoteError> {
+        Err(MarketQuoteError::FetchFailed("EOD historical data interface does not support fetching dividends".to_string()))
     }
 }
 
