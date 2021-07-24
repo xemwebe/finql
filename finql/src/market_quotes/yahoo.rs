@@ -55,7 +55,7 @@ impl MarketQuoteProvider for Yahoo {
         }
         Ok(quotes)
     }
-    
+
     /// Fetch historic dividend payments between start and end date
     async fn fetch_dividend_history(
         &self,
