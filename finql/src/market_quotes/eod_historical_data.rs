@@ -1,7 +1,16 @@
+use std::str::FromStr;
+
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use eodhistoricaldata_api as eod_api;
-use finql_data::{CashFlow, Quote, Ticker, date_time_helper::{date_time_from_str_standard, unix_to_date_time}};
+use finql_data::{CashFlow, Currency, Quote, Ticker, 
+        date_time_helper::{
+            date_time_from_str_standard, 
+            date_from_str, 
+            unix_to_date_time,
+            naive_date_to_date_time,
+        }
+    };
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
@@ -78,7 +87,24 @@ impl MarketQuoteProvider for EODHistData {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
-        Err(MarketQuoteError::FetchFailed("EOD historical data interface does not support fetching dividends".to_string()))
+        let dividends_since_start = self
+            .connector
+            .get_dividend_history(
+                &ticker.name,
+                start.naive_utc().date()
+            )
+            .await
+            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+        let mut div_cash_flows = Vec::new();
+        for div in dividends_since_start {
+            let pay_date = date_from_str(&div.payment_date,"%Y-%m-%d")?;
+            if naive_date_to_date_time(&pay_date, 18) <= end {
+                let currency = Currency::from_str(&div.currency)
+                    .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+                div_cash_flows.push(CashFlow::new(div.value, currency, pay_date));
+            }
+        }
+        Ok(div_cash_flows)        
     }
 }
 

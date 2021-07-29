@@ -61,6 +61,18 @@ pub fn date_time_from_str(
     Ok(naive_date_to_date_time(&date, hour))
 }
 
+/// Create UTC time from NaiveDate string
+/// The following assumptions are made:
+/// 0. Date is given in the provided format
+/// 1. Date is the date in local time zone
+/// 2. Hour is set the given hour parameter
+/// 3. Minutes, seconds and milliseconds are set to zero
+pub fn date_from_str(
+    date_str: &str,
+    format: &str
+) -> Result<NaiveDate, chrono::format::ParseError> {
+   NaiveDate::parse_from_str(date_str, format)
+}
 
 /// Convert string with added time zone (by default 0) to DateTime<Utc>
 pub fn to_time(time: &str, zone: i32) -> Result<DateTime<Utc>, chrono::format::ParseError> {

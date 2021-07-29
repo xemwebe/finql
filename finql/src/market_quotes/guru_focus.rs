@@ -1,16 +1,28 @@
-use super::{MarketQuoteError, MarketQuoteProvider};
-use finql_data::{Quote, Ticker, CashFlow, date_time_helper::{date_time_from_str_american, unix_to_date_time}};
+use std::str::FromStr;
 use chrono::{DateTime, Utc};
 use async_trait::async_trait;
+use gurufocus_api as gfapi;
+
+use super::{MarketQuoteError, MarketQuoteProvider};
+use finql_data::{CashFlow, Currency, Quote, Ticker, 
+    date_time_helper::{
+        date_time_from_str_american, 
+        date_from_str, 
+        unix_to_date_time,
+        naive_date_to_date_time,
+    }
+};
+
+type DividendHistory = Vec<gfapi::Dividend>;
 
 pub struct GuruFocus {
-    connector: gurufocus_api::GuruFocusConnector,
+    connector: gfapi::GuruFocusConnector,
 }
 
 impl GuruFocus {
     pub fn new(token: String) -> GuruFocus {
         GuruFocus {
-            connector: gurufocus_api::GuruFocusConnector::new(token),
+            connector: gfapi::GuruFocusConnector::new(token),
         }
     }
 }
@@ -25,7 +37,7 @@ impl MarketQuoteProvider for GuruFocus {
             .await
             .map_err(MarketQuoteError::FetchFailed)?;
 
-        let quote: gurufocus_api::Quote = serde_json::from_value(prices)
+        let quote: gfapi::Quote = serde_json::from_value(prices)
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
 
         let time = unix_to_date_time(quote.timestamp as u64);
@@ -77,7 +89,24 @@ impl MarketQuoteProvider for GuruFocus {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
-        Err(MarketQuoteError::FetchFailed("Guru Focus interface does not support fetching dividends".to_string()))
+        let gf_dividends = self
+            .connector
+            .get_dividend_history(&ticker.name)
+            .await
+            .map_err(MarketQuoteError::FetchFailed)?;
+        let dividends: DividendHistory = serde_json::from_value(gf_dividends)
+            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+        let mut div_cash_flows = Vec::new();
+        for div in dividends {
+            let pay_date = date_from_str(&div.pay_date,"%Y-%m-%d")?;
+            let pay_date_time = naive_date_to_date_time(&pay_date, 18);
+            if pay_date_time >= start && pay_date_time <= end {
+                let currency = Currency::from_str(&div.currency)
+                    .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+                div_cash_flows.push(CashFlow::new(div.amount.into(), currency, pay_date));
+            }
+        }
+        Ok(div_cash_flows)
     }
 }
 
