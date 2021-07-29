@@ -196,11 +196,11 @@ impl MarketQuoteProvider for Comdirect {
     /// Fetch historic dividend payments between start and end date
     async fn fetch_dividend_history(
         &self,
-        ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        _ticker: &Ticker,
+        _start: DateTime<Utc>,
+        _end: DateTime<Utc>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
-        Err(MarketQuoteError::FetchFailed("Comdirect interface does not support fetching dividends".to_string()))
+        Err(MarketQuoteError::FetchFailed("The comdirect interface does not support fetching dividends".to_string()))
     }
 }
 
