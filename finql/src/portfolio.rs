@@ -61,7 +61,7 @@ pub struct Position {
 /// Calculate the total position as of a given date by applying a specified set of filters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PositionTotals {
-    value: f64,
+    pub value: f64,
     trading_pnl: f64,
     unrealized_pnl: f64,
     dividend: f64,
@@ -133,7 +133,7 @@ impl Position {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PortfolioPosition {
     pub cash: Position,
     pub assets: BTreeMap<usize, Position>,

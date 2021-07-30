@@ -71,7 +71,6 @@ pub struct Market {
 }
 
 impl Market {
-    /// For now, market data statically generated and stored in memory
     pub fn new(db: Arc<dyn QuoteHandler+Sync+Send>) -> Market {
         Market {
             // Set of default calendars
