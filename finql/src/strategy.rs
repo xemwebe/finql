@@ -25,16 +25,14 @@ pub struct InvestAllInSingleStock {
     asset_id: usize,
     ticker_id: usize,
     market: Market,
-    dividends: Vec<CashFlow>,
 }
 
 impl InvestAllInSingleStock {
-    pub fn new(asset_id: usize, ticker_id: usize, market: Market, dividends: Vec<CashFlow>) -> InvestAllInSingleStock {
+    pub fn new(asset_id: usize, ticker_id: usize, market: Market) -> InvestAllInSingleStock {
         InvestAllInSingleStock{
             asset_id,
             ticker_id,
             market,
-            dividends,
         }
     }
 }

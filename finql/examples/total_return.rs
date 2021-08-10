@@ -1,8 +1,11 @@
-///! Demonstrate total retun calculation by single investment in dividend stock
+///! Demonstrate total return calculation by single investment in dividend stock
 use std::{sync::Arc, str::FromStr};
 use std::cmp::min;
+use std::error::Error;
+use std::ops::Range;
 
-use chrono::{Utc, NaiveDate};
+use chrono::{Utc, NaiveDate, Datelike};
+use plotters::prelude::*;
 
 use finql_data::{Asset, CashFlow, Currency, Ticker, QuoteHandler, Transaction, TransactionType, date_time_helper::naive_date_to_date_time};
 use finql::{
@@ -12,13 +15,13 @@ use finql::{
         MarketDataSource},
     portfolio::{
         PortfolioPosition,
-        calculate_position_and_pnl,
         calc_delta_position,
     },
     strategy::{
         Strategy, 
         InvestAllInSingleStock,
     },
+    calendar::last_day_of_month,
 };
 use finql_sqlite::SqliteDB;
 
@@ -90,7 +93,7 @@ async fn main() {
     let mut transactions = Vec::new();
     transactions.push(cash_in);
 
-    let strategy = InvestAllInSingleStock::new(asset_id, ticker_id, market, dividends);
+    let strategy = InvestAllInSingleStock::new(asset_id, ticker_id, market);
 
     let mut current_date = start;
     let mut total_return = Vec::new();
@@ -127,6 +130,67 @@ async fn main() {
         total_return.push(TimeValue{ value: totals.value, date: current_date});
     }
 
-    println!("Total return time series: {:?}", total_return);
-    println!("First value: {:?}", total_return[0]);
+    // plot the graph
+    make_plot("total_return.png", "Total Return", &total_return).unwrap();
 }
+
+fn min_max(time_series: &[TimeValue]) -> (f64, f64) {
+    if time_series.len() == 0 {
+        return (0.0,0.0);
+    }
+    let mut min = time_series[0].value;
+    let mut max = min;
+    for v in time_series {
+        if min>v.value {
+            min = v.value;
+        } 
+        if max<v.value {
+            max = v.value;
+        }
+   }
+   (min,max)
+}
+
+fn calc_ranges(time_series: &[TimeValue]) -> (Range<NaiveDate>, Range<f64>) {
+    let start_date = time_series[0].date;
+    let end_date = time_series.last().unwrap().date;
+    let (start_value, end_value) = min_max(time_series);
+
+    let first_day = NaiveDate::from_ymd(start_date.year(), start_date.month(), 1);
+    let last_year = end_date.year();
+    let last_month = end_date.month();
+    let last_day = NaiveDate::from_ymd(last_year, last_month, last_day_of_month(last_year, last_month));
+    let date_range = first_day..last_day;
+    ( date_range, start_value..end_value)
+}
+
+fn make_plot(file_name: &str, title: &str, time_series: &[TimeValue]) -> Result<(), Box<dyn Error>> {
+    
+    let root = BitMapBackend::new(file_name, (1024, 768)).into_drawing_area();
+
+    root.fill(&WHITE)?;
+
+    let (x_range, y_range) = calc_ranges(time_series);
+    let mut chart = ChartBuilder::on(&root)
+        .margin(10)
+        .caption(title, ("sans-serif", 40))
+        .set_label_area_size(LabelAreaPosition::Left, 60)
+        .set_label_area_size(LabelAreaPosition::Bottom, 40)
+        .build_cartesian_2d(x_range.monthly(), y_range)?;
+
+    chart
+        .configure_mesh()
+        .disable_x_mesh()
+        .disable_y_mesh()
+        .x_labels(30)
+        .y_desc("Total position value (€)")
+        .draw()?;
+
+    chart.draw_series(LineSeries::new(
+        time_series.iter().map(|v| (v.date, v.value) ),
+        &RED,
+    ))?;
+
+    Ok(())
+}
+
