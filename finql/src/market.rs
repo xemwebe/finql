@@ -13,7 +13,8 @@ use std::collections::BTreeMap;
 
 use async_trait::async_trait;
 
-use finql_data::{Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler};
+use finql_data::{Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, date_time_helper::naive_date_to_date_time};
+use crate::time_period::TimePeriod;
 
 use crate::calendar::{Calendar, Holiday, NthWeek};
 use crate::market_quotes;
@@ -26,6 +27,7 @@ pub enum MarketError {
     MarketQuoteError(market_quotes::MarketQuoteError),
     DBError(DataError),
     MissingProviderToken,
+    CurrencyError,
 }
 
 impl fmt::Display for MarketError {
@@ -35,6 +37,7 @@ impl fmt::Display for MarketError {
             Self::MarketQuoteError(_) => write!(f, "market quote error"),
             Self::DBError(_) => write!(f, "database error"),
             Self::MissingProviderToken => write!(f, "missing market data provider token"),
+            Self::CurrencyError => write!(f, "currency conversion failed"),
         }
     }
 }
@@ -62,6 +65,7 @@ impl From<DataError> for MarketError {
 }
 
 /// Container or adaptor to market data
+#[derive(Clone)]
 pub struct Market {
     calendars: BTreeMap<String, Calendar>,
     /// collection of market data quotes provider
@@ -140,6 +144,52 @@ impl Market {
             .await?;
         }
         Ok(())
+    }
+
+    /// Update quote history using all tickers of given asset
+    pub async fn update_quote_history_for_asset(
+        &self,
+        asset_id: usize,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<(), MarketError> {
+        let tickers = self.db.get_all_ticker_for_asset(asset_id).await?;
+        for ticker in tickers {
+            let provider = self.provider.get(&ticker.source);
+            if provider.is_some() {
+                market_quotes::update_ticker_history(
+                    provider.unwrap().deref(),
+                    &ticker,
+                    self.db.clone(),
+                    start,
+                    end,
+                )
+                .await?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_asset_price(&self, asset_id: usize, currency: Currency, date: NaiveDate) -> Result<f64, MarketError> {
+        let quote_curr = self.db.get_last_quote_before_by_id(asset_id, naive_date_to_date_time(&date, 18)).await;
+        let (price, quote_currency) = if let Ok((quote, currency)) = quote_curr {
+            (quote.price, currency)            
+        } else {
+            // if no valid quote could be found in database, try to fetch quotes for previous week and try again
+            let one_week_before = "-7D".parse::<TimePeriod>().unwrap();
+            let date_one_week_before = one_week_before.add_to(date, None);
+            self.update_quote_history_for_asset(asset_id, naive_date_to_date_time(&date_one_week_before, 0), naive_date_to_date_time(&date, 20)).await?;
+            let (quote, currency) = self.db.get_last_quote_before_by_id(asset_id, naive_date_to_date_time(&date, 20)).await?;
+            (quote.price, currency)
+        };
+        if currency == quote_currency {
+            Ok(price)
+        } else  {
+            let fx_rate = self.fx_rate(currency, quote_currency, naive_date_to_date_time(&date, 20)).await
+                .map_err(|_| MarketError::CurrencyError)?;
+            Ok(price*fx_rate)
+        }
+
     }
 }
 

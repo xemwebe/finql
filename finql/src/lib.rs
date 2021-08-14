@@ -52,5 +52,6 @@ pub mod portfolio;
 pub mod rates;
 pub mod time_period;
 pub mod strategy;
+pub mod time_series;
 
 pub use market::Market;

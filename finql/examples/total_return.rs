@@ -2,7 +2,6 @@
 use std::{sync::Arc, str::FromStr};
 use std::cmp::min;
 use std::error::Error;
-use std::ops::Range;
 
 use chrono::{Utc, NaiveDate, Datelike};
 use plotters::prelude::*;
@@ -19,17 +18,55 @@ use finql::{
     },
     strategy::{
         Strategy, 
-        InvestAllInSingleStock,
+        ReInvestInSingleStock,
+        StaticInSingleStock,
     },
     calendar::last_day_of_month,
+    time_series::{TimeSeries, TimeValue, TimeSeriesError},
 };
 use finql_sqlite::SqliteDB;
 
-#[derive(Debug)]
-struct TimeValue {
-    date: NaiveDate,
-    value: f64,
+
+async fn calc_strategy(currency: Currency, transactions: &mut Vec<Transaction>, strategy: &dyn Strategy, start: NaiveDate, end: NaiveDate, market: &Market) -> Vec<TimeValue> {
+
+    let mut current_date = start;
+    let mut total_return = Vec::new();
+
+
+    let mut position = PortfolioPosition::new(currency);
+    calc_delta_position(
+        &mut position,
+        &transactions,
+        Some(start),
+        Some(start)).unwrap();
+
+    position.add_quote(naive_date_to_date_time(&start, 20), &market).await;
+    //let totals = position.calc_totals();
+    //total_return.push(TimeValue{ value: totals.value, date: current_date});
+    
+    while current_date < end {
+        // Update list of transactions with new strategic transactions for the current day
+        let mut new_transactions = strategy.apply(&position, current_date).await.unwrap();
+        transactions.append(&mut new_transactions);
+        
+        // roll position forward to next day
+        let next_date = min(end, strategy.next_day(current_date));
+        
+        // Calculate new position including new transactions
+        calc_delta_position(
+            &mut position,
+            &transactions,
+            Some(current_date),
+            Some(next_date)).unwrap();
+
+        current_date = next_date;
+        position.add_quote(naive_date_to_date_time(&current_date, 20), &market).await;
+        let totals = position.calc_totals();
+        total_return.push(TimeValue{ value: totals.value, date: current_date});
+    }
+    total_return
 }
+
 
 #[tokio::main]
 async fn main() {
@@ -81,102 +118,90 @@ async fn main() {
         start_time, end_time).await.unwrap();
     println!("Found {} dividends", dividends.len());
 
+    let mut transactions = Vec::new();
+
     // put some cash into the account
-    println!("Setup initial cash transaction...");
+    println!("Setup initial cash transaction");
     let cash_flow = CashFlow::new(10_000.0, usd, start);
-    let cash_in = Transaction {
+    transactions.push(Transaction {
         id: None,
         transaction_type: TransactionType::Cash,
         cash_flow,
         note: Some("start capital".to_string()),
-    };
-    let mut transactions = Vec::new();
-    transactions.push(cash_in);
+    });
+    let asset_price = market.get_asset_price(asset_id, usd, start).await.unwrap();
 
-    let strategy = InvestAllInSingleStock::new(asset_id, ticker_id, market);
+    println!("Buy transaction for initial stock position");
+    transactions.push(Transaction {
+        id: None,
+        transaction_type: TransactionType::Asset{
+            asset_id,
+            position: cash_flow.amount.amount/asset_price,
+        },
+        cash_flow: CashFlow{amount: -cash_flow.amount, date: start},
+        note: Some("Initial asset buy transaction".to_string()),
+    });
+    let mut static_transactions = transactions.clone();
+    let mut no_dividends_transactions = transactions.clone();
 
-    let mut current_date = start;
-    let mut total_return = Vec::new();
+    let mut all_time_series = Vec::new();
+    let reinvest_strategy = ReInvestInSingleStock::new(asset_id, ticker_id, market.clone(), dividends.clone());
+    let reinvest_returns =  calc_strategy(usd, &mut transactions, &reinvest_strategy, start, today, &market).await;
+    all_time_series.push(TimeSeries{series: reinvest_returns, title: "AVGO re-invest return".to_string()});
 
-    total_return.push(TimeValue{ value: cash_flow.amount.amount, date: current_date});
-    let mut position = PortfolioPosition::new(usd);
-    //let (mut position, mut totals) = calculate_position_and_pnl(usd, &transactions, None, db.clone()).await.unwrap();
-    let market = Market::new(db.clone());
-    while current_date < today {
-        // roll position forward to next day
-        let next_date = min(today, strategy.next_day(current_date));
-        let previous_position = position.clone();
-        calc_delta_position(
-            &mut position,
-            &transactions,
-            Some(current_date),
-            Some(next_date)).unwrap();
-        
-        // Update list of transactions with new strategic transactions for the current day
-        let mut new_transactions = strategy.apply(&position, next_date).await.unwrap();
-        transactions.append(&mut new_transactions);
-        
-        // Calculate new position including new transactions
-        position = previous_position;
-        calc_delta_position(
-            &mut position,
-            &transactions,
-            Some(current_date),
-            Some(next_date)).unwrap();
+    let static_invest_strategy = StaticInSingleStock::new(asset_id, dividends);
+    let static_invest_returns =  calc_strategy(usd, &mut static_transactions, &static_invest_strategy, start, today, &market).await;
+    all_time_series.push(TimeSeries{series: static_invest_returns, title: "AVGO static return".to_string()});
 
-        current_date = next_date;
-        position.add_quote(naive_date_to_date_time(&current_date, 20), &market).await;
-        let totals = position.calc_totals();
-        total_return.push(TimeValue{ value: totals.value, date: current_date});
-    }
+    let no_dividends_strategy = StaticInSingleStock::new(asset_id, Vec::new());
+    let no_dividends_returns =  calc_strategy(usd, &mut no_dividends_transactions, &no_dividends_strategy, start, today, &market).await;
+    all_time_series.push(TimeSeries{series: no_dividends_returns, title: "AVGO without dividends".to_string()});
 
     // plot the graph
-    make_plot("total_return.png", "Total Return", &total_return).unwrap();
+    make_plot("strategies.png", "Strategies Performance", &all_time_series).unwrap();
 }
 
-fn min_max(time_series: &[TimeValue]) -> (f64, f64) {
-    if time_series.len() == 0 {
-        return (0.0,0.0);
-    }
-    let mut min = time_series[0].value;
-    let mut max = min;
-    for v in time_series {
-        if min>v.value {
-            min = v.value;
-        } 
-        if max<v.value {
-            max = v.value;
-        }
-   }
-   (min,max)
-}
-
-fn calc_ranges(time_series: &[TimeValue]) -> (Range<NaiveDate>, Range<f64>) {
-    let start_date = time_series[0].date;
-    let end_date = time_series.last().unwrap().date;
-    let (start_value, end_value) = min_max(time_series);
-
-    let first_day = NaiveDate::from_ymd(start_date.year(), start_date.month(), 1);
-    let last_year = end_date.year();
-    let last_month = end_date.month();
-    let last_day = NaiveDate::from_ymd(last_year, last_month, last_day_of_month(last_year, last_month));
-    let date_range = first_day..last_day;
-    ( date_range, start_value..end_value)
-}
-
-fn make_plot(file_name: &str, title: &str, time_series: &[TimeValue]) -> Result<(), Box<dyn Error>> {
+fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Result<(), Box<dyn Error>> {
     
-    let root = BitMapBackend::new(file_name, (1024, 768)).into_drawing_area();
+    let root = BitMapBackend::new(file_name, (2048, 1024)).into_drawing_area();
 
     root.fill(&WHITE)?;
 
-    let (x_range, y_range) = calc_ranges(time_series);
+    if all_time_series.len() == 0 {
+        return Err(Box::new(TimeSeriesError::IsEmpty));
+    }
+    let (mut min_date, mut max_date, mut min_val, mut max_val) = all_time_series[0].min_max()?;
+
+    // Calculate max ranges over all time sereies
+    for ts in &all_time_series[1..] {
+        let (min_date_tmp, max_date_tmp, min_val_tmp, max_val_tmp) = ts.min_max()?;
+        if min_date_tmp < min_date {
+            min_date = min_date_tmp;
+        }
+        if max_date_tmp > max_date {
+            max_date = max_date_tmp;
+        }
+        if min_val_tmp < min_val {
+            min_val = min_val_tmp;
+        }
+        if max_val_tmp > max_val {
+            max_val = max_val_tmp;
+        }
+    }
+
+    let y_range = min_val..max_val;
+    min_date = NaiveDate::from_ymd(min_date.year(), min_date.month(), 1);
+    let max_year = max_date.year();
+    let max_month = max_date.month();
+    max_date = NaiveDate::from_ymd(max_year, max_month, last_day_of_month(max_year, max_month));
+    let x_range = (min_date..max_date).monthly();
+
     let mut chart = ChartBuilder::on(&root)
         .margin(10)
         .caption(title, ("sans-serif", 40))
         .set_label_area_size(LabelAreaPosition::Left, 60)
         .set_label_area_size(LabelAreaPosition::Bottom, 40)
-        .build_cartesian_2d(x_range.monthly(), y_range)?;
+        .build_cartesian_2d(x_range, y_range)?;
 
     chart
         .configure_mesh()
@@ -186,11 +211,19 @@ fn make_plot(file_name: &str, title: &str, time_series: &[TimeValue]) -> Result<
         .y_desc("Total position value (€)")
         .draw()?;
 
-    chart.draw_series(LineSeries::new(
-        time_series.iter().map(|v| (v.date, v.value) ),
-        &RED,
-    ))?;
+    static COLORS: [&'static RGBColor; 6] = [&BLUE, &GREEN, &RED, &YELLOW, &CYAN, &MAGENTA];	
+    let mut color_index: usize = 0;
+    for ts in all_time_series {
+        chart.draw_series(LineSeries::new(
+            ts.series.iter().map(|v| (v.date, v.value) ),
+            COLORS[color_index],
+        ))?
+        .label(&ts.title)
+        .legend( move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], COLORS[color_index]));
+        color_index = (color_index + 1) % COLORS.len();
+
+    }
+    chart.configure_series_labels().border_style(&BLACK).draw()?;
 
     Ok(())
 }
-
