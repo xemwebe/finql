@@ -20,6 +20,8 @@ use finql::{
         Strategy, 
         ReInvestInSingleStock,
         StaticInSingleStock,
+        StockTransactionCosts,
+        StockTransactionFee,
     },
     calendar::last_day_of_month,
     time_series::{TimeSeries, TimeValue, TimeSeriesError},
@@ -145,25 +147,37 @@ async fn main() {
     let mut no_dividends_transactions = transactions.clone();
 
     let mut all_time_series = Vec::new();
-    let reinvest_strategy = ReInvestInSingleStock::new(asset_id, ticker_id, market.clone(), dividends.clone());
-    let reinvest_returns =  calc_strategy(usd, &mut transactions, &reinvest_strategy, start, today, &market).await;
-    all_time_series.push(TimeSeries{series: reinvest_returns, title: "AVGO re-invest return".to_string()});
+    let reinvest_strategy_no_tax_no_fee = ReInvestInSingleStock::new(asset_id, ticker_id, market.clone(), dividends.clone(), Default::default());
+    let reinvest_returns_no_tax_no_fee =  calc_strategy(usd, &mut transactions, &reinvest_strategy_no_tax_no_fee, start, today, &market).await;
+    all_time_series.push(TimeSeries{series: reinvest_returns_no_tax_no_fee, title: "AVGO re-invest return, no fees and tax".to_string()});
 
-    let static_invest_strategy = StaticInSingleStock::new(asset_id, dividends);
-    let static_invest_returns =  calc_strategy(usd, &mut static_transactions, &static_invest_strategy, start, today, &market).await;
-    all_time_series.push(TimeSeries{series: static_invest_returns, title: "AVGO static return".to_string()});
+    let static_invest_strategy_no_tax = StaticInSingleStock::new(asset_id, dividends.clone(), Default::default());
+    let static_invest_returns_no_tax =  calc_strategy(usd, &mut static_transactions, &static_invest_strategy_no_tax, start, today, &market).await;
+    all_time_series.push(TimeSeries{series: static_invest_returns_no_tax, title: "AVGO static return, no tax".to_string()});
 
-    let no_dividends_strategy = StaticInSingleStock::new(asset_id, Vec::new());
+    let no_dividends_strategy = StaticInSingleStock::new(asset_id, Vec::new(), Default::default());
     let no_dividends_returns =  calc_strategy(usd, &mut no_dividends_transactions, &no_dividends_strategy, start, today, &market).await;
     all_time_series.push(TimeSeries{series: no_dividends_returns, title: "AVGO without dividends".to_string()});
 
+    let costs = StockTransactionCosts {
+        fee: StockTransactionFee::new(5.0, Some(30.0), 0.0025),
+        tax_rate: 0.25*1.07,
+    };
+    let reinvest_strategy = ReInvestInSingleStock::new(asset_id, ticker_id, market.clone(), dividends.clone(), costs.clone());
+    let reinvest_returns =  calc_strategy(usd, &mut transactions, &reinvest_strategy, start, today, &market).await;
+    all_time_series.push(TimeSeries{series: reinvest_returns, title: "AVGO re-invest return".to_string()});
+
+    let static_invest_strategy = StaticInSingleStock::new(asset_id, dividends, costs);
+    let static_invest_returns =  calc_strategy(usd, &mut static_transactions, &static_invest_strategy, start, today, &market).await;
+    all_time_series.push(TimeSeries{series: static_invest_returns, title: "AVGO static return".to_string()});
+
     // plot the graph
-    make_plot("strategies.png", "Strategies Performance", &all_time_series).unwrap();
+    make_plot("strategies.svg", "Strategies Performance", &all_time_series).unwrap();
 }
 
 fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Result<(), Box<dyn Error>> {
     
-    let root = BitMapBackend::new(file_name, (2048, 1024)).into_drawing_area();
+    let root = SVGBackend::new(file_name, (2048, 1024)).into_drawing_area();
 
     root.fill(&WHITE)?;
 
@@ -199,8 +213,8 @@ fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Re
     let mut chart = ChartBuilder::on(&root)
         .margin(10)
         .caption(title, ("sans-serif", 40))
-        .set_label_area_size(LabelAreaPosition::Left, 60)
-        .set_label_area_size(LabelAreaPosition::Bottom, 40)
+        .set_label_area_size(LabelAreaPosition::Left, 80)
+        .set_label_area_size(LabelAreaPosition::Bottom, 60)
         .build_cartesian_2d(x_range, y_range)?;
 
     chart
@@ -209,9 +223,12 @@ fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Re
         .disable_y_mesh()
         .x_labels(30)
         .y_desc("Total position value (€)")
+        .x_desc("Date")
+        .label_style(("sans-serif", 16))
+        .axis_desc_style(("sans-serif", 20))
         .draw()?;
 
-    static COLORS: [&'static RGBColor; 6] = [&BLUE, &GREEN, &RED, &YELLOW, &CYAN, &MAGENTA];	
+    static COLORS: [&'static RGBColor; 5] = [&BLUE, &GREEN, &RED, &CYAN, &MAGENTA];	
     let mut color_index: usize = 0;
     for ts in all_time_series {
         chart.draw_series(LineSeries::new(
@@ -223,7 +240,12 @@ fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Re
         color_index = (color_index + 1) % COLORS.len();
 
     }
-    chart.configure_series_labels().border_style(&BLACK).draw()?;
+    
+    chart.configure_series_labels()
+        .border_style(&BLACK)
+        .position(SeriesLabelPosition::UpperLeft)
+        .label_font(("sans-serif", 20))
+        .draw()?;
 
     Ok(())
 }
