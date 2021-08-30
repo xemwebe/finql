@@ -3,6 +3,8 @@ use std::{sync::Arc, str::FromStr};
 use std::cmp::min;
 use std::error::Error;
 
+use pretty_env_logger;
+use log::debug;
 use chrono::{Utc, NaiveDate, Datelike};
 use plotters::prelude::*;
 
@@ -29,11 +31,11 @@ use finql::{
 use finql_sqlite::SqliteDB;
 
 
-async fn calc_strategy(currency: Currency, transactions: &mut Vec<Transaction>, strategy: &dyn Strategy, start: NaiveDate, end: NaiveDate, market: &Market) -> Vec<TimeValue> {
+async fn calc_strategy(currency: Currency, start_transactions: &Vec<Transaction>, strategy: &dyn Strategy, start: NaiveDate, end: NaiveDate, market: &Market) -> Vec<TimeValue> {
 
     let mut current_date = start;
     let mut total_return = Vec::new();
-
+    let mut transactions = start_transactions.clone();
 
     let mut position = PortfolioPosition::new(currency);
     calc_delta_position(
@@ -55,11 +57,13 @@ async fn calc_strategy(currency: Currency, transactions: &mut Vec<Transaction>, 
         let next_date = min(end, strategy.next_day(current_date));
         
         // Calculate new position including new transactions
+        debug!("CalcStrategy: cash position before applying new transactions: {}", position.cash.position);
         calc_delta_position(
             &mut position,
             &transactions,
             Some(current_date),
             Some(next_date)).unwrap();
+        debug!("CalcStrategy: cash position after applying new transactions: {}", position.cash.position);
 
         current_date = next_date;
         position.add_quote(naive_date_to_date_time(&current_date, 20), &market).await;
@@ -72,6 +76,8 @@ async fn calc_strategy(currency: Currency, transactions: &mut Vec<Transaction>, 
 
 #[tokio::main]
 async fn main() {
+    pretty_env_logger::init();
+
     println!("Calculate total return of single investment of 10'000 USD in Broadcom (AVGO) five years before today");
     let today = Utc::now().naive_local().date();
     let five_years_before = "-5Y".parse::<TimePeriod>().unwrap();
@@ -143,33 +149,32 @@ async fn main() {
         cash_flow: CashFlow{amount: -cash_flow.amount, date: start},
         note: Some("Initial asset buy transaction".to_string()),
     });
-    let mut static_transactions = transactions.clone();
-    let mut no_dividends_transactions = transactions.clone();
 
     let mut all_time_series = Vec::new();
+
     let reinvest_strategy_no_tax_no_fee = ReInvestInSingleStock::new(asset_id, ticker_id, market.clone(), dividends.clone(), Default::default());
-    let reinvest_returns_no_tax_no_fee =  calc_strategy(usd, &mut transactions, &reinvest_strategy_no_tax_no_fee, start, today, &market).await;
+    let reinvest_returns_no_tax_no_fee =  calc_strategy(usd, &transactions, &reinvest_strategy_no_tax_no_fee, start, today, &market).await;
     all_time_series.push(TimeSeries{series: reinvest_returns_no_tax_no_fee, title: "AVGO re-invest return, no fees and tax".to_string()});
-
-    let static_invest_strategy_no_tax = StaticInSingleStock::new(asset_id, dividends.clone(), Default::default());
-    let static_invest_returns_no_tax =  calc_strategy(usd, &mut static_transactions, &static_invest_strategy_no_tax, start, today, &market).await;
-    all_time_series.push(TimeSeries{series: static_invest_returns_no_tax, title: "AVGO static return, no tax".to_string()});
-
-    let no_dividends_strategy = StaticInSingleStock::new(asset_id, Vec::new(), Default::default());
-    let no_dividends_returns =  calc_strategy(usd, &mut no_dividends_transactions, &no_dividends_strategy, start, today, &market).await;
-    all_time_series.push(TimeSeries{series: no_dividends_returns, title: "AVGO without dividends".to_string()});
 
     let costs = StockTransactionCosts {
         fee: StockTransactionFee::new(5.0, Some(30.0), 0.0025),
         tax_rate: 0.25*1.07,
     };
     let reinvest_strategy = ReInvestInSingleStock::new(asset_id, ticker_id, market.clone(), dividends.clone(), costs.clone());
-    let reinvest_returns =  calc_strategy(usd, &mut transactions, &reinvest_strategy, start, today, &market).await;
+    let reinvest_returns =  calc_strategy(usd, &transactions, &reinvest_strategy, start, today, &market).await;
     all_time_series.push(TimeSeries{series: reinvest_returns, title: "AVGO re-invest return".to_string()});
 
+    let static_invest_strategy_no_tax = StaticInSingleStock::new(asset_id, dividends.clone(), Default::default());
+    let static_invest_returns_no_tax =  calc_strategy(usd, &transactions, &static_invest_strategy_no_tax, start, today, &market).await;
+    all_time_series.push(TimeSeries{series: static_invest_returns_no_tax, title: "AVGO static return, no tax".to_string()});
+
     let static_invest_strategy = StaticInSingleStock::new(asset_id, dividends, costs);
-    let static_invest_returns =  calc_strategy(usd, &mut static_transactions, &static_invest_strategy, start, today, &market).await;
+    let static_invest_returns =  calc_strategy(usd, &transactions, &static_invest_strategy, start, today, &market).await;
     all_time_series.push(TimeSeries{series: static_invest_returns, title: "AVGO static return".to_string()});
+
+    let no_dividends_strategy = StaticInSingleStock::new(asset_id, Vec::new(), Default::default());
+    let no_dividends_returns =  calc_strategy(usd, &transactions, &no_dividends_strategy, start, today, &market).await;
+    all_time_series.push(TimeSeries{series: no_dividends_returns, title: "AVGO without dividends".to_string()});
 
     // plot the graph
     make_plot("strategies.svg", "Strategies Performance", &all_time_series).unwrap();

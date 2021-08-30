@@ -1,5 +1,6 @@
 use chrono::naive::NaiveDate;
 use async_trait::async_trait;
+use log::{debug, trace};
 
 use finql_data::{
     DataError,
@@ -91,7 +92,10 @@ impl Strategy for StaticInSingleStock {
                 cash_flow: dividend,
                 note: None,
             };
+            trace!("ReinvestInSingleStock: added transaction {:?}", dividend_transaction);
             transactions.push(dividend_transaction);
+
+            if tax.amount.amount != 0.0 {
             let tax_transaction = Transaction {
                 id: None,
                 transaction_type: TransactionType::Tax {
@@ -100,7 +104,11 @@ impl Strategy for StaticInSingleStock {
                 cash_flow: tax,
                 note: None,
             };
+            trace!("ReinvestInSingleStock: added transaction {:?}", tax_transaction);
             transactions.push(tax_transaction);
+
+        }
+            debug!("StaticInSingleStock: added dividend without amount {} and tax {} at date {}.", dividend.amount.amount, -tax.amount.amount, date);
         } 
         Ok(transactions)
     }
@@ -141,7 +149,7 @@ impl Strategy for ReInvestInSingleStock {
             dividend.amount.amount *= position.assets[&self.asset_id].position;
             let mut tax = dividend.clone();
             tax.amount.amount = -self.costs.tax_rate * dividend.amount.amount;
-            let available_cash = dividend.amount.amount - tax.amount.amount + position.cash.position;
+            let available_cash = dividend.amount.amount + tax.amount.amount + position.cash.position;
             let dividend_transaction = Transaction {
                 id: None,
                 transaction_type: TransactionType::Dividend {
@@ -150,21 +158,25 @@ impl Strategy for ReInvestInSingleStock {
                 cash_flow: dividend,
                 note: None,
             };
+            trace!("ReinvestInSingleStock: added transaction {:?}", dividend_transaction);
             transactions.push(dividend_transaction);
-            let tax_transaction = Transaction {
-                id: None,
-                transaction_type: TransactionType::Tax {
-                    transaction_ref: None,
-                },
-                cash_flow: tax,
-                note: None,
-            };
-            transactions.push(tax_transaction);
+            if tax.amount.amount != 0.0 {
+                let tax_transaction = Transaction {
+                    id: None,
+                    transaction_type: TransactionType::Tax {
+                        transaction_ref: None,
+                    },
+                    cash_flow: tax,
+                    note: None,
+                };
+                trace!("ReinvestInSingleStock: added transaction {:?}", tax_transaction);
+                transactions.push(tax_transaction);
+            }
             // reinvest in stock
             let (asset_quote, _quote_currency) = self.market.db().get_last_quote_before_by_id(self.ticker_id, naive_date_to_date_time(&date, 20)).await?;
             let (additional_position, fee) = self.calc_position_and_fee(available_cash, asset_quote.price);
             if additional_position>0.0 {
-                let transaction = Transaction{
+                let buy_transaction = Transaction{
                     id: None,
                     transaction_type: TransactionType::Asset{
                         asset_id: self.asset_id,
@@ -173,8 +185,9 @@ impl Strategy for ReInvestInSingleStock {
                     cash_flow: CashFlow::new(-additional_position*asset_quote.price, position.cash.currency, date),
                     note: None,
                 };
+                trace!("ReinvestInSingleStock: added transaction {:?}", buy_transaction);
+                transactions.push(buy_transaction);
                 if fee!=0.0 {
-                    transactions.push(transaction);
                     let fee_transaction = Transaction{
                         id: None,
                         transaction_type: TransactionType::Fee{
@@ -183,9 +196,12 @@ impl Strategy for ReInvestInSingleStock {
                         cash_flow: CashFlow::new(-fee, position.cash.currency, date),
                         note: None,
                     };
+                    trace!("ReinvestInSingleStock: added transaction {:?}", fee_transaction);
                     transactions.push(fee_transaction);
                 }
             }
+            debug!("ReInvestInSingleStock: added dividend with amount {} and tax {} and buying {} shares with fee {} from available cash {} with price {} at date {}.", 
+                dividend.amount.amount, -tax.amount.amount, additional_position, fee, available_cash, asset_quote.price, date);
         } 
 
         Ok(transactions)
