@@ -91,7 +91,7 @@ A demonstration of a certain strategy simulation. Here, we compare the outcome
 of different investment strategy into a single stock. A static investment is 
 compared with a strategy that re-invests any cash flow into the stock, either
 with or without taking fee and tax payments into account. The results will be
-plotted to an image, see for example [Total Return image](../strategies.png)
+plotted to an image, see for example [Total Return image](strategies.png)
 
 ## Market Data
 
