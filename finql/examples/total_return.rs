@@ -177,12 +177,13 @@ async fn main() {
     all_time_series.push(TimeSeries{series: no_dividends_returns, title: "AVGO without dividends".to_string()});
 
     // plot the graph
-    make_plot("strategies.svg", "Strategies Performance", &all_time_series).unwrap();
+    make_plot("strategies.png", "Strategies Performance", &all_time_series).unwrap();
 }
 
 fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Result<(), Box<dyn Error>> {
     
-    let root = SVGBackend::new(file_name, (2048, 1024)).into_drawing_area();
+    //let root = SVGBackend::new(file_name, (2048, 1024)).into_drawing_area();
+    let root = BitMapBackend::new(file_name, (2048, 1024)).into_drawing_area();
 
     root.fill(&WHITE)?;
 
