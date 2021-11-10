@@ -10,6 +10,7 @@ pub mod quote;
 pub mod quote_handler;
 pub mod transaction_handler;
 pub mod transaction;
+pub mod object_handler;
 
 pub use asset::Asset;
 pub use asset_handler::AssetHandler;
@@ -19,6 +20,7 @@ pub use transaction::{Transaction, TransactionType};
 pub use transaction_handler::TransactionHandler;
 pub use currency::{Currency, CurrencyConverter, CurrencyError};
 pub use cash_flow::{CashAmount, CashFlow};
+pub use object_handler::ObjectHandler;
 
 #[derive(Debug)]
 pub enum DataError {

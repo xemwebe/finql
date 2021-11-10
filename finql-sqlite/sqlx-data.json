@@ -168,6 +168,16 @@
       ]
     }
   },
+  "1ed4f06bd03b76b63152426c261bf3786acf6088a1a18094174cbec89b176845": {
+    "query": "CREATE TABLE IF NOT EXISTS objects (\n                id TEXT PRIMARY KEY,\n                object TEXT NOT NULL\n            )",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": []
+    }
+  },
   "2726e8670e72c9c4b7c918dff77566dea83371623e18fb24c5fe2b9102c4a697": {
     "query": "DROP TABLE IF EXISTS rounding_digits",
     "describe": {
@@ -640,6 +650,16 @@
       "nullable": []
     }
   },
+  "88ca9ce527fe6dd8678dc2a0eb5213ef04ba45ec79c85c50fa6f52badce87921": {
+    "query": "INSERT INTO objects (id, object) VALUES (?1, ?2)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
   "8c34b6a8e831af2e778836dd72086be47100d72709e6c88c456537d04c64d28d": {
     "query": "SELECT id FROM assets WHERE isin=?",
     "describe": {
@@ -714,6 +734,24 @@
         "Right": 0
       },
       "nullable": []
+    }
+  },
+  "cf7a005f80ea5909f98aac1f1aff8ba7d8633e205d868ef99c356343ab5ee11b": {
+    "query": "SELECT object FROM objects WHERE id=?",
+    "describe": {
+      "columns": [
+        {
+          "name": "object",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "d49c67e45b501b3457a35246d908a01cb61dd2b9a990920fa197ce586f0366d1": {

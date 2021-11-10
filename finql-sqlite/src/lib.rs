@@ -5,6 +5,7 @@ use sqlx::sqlite::SqlitePool;
 pub mod asset_handler;
 pub mod quote_handler;
 pub mod transaction_handler;
+pub mod object_handler;
 
 /// Struct to handle connections to sqlite3 databases
 pub struct SqliteDB {
@@ -82,6 +83,12 @@ impl SqliteDB {
                 id INTEGER PRIMARY KEY,
                 currency TEXT NOT NULL UNIQUE,
                 digits INT NOT NULL
+            )").execute(&self.pool).await?;
+
+        sqlx::query!(
+            "CREATE TABLE IF NOT EXISTS objects (
+                id TEXT PRIMARY KEY,
+                object TEXT NOT NULL
             )").execute(&self.pool).await?;
 
         Ok(())
