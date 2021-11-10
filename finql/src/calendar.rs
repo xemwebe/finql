@@ -173,8 +173,8 @@ impl Calendar {
     }
 
     /// Calculate the next business day
-    pub fn next_bday(&self, mut date: NaiveDate) -> NaiveDate {
-        date = date.succ();
+    pub fn next_bday(&self, date: NaiveDate) -> NaiveDate {
+        let mut date = date.succ();
         while !self.is_business_day(date) {
             date = date.succ();
         }
@@ -182,8 +182,8 @@ impl Calendar {
     }
 
     /// Calculate the previous business day
-    pub fn prev_bday(&self, mut date: NaiveDate) -> NaiveDate {
-        date = date.pred();
+    pub fn prev_bday(&self, date: NaiveDate) -> NaiveDate {
+        let mut date = date.pred();
         while !self.is_business_day(date) {
             date = date.pred();
         }

@@ -221,6 +221,11 @@ mod tests {
             }
             Ok(quotes)
         }
+
+        async fn fetch_dividend_history(&self, _ticker: &Ticker, _start: DateTime<Utc>, _end: DateTime<Utc>) 
+            -> Result<Vec<CashFlow>, MarketQuoteError> {
+            Ok(Vec::new())
+        }
     }
 
     async fn prepare_db(db: Arc<dyn QuoteHandler+Send+Sync>) -> Ticker {
