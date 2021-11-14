@@ -151,6 +151,26 @@
       ]
     }
   },
+  "25d9f589a0b4626a121e90448da162ad25c784fd8a808bb88ab7e3231c6f0bbd": {
+    "query": "SELECT object FROM objects WHERE id=$1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "object",
+          "type_info": "Json"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "2726e8670e72c9c4b7c918dff77566dea83371623e18fb24c5fe2b9102c4a697": {
     "query": "DROP TABLE IF EXISTS rounding_digits",
     "describe": {
@@ -163,6 +183,16 @@
   },
   "29d7dcc2b8042e655051f273e0124f2688268fe7ec524e315556e4b6b0520819": {
     "query": "\n            delete from quotes q \n            where q.id in\n            (select q2.id\n            from \n                quotes q1,\n                quotes q2\n            where \n                q1.id < q2.id\n            and q1.ticker_id = q2.ticker_id \n            and q1.time = q2.time\n            and q1.price = q2.price) \n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
+  "2ff8c2ad3460a112990623d9642fbd4c7518b7474e968df718f0c39a7a8904d9": {
+    "query": "CREATE TABLE IF NOT EXISTS objects (\n            id TEXT PRIMARY KEY,\n            object JSON NOT NULL)",
     "describe": {
       "columns": [],
       "parameters": {
@@ -1028,6 +1058,19 @@
         "Left": [
           "Text",
           "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "f7dd586a7a35ccdb9bd566c2682cd0f304144e7f709d7e293d80d1139f73b6ac": {
+    "query": "INSERT INTO objects (id, object) VALUES ($1, $2)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Json"
         ]
       },
       "nullable": []

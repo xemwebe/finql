@@ -10,5 +10,7 @@ repository = "https://github.com/xemwebe/finql"
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 finql-data = {version = "0.2", path = "../finql-data" }
-sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "postgres", "macros", "chrono", "offline" ] }
+sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "postgres", "macros", "chrono", "offline", "json" ] }
 async-trait = "0.1"
+serde = { version = "1.0.*", features = ["derive"] }
+serde_json = "1.0"
