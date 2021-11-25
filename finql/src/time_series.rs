@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::fmt;
-use chrono::{NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, Local};
 use crate::calendar::Calendar;
 use std::collections::HashSet;
 
@@ -26,7 +26,7 @@ impl Error for TimeSeriesError {
 
 #[derive(Debug)]
 pub struct TimeValue {
-    pub date: NaiveDate,
+    pub time: DateTime<Local>,
     pub value: f64,
 }
 
@@ -38,13 +38,13 @@ pub struct TimeSeries {
 
 impl TimeSeries {
     pub fn min_max(&self) -> Result<(NaiveDate, NaiveDate, f64, f64), TimeSeriesError> {
-        if self.series.len() == 0 {
+        if self.series.is_empty() {
             return Err(TimeSeriesError::IsEmpty)
         }
         let mut min_val = self.series[0].value;
         let mut max_val = min_val;
-        let min_date = self.series[0].date;
-        let max_date = self.series.last().unwrap().date;
+        let min_time = self.series[0].time;
+        let max_time = self.series.last().unwrap().time;
         for v in &self.series {
             if min_val > v.value {
                 min_val = v.value;
@@ -53,17 +53,19 @@ impl TimeSeries {
                 max_val = v.value;
             }
        }
-       Ok((min_date,max_date, min_val, max_val))
+       Ok((min_time.naive_local().date(), max_time.naive_local().date(), min_val, max_val))
     }
 
     pub fn find_gaps(&self, cal: &Calendar) -> Result<Vec<(NaiveDate,NaiveDate)>, TimeSeriesError> {
         let mut gaps = Vec::new();
         let (min_date, _, _, _) = self.min_max()?;
-        let today = Utc::now().naive_local().date();
-        let dates: HashSet<NaiveDate> = self.series.iter().map(|t| t.date ).collect();
+        let today = Local::now().naive_local().date();
+        println!("series: {:?}", self.series);
+        let dates: HashSet<NaiveDate> = self.series.iter().map(|t| t.time.naive_local().date() ).collect();
         let mut gap_begin = None;
         let mut date = min_date;
         while date <= today {
+            println!("contains {}: {}", date, dates.contains(&date));
             match gap_begin {
                 None => {
                     if ! dates.contains(&date) {
@@ -95,6 +97,7 @@ mod tests {
     use super::*;
     use crate::calendar::Holiday;
     use chrono::{Datelike, Weekday};
+    use finql_data::date_time_helper::make_time;
 
     #[test]
     fn finding_gaps() {
@@ -105,17 +108,17 @@ mod tests {
             Holiday::WeekDay(Weekday::Sat),
             Holiday::WeekDay(Weekday::Sun),
         ];
-        let today = Utc::now().naive_local().date();
+        let today = Local::now().naive_local().date();
         let cal = Calendar::calc_calendar(&holidays, 2021, today.year());
 
         let mut ts = TimeSeries{
             title: "test".to_string(),
             series: Vec::new()
         };
-        ts.series.push( TimeValue{ date: NaiveDate::from_ymd(2021, 10, 28), value: 1.0 } );
-        ts.series.push( TimeValue{ date: NaiveDate::from_ymd(2021, 11, 1), value: 1.0 } );
-        ts.series.push( TimeValue{ date: NaiveDate::from_ymd(2021, 11, 8), value: 1.0 } );
-        ts.series.push( TimeValue{ date: NaiveDate::from_ymd(2021, 11, 9), value: 1.0 } );
+        ts.series.push( TimeValue{ time: make_time(2021, 10, 28, 20, 0, 0).unwrap(), value: 1.0 } );
+        ts.series.push( TimeValue{ time: make_time(2021, 11, 1, 20, 0, 0).unwrap(), value: 1.0 } );
+        ts.series.push( TimeValue{ time: make_time(2021, 11, 8, 20, 0, 0).unwrap(), value: 1.0 } );
+        ts.series.push( TimeValue{ time: make_time(2021, 11, 9, 20, 0, 0).unwrap(), value: 1.0 } );
         
         let gaps = ts.find_gaps(&cal).unwrap();
         assert_eq!(gaps.len(), 3);

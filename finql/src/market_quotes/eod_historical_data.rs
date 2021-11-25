@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use eodhistoricaldata_api as eod_api;
 use finql_data::{CashFlow, Currency, Quote, Ticker, 
         date_time_helper::{
@@ -50,15 +50,15 @@ impl MarketQuoteProvider for EODHistData {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let eod_quotes = self
             .connector
             .get_quote_history(
                 &ticker.name,
-                start.naive_utc().date(),
-                end.naive_utc().date(),
+                start.naive_local().date(),
+                end.naive_local().date(),
             )
             .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
@@ -84,14 +84,14 @@ impl MarketQuoteProvider for EODHistData {
     async fn fetch_dividend_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let dividends_since_start = self
             .connector
             .get_dividend_history(
                 &ticker.name,
-                start.naive_utc().date()
+                start.naive_local().date()
             )
             .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
@@ -149,8 +149,8 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
-        let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
+        let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
+        let end = Local.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
         let quotes = eod.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);

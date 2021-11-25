@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use async_trait::async_trait;
 
 use finql_data::{Asset, Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, Quote, Ticker};
@@ -15,7 +15,7 @@ pub async fn insert_fx_quote(
     fx_rate: f64,
     foreign: Currency,
     base: Currency,
-    time: DateTime<Utc>,
+    time: DateTime<Local>,
     quotes: Arc<dyn QuoteHandler+Send+Sync>,
 ) -> Result<(), DataError> {
     let foreign_id = quotes
@@ -86,7 +86,7 @@ pub struct SimpleCurrencyConverter {
 
 #[async_trait]
 impl CurrencyConverter for SimpleCurrencyConverter {
-    async fn fx_rate(&self, foreign_currency: Currency, domestic_currency: Currency, _time: DateTime<Utc>) -> Result<f64, CurrencyError> {
+    async fn fx_rate(&self, foreign_currency: Currency, domestic_currency: Currency, _time: DateTime<Local>) -> Result<f64, CurrencyError> {
         let currency_string = format!("{}/{}", &foreign_currency.to_string(), &domestic_currency.to_string());
         if let Ok(fx_store) = self.fx_rates.read() {
             if fx_store.contains_key(&currency_string) {
@@ -130,13 +130,13 @@ mod tests {
     use std::str::FromStr;
 
     use chrono::offset::TimeZone;
-    use chrono::Utc;
+    use chrono::Local;
 
     use finql_sqlite::SqliteDB;
     use crate::market::Market;
 
     async fn prepare_db(db: Arc<dyn QuoteHandler+Send+Sync>) {
-        let time = Utc.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);
+        let time = Local.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
         insert_fx_quote(0.9, usd, eur, time, db).await.unwrap();
@@ -151,7 +151,7 @@ mod tests {
         let tol = 1.0e-6_f64;
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();
-        let time = Utc::now();
+        let time = Local::now();
         let market = Market::new(qh);
         let fx = market.fx_rate(usd, eur, time).await.unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);

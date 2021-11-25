@@ -1,6 +1,6 @@
 ///! Data handler trait for market quotes
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -41,14 +41,14 @@ pub trait QuoteHandler: AssetHandler {
     async fn get_last_quote_before(
         &self,
         asset_name: &str,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError>;
 
     /// Get the last quote in database for a specific asset id on or before the given time
     async fn get_last_quote_before_by_id(
         &self,
         asset_id: usize,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError>;
 
     async fn get_all_quotes_for_ticker(&self, ticker_id: usize) -> Result<Vec<Quote>, DataError>;

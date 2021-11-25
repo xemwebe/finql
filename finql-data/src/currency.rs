@@ -5,7 +5,7 @@ use std::str::FromStr;
 use async_trait::async_trait;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 
 
 /// Error type related to the Currency
@@ -146,7 +146,7 @@ impl Currency {
 #[async_trait]
 pub trait CurrencyConverter {
     /// returns the price of 1 unit of foreign currency in terms of domestic currency
-    async fn fx_rate(&self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Utc>) -> Result<f64, CurrencyError>;
+    async fn fx_rate(&self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Local>) -> Result<f64, CurrencyError>;
 }
 
 #[cfg(test)]

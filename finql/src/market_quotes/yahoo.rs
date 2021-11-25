@@ -1,6 +1,6 @@
 use super::{MarketQuoteError, MarketQuoteProvider};
 use finql_data::{CashFlow, Quote, Ticker, date_time_helper::unix_to_date_time};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use yahoo_finance_api as yahoo;
 use async_trait::async_trait;
 
@@ -30,12 +30,12 @@ impl MarketQuoteProvider for Yahoo {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new();
         let response = yahoo
-            .get_quote_history(&ticker.name, start, end)
+            .get_quote_history(&ticker.name, start.into(), end.into())
             .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
         let yahoo_quotes = response
@@ -60,12 +60,12 @@ impl MarketQuoteProvider for Yahoo {
     async fn fetch_dividend_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new();
         let response = yahoo
-            .get_quote_history(&ticker.name, start, end)
+            .get_quote_history(&ticker.name, start.into(), end.into())
             .await
             .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
         let yahoo_dividends = response
@@ -84,8 +84,9 @@ impl MarketQuoteProvider for Yahoo {
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
-    use chrono::offset::TimeZone;
- 
+    use chrono::offset::{TimeZone};
+    use chrono_tz::America::New_York;
+
     use finql_data::Currency;
     
     use crate::market_quotes::MarketDataSource;
@@ -119,8 +120,8 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
-        let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
+        let start = New_York.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0).with_timezone(&Local);
+        let end = New_York.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999).with_timezone(&Local);
         let quotes = yahoo.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);

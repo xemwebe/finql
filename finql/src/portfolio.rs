@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use chrono::{NaiveDate,DateTime, Local, Utc};
+use chrono::{NaiveDate,DateTime, Local};
 use chrono::offset::TimeZone;
 
 use finql_data::{AssetHandler, QuoteHandler, DataError,Transaction, 
@@ -55,7 +55,7 @@ pub struct Position {
     pub tax: f64,
     pub currency: Currency,
     pub last_quote: Option<f64>,
-    pub last_quote_time: Option<DateTime<Utc>>,
+    pub last_quote_time: Option<DateTime<Local>>,
 }
 
 /// Calculate the total position as of a given date by applying a specified set of filters
@@ -100,7 +100,7 @@ impl Position {
     /// Add quote information to position
     /// If no quote is available (or no conversion to position currency), calculate
     /// from purchase value.
-    pub async fn add_quote(&mut self, time: DateTime<Utc>, market: &Market) {
+    pub async fn add_quote(&mut self, time: DateTime<Local>, market: &Market) {
         if let Some(asset_id) = self.asset_id {
             let quote_and_curr =  market.db().get_last_quote_before_by_id(asset_id, time).await;
             if let Ok((quote, currency)) = quote_and_curr {
@@ -126,9 +126,9 @@ impl Position {
                 self.last_quote_time = None;
             }
         } else {
-            // No asset ID, must some technical account, set price to 1.0
+            // No asset ID, must be some technical account, set price to 1.0
             self.last_quote = Some(1.0);
-            self.last_quote_time = Some(DateTime::<Utc>::from(Local::now()));
+            self.last_quote_time = Some(Local::now());
         };
     }
 }
@@ -155,7 +155,7 @@ impl PortfolioPosition {
         Ok(())
     }
 
-    pub async fn add_quote(&mut self, time: DateTime<Utc>, market: &Market) {
+    pub async fn add_quote(&mut self, time: DateTime<Local>, market: &Market) {
         for pos in self.assets.values_mut() {
             pos.add_quote(time, market).await;
         }
@@ -370,12 +370,12 @@ pub fn calc_delta_position(
 /// using the latest available quote before midnight of that date.
 pub async fn calculate_position_and_pnl(currency: Currency, transactions: &[Transaction], date: Option<NaiveDate>, db: Arc<dyn QuoteHandler+Send+Sync>) 
     -> Result<(PortfolioPosition, PositionTotals), PositionError> {
-    let mut position = calc_position(currency, &transactions, date)?;
+    let mut position = calc_position(currency, transactions, date)?;
     position.get_asset_names(db.clone().into_arc_dispatch()).await.map_err(PositionError::NoAsset)?;
-    let date_time: DateTime<Utc> = if let Some(date) = date {
-        DateTime::<Utc>::from(Local.from_local_datetime(&date.and_hms(0,0,0)).unwrap())
+    let date_time: DateTime<Local> = if let Some(date) = date {
+        DateTime::<Local>::from(Local.from_local_datetime(&date.and_hms(0,0,0)).unwrap())
     } else {
-        Utc::now()
+        Local::now()
     };
     let market = Market::new(db);
     position.add_quote(date_time, &market).await;
@@ -395,9 +395,9 @@ pub async fn calculate_position_for_period(currency: Currency, transactions: &[T
             -> Result<(PortfolioPosition, PositionTotals), PositionError> {
     let (mut position, _) = calculate_position_and_pnl(currency, transactions, Some(start), db.clone()).await?;
     position.reset_pnl();
-    calc_delta_position(&mut position, &transactions, Some(start), Some(end))?;
+    calc_delta_position(&mut position, transactions, Some(start), Some(end))?;
     position.get_asset_names(db.clone().into_arc_dispatch()).await.map_err(PositionError::NoAsset)?;
-    let end_date_time: DateTime<Utc> = DateTime::<Utc>::from(Local.from_local_datetime(&end.succ().and_hms(0,0,0)).unwrap());
+    let end_date_time: DateTime<Local> = DateTime::<Local>::from(Local.from_local_datetime(&end.succ().and_hms(0,0,0)).unwrap());
     let quote_handler = db as Arc<dyn QuoteHandler+Send+Sync>;
     let market = Market::new(quote_handler);
     position.add_quote(end_date_time, &market).await;
@@ -715,13 +715,13 @@ mod tests {
         assert_fuzzy_eq!(eur_position.last_quote.unwrap(), 12.34, tol);
         assert_eq!(
             eur_position.last_quote_time.unwrap().format("%F %H:%M:%S").to_string(),
-            "2019-12-30 09:00:00"
+            "2019-12-30 10:00:00"
         );
         usd_position.add_quote(time, &market).await;
         assert_fuzzy_eq!(usd_position.last_quote.unwrap(), 86.42, tol);
         assert_eq!(
             usd_position.last_quote_time.unwrap().format("%F %H:%M:%S").to_string(),
-            "2019-12-30 09:00:00"
+            "2019-12-30 10:00:00"
         );
     }
 }

@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use std::ops::Neg;
 
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc, NaiveDate};
+use chrono::{DateTime, Local, NaiveDate};
 
 use crate::currency::{Currency, CurrencyConverter, CurrencyError};
 
@@ -22,7 +22,7 @@ impl CashAmount {
     pub async fn add(
         &mut self,
         cash_amount: CashAmount,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
         currency_converter: &(dyn CurrencyConverter+Send+Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
@@ -42,7 +42,7 @@ impl CashAmount {
     pub async fn add_opt(
         &mut self,
         cash_amount: Option<CashAmount>,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
         currency_converter: &(dyn CurrencyConverter+Send+Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
@@ -55,7 +55,7 @@ impl CashAmount {
     pub async fn sub(
         &mut self,
         cash_amount: CashAmount,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
         currency_converter: &(dyn CurrencyConverter+Send+Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
@@ -75,7 +75,7 @@ impl CashAmount {
     pub async fn sub_opt(
         &mut self,
         cash_amount: Option<CashAmount>,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
         currency_converter: &(dyn CurrencyConverter+Send+Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {

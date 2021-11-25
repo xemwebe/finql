@@ -1,14 +1,14 @@
 /// A tool to fetch prices by parsing comdirect web page
 use super::{MarketQuoteError, MarketQuoteProvider};
 use finql_data::{CashFlow, Quote, Ticker, date_time_helper::date_time_from_str};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use scraper::{Html, Selector};
 use async_trait::async_trait;
 use tokio_compat_02::FutureExt;
 
 #[derive(Debug)]
 pub struct ComdirectQuote {
-    date: DateTime<Utc>,
+    date: DateTime<Local>,
     high: Option<f64>,
     low: Option<f64>,
     close: f64,
@@ -71,8 +71,8 @@ impl Comdirect {
     pub async fn get_quote_history(
         &self,
         id: &str,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<ComdirectQuote>, MarketQuoteError> {
         let url = format!(
             "{}{}{}{}{}{}",
@@ -161,7 +161,7 @@ impl MarketQuoteProvider for Comdirect {
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let codi = Comdirect::new();
         let price = codi.get_latest_quote(&ticker.name).await?;
-        let time = Utc::now();
+        let time = Local::now();
         Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
@@ -174,8 +174,8 @@ impl MarketQuoteProvider for Comdirect {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let codi = Comdirect::new();
         let codi_quotes = codi.get_quote_history(&ticker.name, start, end).await?;
@@ -197,8 +197,8 @@ impl MarketQuoteProvider for Comdirect {
     async fn fetch_dividend_history(
         &self,
         _ticker: &Ticker,
-        _start: DateTime<Utc>,
-        _end: DateTime<Utc>,
+        _start: DateTime<Local>,
+        _end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         Err(MarketQuoteError::FetchFailed("The comdirect interface does not support fetching dividends".to_string()))
     }
@@ -242,8 +242,8 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
-        let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
+        let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
+        let end = Local.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
         let quotes = codi.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);

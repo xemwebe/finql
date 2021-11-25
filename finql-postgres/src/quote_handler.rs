@@ -1,6 +1,6 @@
 ///! Implementation for quote handler with Sqlite3 database as backend
 use std::str::FromStr;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -212,7 +212,7 @@ impl QuoteHandler for PostgresDB {
     async fn get_last_quote_before(
         &self,
         asset_name: &str,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError> {
         let row = sqlx::query!(
                 "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
@@ -226,7 +226,7 @@ impl QuoteHandler for PostgresDB {
         let id = row.id;
         let ticker = row.ticker_id;
         let price = row.price;
-        let time = row.time;
+        let time: DateTime<Local> = row.time.into();
         let volume = row.volume;
         let currency = row.currency;
         let currency =
@@ -246,7 +246,7 @@ impl QuoteHandler for PostgresDB {
     async fn get_last_quote_before_by_id(
         &self,
         asset_id: usize,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError> {
         let row = sqlx::query!(
                 "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
@@ -260,7 +260,7 @@ impl QuoteHandler for PostgresDB {
         let id = row.id;
         let ticker = row.ticker_id;
         let price = row.price;
-        let time = row.time;
+        let time: DateTime<Local> = row.time.into();
         let volume = row.volume;
         let currency = row.currency;
         let currency =
@@ -287,7 +287,7 @@ impl QuoteHandler for PostgresDB {
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
             let id = row.id;
-            let time = row.time;
+            let time = row.time.into();
             quotes.push(Quote {
                 id: Some(id as usize),
                 ticker: ticker_id,
@@ -353,7 +353,7 @@ impl QuoteHandler for PostgresDB {
         ).fetch_all(&self.pool).await;
         match rows {
             Ok(row_vec) => {
-                if row_vec.len() > 0 {
+                if row_vec.is_empty() {
                     let digits: i32 = row_vec[0].digits;
                     digits
                 } else {

@@ -51,8 +51,8 @@ pub trait Strategy {
 
 
 fn cash_flow_idx(date: NaiveDate, cash_flows: &[CashFlow]) -> Option<usize> {
-    for i in 0..cash_flows.len() {
-        if cash_flows[i].date == date {
+    for (i, cf) in cash_flows.iter().enumerate() {
+        if cf.date == date {
             return Some(i);
         }
     }
@@ -80,9 +80,9 @@ impl Strategy for StaticInSingleStock {
     async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>, DataError> {
         let mut transactions = Vec::new();
         if let Some(idx) = cash_flow_idx(date, &self.dividends) {
-            let mut dividend = self.dividends[idx].clone();
+            let mut dividend = self.dividends[idx];
             dividend.amount.amount *= position.assets[&self.asset_id].position;
-            let mut tax = dividend.clone();
+            let mut tax = dividend;
             tax.amount.amount = -self.costs.tax_rate * dividend.amount.amount;
             let dividend_transaction = Transaction {
                 id: None,
@@ -145,9 +145,9 @@ impl Strategy for ReInvestInSingleStock {
     async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>, DataError> {
         let mut transactions = Vec::new();
         if let Some(idx) = cash_flow_idx(date, &self.dividends) {
-            let mut dividend = self.dividends[idx].clone();
+            let mut dividend = self.dividends[idx];
             dividend.amount.amount *= position.assets[&self.asset_id].position;
-            let mut tax = dividend.clone();
+            let mut tax = dividend;
             tax.amount.amount = -self.costs.tax_rate * dividend.amount.amount;
             let available_cash = dividend.amount.amount + tax.amount.amount + position.cash.position;
             let dividend_transaction = Transaction {

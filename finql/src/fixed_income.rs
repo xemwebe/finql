@@ -43,7 +43,7 @@ pub trait FixedIncome {
         calendar_provider: &dyn CalendarProvider,
     ) -> Result<f64, Self::Error> {
         let cash_flows = self.rollout_cash_flows(1., calendar_provider)?;
-        let value = calculate_cash_flows_ytm(&cash_flows, &purchase_cash_flow)?;
+        let value = calculate_cash_flows_ytm(&cash_flows, purchase_cash_flow)?;
         Ok(value)
     }
 }
@@ -103,7 +103,7 @@ impl<'a> ArgminOp for FlatRateDiscounter<'a> {
         let today = self.init_cash_flow.date;
         for cf in self.cash_flows {
             if cf.date > today {
-                sum += discount_rate.discount_cash_flow(&cf, today)?.amount;
+                sum += discount_rate.discount_cash_flow(cf, today)?.amount;
             }
         }
         Ok(sum)
@@ -139,7 +139,7 @@ impl<'de> Deserialize<'de> for FlatRateDiscounter<'de> {
 mod tests {
     use std::str::FromStr;
     use std::collections::BTreeMap;
-    use chrono::{TimeZone, Utc};
+    use chrono::{TimeZone, Local};
 
     use finql_data::{Currency, CashAmount, CashFlow};
 
@@ -160,7 +160,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn cash_amount_arithmetic_sqlite() {
         let tol = 1e-11;
-        let time = Utc.ymd(2020, 4, 6).and_hms_milli(18, 0, 0, 0);
+        let time = Local.ymd(2020, 4, 6).and_hms_milli(18, 0, 0, 0);
 
         let eur = Currency::from_str("EUR").unwrap();
         let jpy = Currency::from_str("JPY").unwrap();
@@ -249,7 +249,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn cash_amount_arithmetic_simple() {
         let tol = 1e-11;
-        let time = Utc.ymd(2020, 4, 6).and_hms_milli(18, 0, 0, 0);
+        let time = Local.ymd(2020, 4, 6).and_hms_milli(18, 0, 0, 0);
 
         let eur = Currency::from_str("EUR").unwrap();
         let jpy = Currency::from_str("JPY").unwrap();

@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -227,7 +227,7 @@ impl QuoteHandler for SqliteDB {
     async fn get_last_quote_before(
         &self,
         asset_name: &str,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError> {
         let row = sqlx::query!(
                 "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
@@ -261,7 +261,7 @@ impl QuoteHandler for SqliteDB {
     async fn get_last_quote_before_by_id(
         &self,
         asset_id: usize,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError> {
         let asset_id = asset_id as i32;
         let row = sqlx::query!(

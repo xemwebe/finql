@@ -1,6 +1,6 @@
 ///! Implementation of a container for basic asset data
 use std::cmp::Ordering;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
 use crate::currency::Currency;
@@ -22,7 +22,7 @@ pub struct Quote {
     pub id: Option<usize>,
     pub ticker: usize,
     pub price: f64,
-    pub time: DateTime<Utc>,
+    pub time: DateTime<Local>,
     pub volume: Option<f64>,
 }
 

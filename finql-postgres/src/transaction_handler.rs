@@ -46,20 +46,20 @@ impl RawTransaction {
         let transaction_type = match self.trans_type.as_str() {
             CASH => TransactionType::Cash,
             ASSET => TransactionType::Asset {
-                asset_id: self.asset.ok_or(DataError::InvalidTransaction(
+                asset_id: self.asset.ok_or_else(|| DataError::InvalidTransaction(
                     "missing asset id".to_string(),
                 ))? as usize,
-                position: self.position.ok_or(DataError::InvalidTransaction(
+                position: self.position.ok_or_else(|| DataError::InvalidTransaction(
                     "missing position value".to_string(),
                 ))?,
             },
             DIVIDEND => TransactionType::Dividend {
-                asset_id: self.asset.ok_or(DataError::InvalidTransaction(
+                asset_id: self.asset.ok_or_else(|| DataError::InvalidTransaction(
                     "missing asset id".to_string(),
                 ))? as usize,
             },
             INTEREST => TransactionType::Interest {
-                asset_id: self.asset.ok_or(DataError::InvalidTransaction(
+                asset_id: self.asset.ok_or_else(|| DataError::InvalidTransaction(
                     "missing asset id".to_string(),
                 ))? as usize,
             },

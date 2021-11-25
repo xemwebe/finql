@@ -5,10 +5,10 @@ use std::error::Error;
 
 use pretty_env_logger;
 use log::debug;
-use chrono::{Utc, NaiveDate, Datelike};
+use chrono::{Local, NaiveDate, Datelike};
 use plotters::prelude::*;
 
-use finql_data::{Asset, CashFlow, Currency, Ticker, QuoteHandler, Transaction, TransactionType, date_time_helper::naive_date_to_date_time};
+use finql_data::{Asset, CashFlow, Currency, Ticker, QuoteHandler, Transaction, TransactionType, date_time_helper::{make_time, naive_date_to_date_time}};
 use finql::{
     Market,
     time_period::TimePeriod, 
@@ -66,9 +66,10 @@ async fn calc_strategy(currency: Currency, start_transactions: &Vec<Transaction>
         debug!("CalcStrategy: cash position after applying new transactions: {}", position.cash.position);
 
         current_date = next_date;
-        position.add_quote(naive_date_to_date_time(&current_date, 20), &market).await;
+        let current_time = naive_date_to_date_time(&current_date, 20);
+        position.add_quote(current_time, &market).await;
         let totals = position.calc_totals();
-        total_return.push(TimeValue{ value: totals.value, date: current_date});
+        total_return.push(TimeValue{ value: totals.value, time: current_time});
     }
     total_return
 }
@@ -79,7 +80,7 @@ async fn main() {
     pretty_env_logger::init();
 
     println!("Calculate total return of single investment of 10'000 USD in Broadcom (AVGO) five years before today");
-    let today = Utc::now().naive_local().date();
+    let today = Local::now().naive_local().date();
     let five_years_before = "-5Y".parse::<TimePeriod>().unwrap();
     let start = five_years_before.add_to(today, None);
     println!("The simulation will run from {} until {}.", start, today);
@@ -210,11 +211,11 @@ fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Re
     }
 
     let y_range = min_val..max_val;
-    min_date = NaiveDate::from_ymd(min_date.year(), min_date.month(), 1);
+    let min_time = make_time(min_date.year(), min_date.month(), 1, 0, 0, 0).unwrap();
     let max_year = max_date.year();
     let max_month = max_date.month();
-    max_date = NaiveDate::from_ymd(max_year, max_month, last_day_of_month(max_year, max_month));
-    let x_range = (min_date..max_date).monthly();
+    let max_time = make_time(max_year, max_month, last_day_of_month(max_year, max_month), 23, 59, 59).unwrap();
+    let x_range = (min_time..max_time).monthly();
 
     let mut chart = ChartBuilder::on(&root)
         .margin(10)
@@ -238,7 +239,7 @@ fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Re
     let mut color_index: usize = 0;
     for ts in all_time_series {
         chart.draw_series(LineSeries::new(
-            ts.series.iter().map(|v| (v.date, v.value) ),
+            ts.series.iter().map(|v| (v.time, v.value) ),
             COLORS[color_index],
         ))?
         .label(&ts.title)

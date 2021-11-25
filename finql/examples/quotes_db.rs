@@ -184,6 +184,8 @@ async fn quote_tests(market: &mut Market) {
     } else {
         println!("failed");
     }
+    println!("List of quotes in db: {:?}", quotes);
+    
     // correct wrong quote
     log("update quote...");
     wrong_quote.id = Some(wrong_quote_id);

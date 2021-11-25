@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc, Duration};
+use chrono::{DateTime, Local, Duration};
 use async_trait::async_trait;
 use tokio_compat_02::FutureExt;
 
@@ -43,10 +43,10 @@ impl MarketQuoteProvider for AlphaVantage {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
-        let now = Utc::now();
+        let now = Local::now();
         // This estimate is conservative, since we expect less business days than calendar
         // days, but to be on the conservative side, we use calendar days
         let output_size = if now.signed_duration_since(start) > Duration::days(100) {
@@ -86,8 +86,8 @@ impl MarketQuoteProvider for AlphaVantage {
     async fn fetch_dividend_history(
         &self,
         _ticker: &Ticker,
-        _start: DateTime<Utc>,
-        _end: DateTime<Utc>,
+        _start: DateTime<Local>,
+        _end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         Err(MarketQuoteError::FetchFailed("The Alpha Vantage API does not support fetching dividends".to_string()))
     }
@@ -133,8 +133,8 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
-        let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
+        let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
+        let end = Local.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
         let quotes = alpha.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);

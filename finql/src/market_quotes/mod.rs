@@ -2,7 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
@@ -56,16 +56,16 @@ pub trait MarketQuoteProvider: Send+Sync {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<Quote>, MarketQuoteError>;
 
     /// Fetch historic dividends (if any), returning a vector of cash flows, each cash flow representing a dividend payment per single stock
     async fn fetch_dividend_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError>;
 }
 
@@ -74,7 +74,7 @@ pub async fn update_ticker<'a>(
     ticker: &Ticker,
     db: Arc<dyn QuoteHandler+Send+Sync+'a>,
 ) -> Result<(), MarketQuoteError> {
-    let mut quote = provider.fetch_latest_quote(&ticker).await?;
+    let mut quote = provider.fetch_latest_quote(ticker).await?;
     quote.price *= ticker.factor;
     db.insert_quote(&quote).await
         .map_err(|e| MarketQuoteError::StoringFailed(e.to_string()))?;
@@ -86,13 +86,13 @@ pub async fn update_ticker_history<'a>(
     provider: &(dyn MarketQuoteProvider + Send + Sync),
     ticker: &Ticker,
     db: Arc<dyn QuoteHandler+Send+Sync+'a>,
-    start: DateTime<Utc>,
-    end: DateTime<Utc>,
+    start: DateTime<Local>,
+    end: DateTime<Local>,
 ) -> Result<(), MarketQuoteError> {
     let mut quotes = provider.fetch_quote_history(ticker, start, end).await?;
     for mut quote in &mut quotes {
         quote.price *= ticker.factor;
-        db.insert_quote(&quote).await
+        db.insert_quote(quote).await
             .map_err(|e| MarketQuoteError::StoringFailed(e.to_string()))?;
     }
     Ok(())
@@ -178,7 +178,7 @@ mod tests {
 
     use std::str::FromStr;
     use chrono::offset::TimeZone;
-    use chrono::{Duration, Utc};
+    use chrono::{Duration, Local};
     use rand::Rng;
 
     use finql_data::{Asset, Currency, QuoteHandler};
@@ -193,7 +193,7 @@ mod tests {
                 id: None,
                 ticker: ticker.id.unwrap(),
                 price: 1.23,
-                time: Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0),
+                time: Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0),
                 volume: None,
             })
         }
@@ -201,8 +201,8 @@ mod tests {
         async fn fetch_quote_history(
             &self,
             ticker: &Ticker,
-            start: DateTime<Utc>,
-            end: DateTime<Utc>,
+            start: DateTime<Local>,
+            end: DateTime<Local>,
         ) -> Result<Vec<Quote>, MarketQuoteError> {
             let mut rng = rand::thread_rng();
             let mut quotes = Vec::new();
@@ -222,7 +222,7 @@ mod tests {
             Ok(quotes)
         }
 
-        async fn fetch_dividend_history(&self, _ticker: &Ticker, _start: DateTime<Utc>, _end: DateTime<Utc>) 
+        async fn fetch_dividend_history(&self, _ticker: &Ticker, _start: DateTime<Local>, _end: DateTime<Local>) 
             -> Result<Vec<CashFlow>, MarketQuoteError> {
             Ok(Vec::new())
         }
@@ -273,8 +273,8 @@ mod tests {
         db.init().await.unwrap();
         let ticker = prepare_db(db.clone()).await;
         let provider = DummyProvider {};
-        let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
-        let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
+        let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
+        let end = Local.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
         update_ticker_history(&provider, &ticker, db.clone(), start, end).await.unwrap();
         let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
         assert_eq!(quotes.len(), 31);

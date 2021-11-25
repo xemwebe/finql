@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 use async_trait::async_trait;
 use gurufocus_api as gfapi;
 
@@ -53,8 +53,8 @@ impl MarketQuoteProvider for GuruFocus {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let gf_quotes = self
             .connector
@@ -86,8 +86,8 @@ impl MarketQuoteProvider for GuruFocus {
     async fn fetch_dividend_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let gf_dividends = self
             .connector
@@ -149,8 +149,8 @@ mod tests {
             priority: 1,
             factor: 1.0,
         };
-        let start = Utc.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
-        let end = Utc.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
+        let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
+        let end = Local.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
         let quotes = gf.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert!(quotes.len() > 15);
         assert!(quotes[0].price != 0.0);

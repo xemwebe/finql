@@ -8,7 +8,7 @@ use std::fmt;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use chrono::{DateTime, NaiveDate, Utc, Weekday};
+use chrono::{DateTime, NaiveDate, Local, Weekday};
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
@@ -128,8 +128,8 @@ impl Market {
     pub async fn update_quote_history(
         &self,
         ticker_id: usize,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<(), MarketError> {
         let ticker = self.db.get_ticker_by_id(ticker_id).await?;
         let provider = self.provider.get(&ticker.source);
@@ -150,8 +150,8 @@ impl Market {
     pub async fn update_quote_history_for_asset(
         &self,
         asset_id: usize,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
     ) -> Result<(), MarketError> {
         let tickers = self.db.get_all_ticker_for_asset(asset_id).await?;
         for ticker in tickers {
@@ -199,7 +199,7 @@ impl CurrencyConverter for Market {
         &self,
         foreign: Currency,
         base: Currency,
-        time: DateTime<Utc>,
+        time: DateTime<Local>,
     ) -> Result<f64, CurrencyError> {
         if foreign == base {
             return Ok(1.0);
