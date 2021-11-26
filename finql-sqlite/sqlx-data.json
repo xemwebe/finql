@@ -10,6 +10,16 @@
       "nullable": []
     }
   },
+  "039b2dc4a4478ae1ba3b5e62a09717f7e5e1e76109dcece1dee53ee7a4028871": {
+    "query": "CREATE TABLE IF NOT EXISTS ticker (\n                id INTEGER PRIMARY KEY,\n                name TEXT NOT NULL,\n                asset_id INTEGER NOT NULL,\n                source TEXT NOT NULL,\n                priority INTEGER NOT NULL,\n                currency TEXT NOT NULL,\n                factor REAL NOT NULL DEFAULT 1.0,\n                tz TEXT,\n                cal TEXT,\n                FOREIGN KEY(asset_id) REFERENCES assets(id) \n            )",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": []
+    }
+  },
   "05bac0434b2b4a97ea9587291364d4b769772596bbf51f659d329c675b3e30eb": {
     "query": "CREATE TABLE IF NOT EXISTS transactions (\n                id INTEGER PRIMARY KEY,\n                trans_type TEXT NOT NULL,\n                asset_id INTEGER,\n                cash_amount REAL NOT NULL,\n                cash_currency TEXT NOT NULL,\n                cash_date TEXT NOT NULL,\n                related_trans INTEGER,\n                position REAL,\n                note TEXT,\n                time_stamp INTEGER NOT NULL,\n                FOREIGN KEY(asset_id) REFERENCES assets(id),\n                FOREIGN KEY(related_trans) REFERENCES transactions(id)\n            )",
     "describe": {
@@ -198,16 +208,6 @@
       "nullable": []
     }
   },
-  "30a365d3e2058c995c25bb6ef622f0acd055d99d9e9d060cdcab6794189c2a54": {
-    "query": "UPDATE ticker SET name=?2, asset_id=?3, source=?4, priority=?5, currency=?6, factor=?7\n                WHERE id=?1",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 7
-      },
-      "nullable": []
-    }
-  },
   "3296b0aed45be6ec29ba78eac259728887e8c5f8a2cb0567353a89421cce4211": {
     "query": "UPDATE quotes SET ticker_id=?2, price=?3, time=?4, volume=?5\n                WHERE id=?1",
     "describe": {
@@ -292,6 +292,126 @@
       ]
     }
   },
+  "3e911aff702f2ee523e11a495a5310d075869d2c5e33feb8dfb9f208a26f995e": {
+    "query": "SELECT id, name, source, priority, currency, factor, tz, cal FROM ticker WHERE asset_id=?",
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "source",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "priority",
+          "ordinal": 3,
+          "type_info": "Int64"
+        },
+        {
+          "name": "currency",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "factor",
+          "ordinal": 5,
+          "type_info": "Float"
+        },
+        {
+          "name": "tz",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "cal",
+          "ordinal": 7,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
+  "3ed17ccfef2d76c64bf92445e1d9c920cbe42362503ddec2046000c6e978ce7a": {
+    "query": "SELECT name, asset_id, source, priority, currency, factor, tz, cal FROM ticker WHERE id=?",
+    "describe": {
+      "columns": [
+        {
+          "name": "name",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "asset_id",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "source",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "priority",
+          "ordinal": 3,
+          "type_info": "Int64"
+        },
+        {
+          "name": "currency",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "factor",
+          "ordinal": 5,
+          "type_info": "Float"
+        },
+        {
+          "name": "tz",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "cal",
+          "ordinal": 7,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
   "477a18ebcdc948588d246043e085f67e58f6e28e02ab4ec1e0f019eb99dbedd9": {
     "query": "SELECT id, trans_type, asset_id, \n        cash_amount, cash_currency, cash_date, related_trans, position, note \n        FROM transactions",
     "describe": {
@@ -368,54 +488,6 @@
       "nullable": []
     }
   },
-  "4ebbf985db4da836a73afbd7504f08d31c4e79e0b6da5b3d5c0fb1be3ec869af": {
-    "query": "SELECT id, name, source, priority, currency, factor FROM ticker WHERE asset_id=?",
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "name",
-          "ordinal": 1,
-          "type_info": "Text"
-        },
-        {
-          "name": "source",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "priority",
-          "ordinal": 3,
-          "type_info": "Int64"
-        },
-        {
-          "name": "currency",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "factor",
-          "ordinal": 5,
-          "type_info": "Float"
-        }
-      ],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
   "625df8d5eac7ec128ebf22096f4b4674aa39b7b675db2f2c9612d5549862b84e": {
     "query": "INSERT INTO quotes (ticker_id, price, time, volume) \n                VALUES (?, ?, ?, ?)",
     "describe": {
@@ -426,56 +498,8 @@
       "nullable": []
     }
   },
-  "67593e25d89ac0c3ee0bc48184ef79effb31ccc63dce2caa5aae1c2a060c1dbb": {
-    "query": "SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=?",
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "name",
-          "ordinal": 1,
-          "type_info": "Text"
-        },
-        {
-          "name": "asset_id",
-          "ordinal": 2,
-          "type_info": "Int64"
-        },
-        {
-          "name": "priority",
-          "ordinal": 3,
-          "type_info": "Int64"
-        },
-        {
-          "name": "currency",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "factor",
-          "ordinal": 5,
-          "type_info": "Float"
-        }
-      ],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
-  "6f3da4e9a48ffb70928cb3810a08a8edca4b01f9b7203a7db213736022833d6b": {
-    "query": "SELECT id, name, asset_id, priority, source, currency, factor FROM ticker",
+  "71befd8a497ede027b2915014f3e1c73a64b2c2b6c1034526641c6573d708ca0": {
+    "query": "SELECT id, name, asset_id, priority, source, currency, factor, tz, cal FROM ticker",
     "describe": {
       "columns": [
         {
@@ -512,6 +536,16 @@
           "name": "factor",
           "ordinal": 6,
           "type_info": "Float"
+        },
+        {
+          "name": "tz",
+          "ordinal": 7,
+          "type_info": "Text"
+        },
+        {
+          "name": "cal",
+          "ordinal": 8,
+          "type_info": "Text"
         }
       ],
       "parameters": {
@@ -524,7 +558,9 @@
         false,
         false,
         false,
-        false
+        false,
+        true,
+        true
       ]
     }
   },
@@ -592,64 +628,6 @@
       ]
     }
   },
-  "862c0f517783d4e65d0b38e5947cf1d564a23287c3a91d3c88c75138db6e6e6a": {
-    "query": "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=?",
-    "describe": {
-      "columns": [
-        {
-          "name": "name",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "asset_id",
-          "ordinal": 1,
-          "type_info": "Int64"
-        },
-        {
-          "name": "source",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "priority",
-          "ordinal": 3,
-          "type_info": "Int64"
-        },
-        {
-          "name": "currency",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "factor",
-          "ordinal": 5,
-          "type_info": "Float"
-        }
-      ],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
-  "86f426b15942101acfe34f71058095e3ab7fddf8eb5208ff997d9c4e15d149a8": {
-    "query": "INSERT INTO ticker (name, asset_id, source, priority, currency, factor) \n            VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 6
-      },
-      "nullable": []
-    }
-  },
   "88ca9ce527fe6dd8678dc2a0eb5213ef04ba45ec79c85c50fa6f52badce87921": {
     "query": "INSERT INTO objects (id, object) VALUES (?1, ?2)",
     "describe": {
@@ -678,6 +656,16 @@
       ]
     }
   },
+  "a345070a7946ebbc36422066e09a081e34fde00c0e051500426d94ccf0878bd2": {
+    "query": "UPDATE ticker SET name=?2, asset_id=?3, source=?4, priority=?5, currency=?6, factor=?7, tz=?8, cal=?9\n                WHERE id=?1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 9
+      },
+      "nullable": []
+    }
+  },
   "b43004a4421651c40e4af0e172c95c21dc86d26e1441a60d99a60478c680edd2": {
     "query": "DELETE FROM transactions WHERE id=?",
     "describe": {
@@ -690,16 +678,6 @@
   },
   "bd142e357d737fce06e20e457881d8ad55eede6b714ed3100f2675430d034e74": {
     "query": "CREATE TABLE IF NOT EXISTS rounding_digits (\n                id INTEGER PRIMARY KEY,\n                currency TEXT NOT NULL UNIQUE,\n                digits INT NOT NULL\n            )",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 0
-      },
-      "nullable": []
-    }
-  },
-  "c0f2ee69e780d4bf665114891fce41816bb921328608774255d7309ae2cc9010": {
-    "query": "CREATE TABLE IF NOT EXISTS ticker (\n                id INTEGER PRIMARY KEY,\n                name TEXT NOT NULL,\n                asset_id INTEGER NOT NULL,\n                source TEXT NOT NULL,\n                priority INTEGER NOT NULL,\n                currency TEXT NOT NULL,\n                factor REAL NOT NULL DEFAULT 1.0,\n                FOREIGN KEY(asset_id) REFERENCES assets(id) \n            )",
     "describe": {
       "columns": [],
       "parameters": {
@@ -723,6 +701,66 @@
       },
       "nullable": [
         false
+      ]
+    }
+  },
+  "c521cefd5f901fcdd06f9805cc8208368ffce915160d107c37f9921a996f3981": {
+    "query": "SELECT id, name, asset_id, priority, currency, factor, tz, cal FROM ticker WHERE source=?",
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "name",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "asset_id",
+          "ordinal": 2,
+          "type_info": "Int64"
+        },
+        {
+          "name": "priority",
+          "ordinal": 3,
+          "type_info": "Int64"
+        },
+        {
+          "name": "currency",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "factor",
+          "ordinal": 5,
+          "type_info": "Float"
+        },
+        {
+          "name": "tz",
+          "ordinal": 6,
+          "type_info": "Text"
+        },
+        {
+          "name": "cal",
+          "ordinal": 7,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
       ]
     }
   },
@@ -778,6 +816,16 @@
       "columns": [],
       "parameters": {
         "Right": 1
+      },
+      "nullable": []
+    }
+  },
+  "e06d317fc839288fadd00512cefe8b8cb04d04941040117efb3cc1691027ac46": {
+    "query": "INSERT INTO ticker (name, asset_id, source, priority, currency, factor, tz, cal) \n            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 8
       },
       "nullable": []
     }

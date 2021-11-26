@@ -22,14 +22,16 @@ impl QuoteHandler for SqliteDB {
         let asset_id = ticker.asset as i64;
         let curr = ticker.currency.to_string();
         sqlx::query!(
-            "INSERT INTO ticker (name, asset_id, source, priority, currency, factor) 
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO ticker (name, asset_id, source, priority, currency, factor, tz, cal) 
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             ticker.name,
             asset_id,
             ticker.source,
             ticker.priority,
             curr,
             ticker.factor,
+            ticker.tz,
+            ticker.cal,
         ).execute(&self.pool).await
         .map_err(|e| DataError::InsertFailed(e.to_string()))?;
 
@@ -63,7 +65,7 @@ impl QuoteHandler for SqliteDB {
     async fn get_ticker_by_id(&self, id: usize) -> Result<Ticker, DataError> {
         let id_param = id as i32;
         let row = sqlx::query!(
-                "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=?",
+                "SELECT name, asset_id, source, priority, currency, factor, tz, cal FROM ticker WHERE id=?",
                 id_param,
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
@@ -81,13 +83,15 @@ impl QuoteHandler for SqliteDB {
             priority: row.priority as i32,
             currency,
             factor: row.factor.into(),
+            tz: row.tz,
+            cal: row.cal,
         })
     }
 
     async fn get_all_ticker(&self) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, name, asset_id, priority, source, currency, factor FROM ticker",
+                "SELECT id, name, asset_id, priority, source, currency, factor, tz, cal FROM ticker",
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
@@ -106,6 +110,8 @@ impl QuoteHandler for SqliteDB {
                 priority: row.priority as i32,
                 currency,
                 factor: factor as f64,
+                tz: row.tz,
+                cal: row.cal,
             });
         }
         Ok(all_ticker)
@@ -117,7 +123,7 @@ impl QuoteHandler for SqliteDB {
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=?",
+                "SELECT id, name, asset_id, priority, currency, factor, tz, cal FROM ticker WHERE source=?",
                 source,
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
@@ -136,6 +142,8 @@ impl QuoteHandler for SqliteDB {
                 priority: row.priority as i32,
                 currency,
                 factor: factor.into(),
+                tz: row.tz,
+                cal: row.cal,
             });
         }
         Ok(all_ticker)
@@ -148,7 +156,7 @@ impl QuoteHandler for SqliteDB {
         let mut all_ticker = Vec::new();
         let a_id = asset_id as i64;
         for row in sqlx::query!(
-                "SELECT id, name, source, priority, currency, factor FROM ticker WHERE asset_id=?",
+                "SELECT id, name, source, priority, currency, factor, tz, cal FROM ticker WHERE asset_id=?",
                 a_id,
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
@@ -166,6 +174,8 @@ impl QuoteHandler for SqliteDB {
                 priority: row.priority as i32,
                 currency,
                 factor: row.factor.into(),
+                tz: row.tz,
+                cal: row.cal,
             });
         }
         Ok(all_ticker)
@@ -181,7 +191,7 @@ impl QuoteHandler for SqliteDB {
         let curr = ticker.currency.to_string();
         let asset_id = ticker.asset as i32;
         sqlx::query!(
-                "UPDATE ticker SET name=?2, asset_id=?3, source=?4, priority=?5, currency=?6, factor=?7
+                "UPDATE ticker SET name=?2, asset_id=?3, source=?4, priority=?5, currency=?6, factor=?7, tz=?8, cal=?9
                 WHERE id=?1",
                 id,
                 ticker.name,
@@ -190,6 +200,8 @@ impl QuoteHandler for SqliteDB {
                 ticker.priority,
                 curr,
                 ticker.factor,
+                ticker.tz,
+                ticker.cal,
             )
             .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;

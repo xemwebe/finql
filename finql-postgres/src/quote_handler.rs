@@ -20,14 +20,16 @@ impl QuoteHandler for PostgresDB {
     // insert, get, update and delete for market data sources
     async fn insert_ticker(&self, ticker: &Ticker) -> Result<usize, DataError> {
         let row = sqlx::query!(
-                "INSERT INTO ticker (name, asset_id, source, priority, currency, factor) 
-                VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+                "INSERT INTO ticker (name, asset_id, source, priority, currency, factor, tz, cal) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
                 ticker.name,
                 (ticker.asset as i32),
                 (ticker.source.to_string()),
                 ticker.priority,
                 (ticker.currency.to_string()),
                 ticker.factor,
+                ticker.tz,
+                ticker.cal
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id: i32 = row.id;
@@ -55,7 +57,7 @@ impl QuoteHandler for PostgresDB {
 
     async fn get_ticker_by_id(&self, id: usize) -> Result<Ticker, DataError> {
         let row = sqlx::query!(
-                "SELECT name, asset_id, source, priority, currency, factor FROM ticker WHERE id=$1",
+                "SELECT name, asset_id, source, priority, currency, factor, tz, cal FROM ticker WHERE id=$1",
                 (id as i32),
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
@@ -73,13 +75,15 @@ impl QuoteHandler for PostgresDB {
             priority: row.priority,
             currency,
             factor: row.factor,
+            tz: row.tz,
+            cal: row.cal,
         })
     }
 
     async fn get_all_ticker(&self) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, name, asset_id, priority, source, currency, factor FROM ticker",
+                "SELECT id, name, asset_id, priority, source, currency, factor, tz, cal FROM ticker",
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
@@ -98,6 +102,8 @@ impl QuoteHandler for PostgresDB {
                 priority: row.priority,
                 currency,
                 factor,
+                tz: row.tz,
+                cal: row.cal,
             });
         }
         Ok(all_ticker)
@@ -109,7 +115,7 @@ impl QuoteHandler for PostgresDB {
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, name, asset_id, priority, currency, factor FROM ticker WHERE source=$1",
+                "SELECT id, name, asset_id, priority, currency, factor, tz, cal FROM ticker WHERE source=$1",
                 (source.to_string()),
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
@@ -128,6 +134,8 @@ impl QuoteHandler for PostgresDB {
                 priority: row.priority,
                 currency,
                 factor,
+                tz: row.tz,
+                cal: row.cal,
             });
         }
         Ok(all_ticker)
@@ -139,7 +147,7 @@ impl QuoteHandler for PostgresDB {
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, name, source, priority, currency, factor FROM ticker WHERE asset_id=$1",
+                "SELECT id, name, source, priority, currency, factor, tz, cal FROM ticker WHERE asset_id=$1",
                 (asset_id as i32),
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
@@ -158,6 +166,8 @@ impl QuoteHandler for PostgresDB {
                 priority: row.priority,
                 currency,
                 factor,
+                tz: row.tz,
+                cal: row.cal,
             });
         }
         Ok(all_ticker)
@@ -172,7 +182,7 @@ impl QuoteHandler for PostgresDB {
         }
         let id = ticker.id.unwrap() as i32;
         sqlx::query!(
-                "UPDATE ticker SET name=$2, asset_id=$3, source=$4, priority=$5, currency=$6, factor=$7
+                "UPDATE ticker SET name=$2, asset_id=$3, source=$4, priority=$5, currency=$6, factor=$7, tz=$8, cal=$9
                 WHERE id=$1",
                 id,
                 ticker.name,
@@ -181,6 +191,8 @@ impl QuoteHandler for PostgresDB {
                 ticker.priority,
                 ticker.currency.to_string(),
                 ticker.factor,
+                ticker.tz,
+                ticker.cal
             )
             .execute(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;

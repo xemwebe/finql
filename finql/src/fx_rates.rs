@@ -37,6 +37,8 @@ pub async fn insert_fx_quote(
             priority: 10,
             currency: base,
             factor: 1.0,
+            tz: None,
+            cal: None,
         })
         .await.unwrap();
     quotes.insert_quote(&Quote {
@@ -66,6 +68,8 @@ pub async fn insert_fx_quote(
             priority: 10,
             currency: foreign,
             factor: 1.0,
+            tz: None,
+            cal: None,
         })
         .await.unwrap();
     quotes.insert_quote(&Quote {

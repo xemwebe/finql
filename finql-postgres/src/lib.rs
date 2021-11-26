@@ -84,6 +84,8 @@ impl PostgresDB {
                 priority INTEGER NOT NULL,
                 currency TEXT NOT NULL,
                 factor FLOAT8 NOT NULL DEFAULT 1.0,
+                tz TEXT,
+                cal TEXT,
                 FOREIGN KEY(asset_id) REFERENCES assets(id) 
             )"
         )

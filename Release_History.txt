@@ -1,3 +1,28 @@
+Version 0.11
+  * Breaking change: Switch to Local time zone. Originally, internally Utc has been used 
+    for all DateTime values (mainly related to quote times). On the other hand, input values
+    have been assumed to be in local time, resulting in a lot of conversions which (some
+    of them implicitly, e.g. when storing in database). In turned out to be difficult to 
+    maintain consistency here. Therefore, we use now internally TimeZone Local. To make this
+    consistent with inputs form external sources (e.g. market data providers like yahoo, 
+    alphavantage, etc.), the ticker struct has been extended by an (optional) TimeZone and
+    (optional) Calendar (to handle days where no quote is expected). In general, the TimeZone
+    should be set to the TimeZone of the market data source (e.g. the exchange) and the
+    valid business day calendar for this source (e.g. again the exchange calendar, which 
+    may differ in one country for different exchanges or markets). As default, TimeZone 
+    Local and the Calendar with only Saturdays and Sundays as bank holidays will be used. 
+  * A new object handler has been added to allow storing arbitrary objects which implement
+    the Serialize and DeserializeOwned traits (e.g Calendar definitions).
+  * Implementation of a investment strategy simulation framework: Simulate the effects of
+    specified trading strategies by simulating the buying and selling assets, receive
+    dividends or interests, pay taxes and fees, etc. The simulation can be run for a
+    historical period, using the history of asset prices and fx rates to calculated the
+    performance. An example has been added that demonstrates the effects of different 
+    total return strategies with or without assumptions about fees and taxes to be paid. 
+    The resulting performance is plotted using the plotter crate. To support this new module,
+    to calculation of postions and performance have been improved and the concept of a 
+    TimeSeries has been introduced.
+    
 Version 0.10
   * Ordering for quotes: Implementation of traits Ord, PartialOrd, PartialEq and Eq. Quotes 
     are ordered by time and than by ticker id. This allows to use standard methods to sort

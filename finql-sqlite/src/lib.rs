@@ -65,6 +65,8 @@ impl SqliteDB {
                 priority INTEGER NOT NULL,
                 currency TEXT NOT NULL,
                 factor REAL NOT NULL DEFAULT 1.0,
+                tz TEXT,
+                cal TEXT,
                 FOREIGN KEY(asset_id) REFERENCES assets(id) 
             )").execute(&self.pool).await?;
             

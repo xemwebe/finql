@@ -1,5 +1,6 @@
 ///! Implementation of a container for basic asset data
 use std::cmp::Ordering;
+
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
@@ -15,6 +16,8 @@ pub struct Ticker {
     pub source: String,
     pub priority: i32,
     pub factor: f64,
+    pub tz: Option<String>,
+    pub cal: Option<String>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
