@@ -10,7 +10,7 @@ use super::PostgresDB;
 /// Handler for globally available Asset data
 #[async_trait]
 impl ObjectHandler for PostgresDB {
-    async fn store_object<T: Serialize+Sync>(&self, id: &str, object: &T) -> Result<(), DataError> {
+    async fn store_object<T: Serialize+Sync>(&self, id: &str, _object_type: &str, object: &T) -> Result<(), DataError> {
         let object_json = serde_json::to_value(&object)
         .map_err(|_| DataError::InsertFailed("Could not serialize object".to_string()))?;
 

@@ -11,6 +11,6 @@ use super::DataError;
 #[async_trait]
 pub trait ObjectHandler {
     // insert, get, update and delete for assets
-    async fn store_object<T: Serialize+Sync>(&self, id: &str, object: &T) -> Result<(), DataError>;
+    async fn store_object<T: Serialize+Sync>(&self, name: &str, object_type: &str, object: &T) -> Result<(), DataError>;
     async fn get_object<T: DeserializeOwned>(&self,  id: &str) ->Result<T, DataError>;
 }
