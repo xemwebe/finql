@@ -180,3 +180,39 @@ impl AssetHandler for SqliteDB {
         .map_err(|e| DataError::DataAccessFailure(e.to_string()))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::sync::Arc;
+    use super::super::SqliteDBPool;
+    
+    #[tokio::test]
+    async fn store_asset() {
+        let db_pool = Arc::new(SqliteDBPool::in_memory().await.unwrap());
+        let db = db_pool.get_conection().await.unwrap();
+        assert!(db.clean().await.is_ok());
+
+        let asset1 = Asset{
+            id: None,
+            name: "A asset".to_string(),
+            isin: Some("123456789012".to_string()),
+            wkn: Some("A1B2C3".to_string()),
+            note: Some("Just a simple asset for testing".to_string()),
+        };
+
+        let id = db.insert_asset(&asset1).await.unwrap();
+        assert_eq!(id, 1);
+
+        let id = db.get_asset_id(&asset1).await;
+        assert_eq!(id, Some(1));
+
+        let asset2 = db.get_asset_by_isin("123456789012").await.unwrap();
+        assert_eq!(asset2.id, Some(1));
+        assert_eq!(&asset2.name, "A asset");
+
+        let asset2 = db.get_asset_by_id(1).await.unwrap();
+        assert_eq!(asset2.id, Some(1));
+        assert_eq!(&asset2.name, "A asset");
+    }
+}
