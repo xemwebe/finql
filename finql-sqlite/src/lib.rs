@@ -3,8 +3,9 @@
 use std::path::Path;
 use deadpool_sqlite::{Config, Runtime, Pool, Connection};
 use thiserror::Error;
+use finql_data::currency::CurrencyError;
 
-//pub mod asset_handler;
+pub mod asset_handler;
 //pub mod quote_handler;
 //pub mod transaction_handler;
 pub mod object_handler;
@@ -21,6 +22,8 @@ pub enum SQLiteError {
     DeadPoolError,
     #[error("Query returned invalid result")]
     InvalidQueryResult,
+    #[error("Malformed currency")]
+    MalformedCurrency(#[from] CurrencyError),
 }
 
 
