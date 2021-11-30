@@ -214,5 +214,28 @@ mod test {
         let asset2 = db.get_asset_by_id(1).await.unwrap();
         assert_eq!(asset2.id, Some(1));
         assert_eq!(&asset2.name, "A asset");
+
+        let mut asset2 = Asset{
+            id: None,
+            name: "B asset".to_string(),
+            isin: Some("210987654321".to_string()),
+            wkn: Some("3c2b1a".to_string()),
+            note: Some("Some other asset".to_string()),
+        };
+
+        let id2 = db.insert_asset(&asset2).await.unwrap();
+        assert_eq!(id2, 2);
+        asset2.id = Some(id2);
+        asset2.name = "bb".to_string();
+        db.update_asset(&asset2).await.unwrap();
+
+        let assets = db.get_all_assets().await.unwrap();
+        assert_eq!(assets.len(), 2);
+
+        db.delete_asset(1).await.unwrap();
+        let assets = db.get_all_assets().await.unwrap();
+        assert_eq!(assets.len(), 1);
+        assert_eq!(assets[0].id, Some(2));
+        assert_eq!(&assets[0].name, "bb");
     }
 }
