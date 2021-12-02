@@ -188,7 +188,7 @@ mod test {
     use super::super::SqliteDBPool;
     
     #[tokio::test]
-    async fn store_asset() {
+    async fn asset_handler_test() {
         let db_pool = Arc::new(SqliteDBPool::in_memory().await.unwrap());
         let db = db_pool.get_conection().await.unwrap();
         assert!(db.clean().await.is_ok());
@@ -227,7 +227,7 @@ mod test {
         assert_eq!(id2, 2);
         asset2.id = Some(id2);
         asset2.name = "bb".to_string();
-        db.update_asset(&asset2).await.unwrap();
+        assert!(db.update_asset(&asset2).await.is_ok());
 
         let assets = db.get_all_assets().await.unwrap();
         assert_eq!(assets.len(), 2);

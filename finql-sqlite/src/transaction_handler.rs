@@ -11,7 +11,7 @@ use super::{SqliteDB, SQLiteError};
 use deadpool_sqlite::rusqlite::params;
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RawTransaction {
     pub id: Option<usize>,
     pub trans_type: String,
@@ -246,7 +246,8 @@ impl TransactionHandler for SqliteDB {
                 cash_date=?6,
                 related_trans=?7,
                 position=?8,
-                note=?9
+                note=?9,
+                time_stamp=?10
                 WHERE id=?1",
                 params![
                     &transaction.id,                
@@ -270,5 +271,96 @@ impl TransactionHandler for SqliteDB {
             Ok(())
         }).await.map_err(|e| DataError::DataAccessFailure(e.to_string()))?
         .map_err(|e| DataError::DataAccessFailure(e.to_string()))
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::sync::Arc;
+    use super::super::SqliteDBPool;
+    use finql_data::{Asset, AssetHandler};
+    
+    #[tokio::test]
+    async fn transaction_handler_test() {
+        let db_pool = Arc::new(SqliteDBPool::in_memory().await.unwrap());
+        let db = db_pool.get_conection().await.unwrap();
+        assert!(db.clean().await.is_ok());
+
+        let asset = Asset{
+            id: None,
+            name: "A asset".to_string(),
+            isin: Some("123456789012".to_string()),
+            wkn: Some("A1B2C3".to_string()),
+            note: Some("Just a simple asset for testing".to_string()),
+        };
+
+        let asset_id = db.insert_asset(&asset).await.unwrap();
+        assert_eq!(asset_id, 1);
+
+        let eur = Currency::from_str("EUR").unwrap();
+        let asset_buy = Transaction {
+            id: None,
+            transaction_type: TransactionType::Asset{ asset_id, position: 100.0 },
+            cash_flow: CashFlow::new(-100.0, eur, NaiveDate::from_ymd(2020, 12, 02)),
+            note: Some("First buy".to_string()),
+        };
+        let buy_id = db.insert_transaction(&asset_buy).await.unwrap();
+        assert_eq!(buy_id, 1);
+
+        let dividend = Transaction {
+            id: None,
+            transaction_type: TransactionType::Dividend{ asset_id },
+            cash_flow: CashFlow::new(6.0, eur, NaiveDate::from_ymd(2020, 12, 02)),
+            note: None,
+        };
+        let dividend_id = db.insert_transaction(&dividend).await.unwrap();
+        assert_eq!(dividend_id, 2);
+
+
+        let interest = Transaction {
+            id: None,
+            transaction_type: TransactionType::Interest{ asset_id },
+            cash_flow: CashFlow::new(3.0, eur, NaiveDate::from_ymd(2020, 12, 02)),
+            note: None,
+        };
+        let interest_id = db.insert_transaction(&interest).await.unwrap();
+        assert_eq!(interest_id, 3);
+
+        let tax = Transaction {
+            id: None,
+            transaction_type: TransactionType::Tax{ transaction_ref: Some(dividend_id) },
+            cash_flow: CashFlow::new(-4.0, eur, NaiveDate::from_ymd(2020, 12, 02)),
+            note: None,
+        };
+        let tax_id = db.insert_transaction(&tax).await.unwrap();
+        assert_eq!(tax_id, 4);
+
+        let fee = Transaction {
+            id: None,
+            transaction_type: TransactionType::Fee{ transaction_ref: Some(buy_id) },
+            cash_flow: CashFlow::new(-0.5, eur, NaiveDate::from_ymd(2020, 12, 02)),
+            note: None,
+        };
+        let fee_id = db.insert_transaction(&fee).await.unwrap();
+        assert_eq!(fee_id, 5);
+
+        let cash = Transaction {
+            id: None,
+            transaction_type: TransactionType::Cash,
+            cash_flow: CashFlow::new(100.0, eur, NaiveDate::from_ymd(2020, 12, 02)),
+            note: None,
+        };
+        let cash_id = db.insert_transaction(&cash).await.unwrap();
+        assert_eq!(cash_id, 6);
+
+        let mut cash2 = db.get_transaction_by_id(6).await.unwrap();
+        assert_eq!(cash2.id, Some(6));
+        cash2.cash_flow = CashFlow::new(200.0, eur, NaiveDate::from_ymd(2020, 12, 01));
+        assert!(db.update_transaction(&cash2).await.is_ok());
+
+        assert!(db.delete_transaction(interest_id).await.is_ok());
+        assert_eq!(db.get_all_transactions().await.unwrap().len(), 5);
     }
 }
