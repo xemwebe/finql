@@ -17,6 +17,7 @@ serde_json = "1.0"
 deadpool = "0.9"
 deadpool-sqlite = "0.3"
 thiserror = "1.0"
+rusqlite = { version = "0.25.3", features = ["chrono"]}
 
 [dev-dependencies]
 tempfile = "3.2"

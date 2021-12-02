@@ -7,7 +7,7 @@ use finql_data::currency::CurrencyError;
 
 pub mod asset_handler;
 //pub mod quote_handler;
-//pub mod transaction_handler;
+pub mod transaction_handler;
 pub mod object_handler;
 
 #[derive(Error, Debug)]
