@@ -233,7 +233,7 @@ impl TransactionHandler for SqliteDB {
             return Err(DataError::NotFound(
                 "not yet stored to database".to_string(),
             ));
-        };
+        }
         let transaction = RawTransaction::from_transaction(transaction);
         let time_stamp = chrono::offset::Utc::now().timestamp_nanos();
         self.conn.interact(move |conn| -> Result<(), SQLiteError> {
