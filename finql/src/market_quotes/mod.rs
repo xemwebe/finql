@@ -182,7 +182,7 @@ mod tests {
     use rand::Rng;
 
     use finql_data::{Asset, Currency, QuoteHandler};
-    use finql_sqlite::SqliteDB;
+    use finql_sqlite::SqliteDBPool;
 
     struct DummyProvider {}
 
@@ -247,6 +247,8 @@ mod tests {
             source: "manual".to_string(),
             priority: 1,
             factor: 1.0,
+            tz: None,
+            cal: None,
         };
         let ticker_id = db.insert_ticker(&ticker).await.unwrap();
         ticker.id = Some(ticker_id);
@@ -256,8 +258,10 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_fetch_latest_quote() {
         let tol = 1.0e-6;
-        let db = Arc::new(SqliteDB::new("sqlite::memory:").await.unwrap());
+        let db_pool = SqliteDBPool::in_memory().await.unwrap();
+        let db = db_pool.get_conection().await.unwrap();
         db.init().await.unwrap();
+        let db = Arc::new(db);
         let ticker = prepare_db(db.clone()).await;
         let provider = DummyProvider {};
         update_ticker(&provider, &ticker, db.clone()).await.unwrap();
@@ -269,8 +273,10 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_fetch_quote_history() {
         let tol = 1.0e-6;
-        let db = Arc::new(SqliteDB::new("sqlite::memory:").await.unwrap());
+        let db_pool = SqliteDBPool::in_memory().await.unwrap();
+        let db = db_pool.get_conection().await.unwrap();
         db.init().await.unwrap();
+        let db = Arc::new(db);
         let ticker = prepare_db(db.clone()).await;
         let provider = DummyProvider {};
         let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);

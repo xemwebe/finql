@@ -103,6 +103,8 @@ mod tests {
             source: MarketDataSource::Yahoo.to_string(),
             priority: 1,
             factor: 1.0,
+            tz: None,
+            cal: None,
         };
         let quote = yahoo.fetch_latest_quote(&ticker).await.unwrap();
         assert!(quote.price != 0.0);
@@ -119,6 +121,8 @@ mod tests {
             source: MarketDataSource::Yahoo.to_string(),
             priority: 1,
             factor: 1.0,
+            tz: None,
+            cal: None,
         };
         let start = New_York.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0).with_timezone(&Local);
         let end = New_York.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999).with_timezone(&Local);

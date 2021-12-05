@@ -115,6 +115,8 @@ mod tests {
             source: "alphavantage".to_string(),
             priority: 1,
             factor: 1.0,
+            tz: None,
+            cal: None,
         };
         let quote = alpha.fetch_latest_quote(&ticker).await.unwrap();
         assert!(quote.price != 0.0);
@@ -132,6 +134,8 @@ mod tests {
             source: MarketDataSource::AlphaVantage.to_string(),
             priority: 1,
             factor: 1.0,
+            tz: None,
+            cal: None,
         };
         let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Local.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);

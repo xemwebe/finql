@@ -136,7 +136,7 @@ mod tests {
     use chrono::offset::TimeZone;
     use chrono::Local;
 
-    use finql_sqlite::SqliteDB;
+    use finql_sqlite::SqliteDBPool;
     use crate::market::Market;
 
     async fn prepare_db(db: Arc<dyn QuoteHandler+Send+Sync>) {
@@ -148,7 +148,8 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_get_fx_rate() {
-        let fx_db = SqliteDB::new("sqlite::memory:").await.unwrap();
+        let db_pool = SqliteDBPool::in_memory().await.unwrap();
+        let fx_db = db_pool.get_conection().await.unwrap();
         fx_db.init().await.unwrap();
         let qh: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(fx_db);
         prepare_db(qh.clone()).await;

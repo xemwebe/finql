@@ -5,7 +5,7 @@ use std::str::FromStr;
 use chrono::NaiveDate;
 
 use finql_data::{Asset, Currency, CashFlow, Transaction, TransactionHandler, TransactionType};
-use finql_sqlite::SqliteDB;
+use finql_sqlite::SqliteDBPool;
 
 async fn transaction_tests(db: &mut dyn TransactionHandler) {
     print!("Store asset...");
@@ -111,8 +111,8 @@ where <db_type> is any of 'sqlite' or 'memory'"#
     );
     match args[1].as_str() {
         "memory" => {
-            let mut db = SqliteDB::new("sqlite::memory:").await.unwrap();
-            db.init().await.unwrap();
+            let db_pool = SqliteDBPool::in_memory().await.unwrap();
+            let mut db = db_pool.get_conection().await.unwrap();
             transaction_tests(&mut db).await;
         }
         "sqlite" => {
@@ -124,9 +124,8 @@ where <db_type> is any of 'sqlite' or 'memory'"#
                     eprintln!("Apparently there exists already a file with this path.");
                     eprintln!("Please provide another path or remove the file, since a new database will be created.");
                 } else {
-                    let conn = format!("sqlite:{}", path);
-                    { let _= fs::File::create(path); }
-                    let mut db = SqliteDB::new(&conn).await.unwrap();
+                    let db_pool = SqliteDBPool::open(std::path::Path::new(path)).await.unwrap();
+                    let mut db = db_pool.get_conection().await.unwrap();
                     db.init().await.unwrap();
                     transaction_tests(&mut db).await;
                 }

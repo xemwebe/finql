@@ -415,7 +415,7 @@ mod tests {
 
     use crate::{assert_fuzzy_eq};
     use finql_data::{Asset, AssetHandler, CashAmount, CashFlow, Quote, Ticker, date_time_helper::make_time};
-    use finql_sqlite::SqliteDB;
+    use finql_sqlite::SqliteDBPool;
 
     #[test]
     fn test_portfolio_position() {
@@ -632,7 +632,8 @@ mod tests {
     async fn test_add_quote_to_position() {
         let tol = 1e-4;
         // Make new database
-        let db = SqliteDB::new(":memory:").await.unwrap();
+        let db_pool = SqliteDBPool::in_memory().await.unwrap();
+        let db = db_pool.get_conection().await.unwrap();
         db.init().await.unwrap();
         // first add some assets
         let eur_id = db
@@ -666,7 +667,9 @@ mod tests {
                 currency: eur,
                 source: "manual".to_string(),
                 factor: 1.0,
-            })
+                tz: None,
+                cal: None,
+                })
             .await.unwrap();
         let _us_ticker_id = db
             .insert_ticker(&Ticker {
@@ -677,6 +680,8 @@ mod tests {
                 currency: usd,
                 source: "manual".to_string(),
                 factor: 1.0,
+                tz: None,
+                cal: None,
             })
             .await.unwrap();
         // add quotes

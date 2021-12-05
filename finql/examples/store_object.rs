@@ -4,7 +4,7 @@ use chrono::Weekday;
 
 use finql::calendar::Holiday;
 use finql_data::ObjectHandler;
-use finql_sqlite::SqliteDB;
+use finql_sqlite::SqliteDBPool;
 
 #[tokio::main]
 async fn main() {
@@ -39,12 +39,11 @@ async fn main() {
         eprintln!("Apparently there exists already a file with this path.");
         eprintln!("Please provide another path or remove the file, since a new database will be created.");
     } else {
-        let conn = format!("sqlite:{}", path);
-        { let _= fs::File::create(path); }
-        let db = SqliteDB::new(&conn).await.unwrap();
+        let db_pool = SqliteDBPool::open(&std::path::Path::new(path)).await.unwrap();
+        let db = db_pool.get_conection().await.unwrap();
         db.init().await.unwrap();
 
-        db.store_object("test", &holidays).await.unwrap();
+        db.store_object("test", "calendar", &holidays).await.unwrap();
         
         let new_holiday: Vec<Holiday> = db.get_object("test").await.unwrap();
         println!("New holiday struct: {:?}", new_holiday);

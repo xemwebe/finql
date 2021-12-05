@@ -28,7 +28,7 @@ use finql::{
     calendar::last_day_of_month,
     time_series::{TimeSeries, TimeValue, TimeSeriesError},
 };
-use finql_sqlite::SqliteDB;
+use finql_sqlite::SqliteDBPool;
 
 
 async fn calc_strategy(currency: Currency, start_transactions: &Vec<Transaction>, strategy: &dyn Strategy, start: NaiveDate, end: NaiveDate, market: &Market) -> Vec<TimeValue> {
@@ -86,7 +86,9 @@ async fn main() {
     println!("The simulation will run from {} until {}.", start, today);
 
     // Prepare database
-    let sqlite_db = SqliteDB::new("sqlite::memory:").await.unwrap();
+    let db_pool = SqliteDBPool::in_memory().await.unwrap();
+    let sqlite_db = db_pool.get_conection().await.unwrap();
+
     sqlite_db.init().await.unwrap();
     let db: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(sqlite_db);
 
@@ -117,7 +119,9 @@ async fn main() {
         source: yahoo.to_string(),
         priority: 1,
         factor: 1.0,
-    };
+        tz: None,
+        cal: None,
+};
     let ticker_id = db.insert_ticker(&ticker).await.unwrap();
     let start_time = naive_date_to_date_time(&start, 0);
     let end_time = naive_date_to_date_time(&today, 20);

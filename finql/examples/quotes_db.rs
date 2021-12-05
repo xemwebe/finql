@@ -9,7 +9,7 @@ use finql_data::{Asset, Currency, CurrencyConverter, Quote, Ticker, QuoteHandler
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
-use finql_sqlite::SqliteDB;
+use finql_sqlite::SqliteDBPool;
 
 fn log(s: &str) {
     print!("{}", s);
@@ -65,6 +65,8 @@ async fn quote_tests(market: &mut Market) {
         priority: 10,
         source: yahoo.to_string(),
         factor: 1.0,
+        tz: None,
+        cal: None,
     };
     let basf_id = market.db().insert_ticker(&basf).await.unwrap();
     // Get ticker back
@@ -78,6 +80,8 @@ async fn quote_tests(market: &mut Market) {
         currency: eur,
         source: yahoo.to_string(),
         factor: 1.0,
+        tz: None,
+        cal: None,
     };
     let siemens_id = market.db().insert_ticker(&siemens).await.unwrap();
     // Insert another ticker, with other source
@@ -89,6 +93,8 @@ async fn quote_tests(market: &mut Market) {
         currency: eur,
         source: MarketDataSource::Manual.to_string(),
         factor: 1.0,
+        tz: None,
+        cal: None,
     };
     let bhp_id = market.db().insert_ticker(&bhp).await.unwrap();
     println!("ok");
@@ -256,9 +262,8 @@ async fn main() {
         eprintln!("Apparently there exists already a file with this path.");
         eprintln!("Please provide another path or remove the file, since a new database will be created.");
     } else {
-        let conn = format!("sqlite:{}", path);
-        { let _= fs::File::create(path); }
-        let db = SqliteDB::new(&conn).await.unwrap();
+        let db_pool = SqliteDBPool::open(std::path::Path::new(path)).await.unwrap();
+        let db = db_pool.get_conection().await.unwrap();
         db.init().await.unwrap();
         let qh: Arc<dyn QuoteHandler+Sync+Send> = Arc::new(db);
         let mut market = Market::new(qh);            
