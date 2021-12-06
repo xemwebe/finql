@@ -87,9 +87,9 @@ impl QuoteHandler for SqliteDB {
                     priority: row.get(3)?,
                     currency: Currency::from_str(&currency)
                         .map_err(|e| rusqlite::Error::InvalidParameterName(format!("{}", e)))?,
-                    factor: row.get(4)?,
-                    tz: row.get(5)?,
-                    cal: row.get(6)?
+                    factor: row.get(5)?,
+                    tz: row.get(6)?,
+                    cal: row.get(7)?
                 })
             })?)
         }).await.map_err(|e| DataError::DataAccessFailure(e.to_string()))?
@@ -268,6 +268,7 @@ impl QuoteHandler for SqliteDB {
         .map_err(|e| DataError::DataAccessFailure(e.to_string()))
     }
 
+    /// Get the latest quote before a given time for a specific asset id
     async fn get_last_quote_before_by_id(
         &self,
         asset_id: usize,
@@ -381,5 +382,170 @@ impl QuoteHandler for SqliteDB {
             Ok(())
         }).await.map_err(|e| DataError::DataAccessFailure(e.to_string()))?
         .map_err(|e| DataError::DataAccessFailure(e.to_string()))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::sync::Arc;
+    use super::super::SqliteDBPool;
+    use finql_data::{Asset, date_time_helper::make_time};
+
+    #[tokio::test]
+    async fn sqlite_ticker_test() {
+        let sqlite_pool = Arc::new(SqliteDBPool::in_memory().await.unwrap());
+        let db = sqlite_pool.get_conection().await.unwrap();
+        assert!(db.clean().await.is_ok());
+
+        let asset = Asset{
+            id: None,
+            name: "asset A".to_string(),
+            isin: Some("123456789012".to_string()),
+            wkn: Some("A1B2C3".to_string()),
+            note: Some("Just a simple asset for testing".to_string()),
+        };
+
+        let asset = db.insert_asset(&asset).await.unwrap();
+        assert_eq!(asset, 1);
+        let eur = Currency::from_str("EUR").unwrap();
+
+        let s1_ticker = Ticker{
+            id: None,
+            asset,
+            name: "A".to_string(),
+            currency: eur,
+            source: "s1".to_string(),
+            priority: 2,
+            factor: 3.0,
+            tz: None,
+            cal: None,
+        };
+        let s1_id = db.insert_ticker(&s1_ticker).await.unwrap();
+        assert_eq!(s1_id, 1);
+        assert_eq!(db.insert_if_new_ticker(&s1_ticker).await.unwrap(), 1);
+
+        let mut s2_ticker = Ticker{
+            id: None,
+            asset,
+            name: "B".to_string(),
+            currency: eur,
+            source: "s2".to_string(),
+            priority: 4,
+            factor: 5.0,
+            tz: Some("Europe".to_string()),
+            cal: Some("TARGET".to_string()),
+        };
+        let s2_id = db.insert_if_new_ticker(&s2_ticker).await.unwrap();
+        assert_eq!(s2_id, 2);
+
+        let s2_id2 = db.get_ticker_id("B").await.unwrap();
+        assert_eq!(s2_id2, s2_id);
+        
+        s2_ticker.id = Some(s2_id);
+
+        let new_s2 = db.get_ticker_by_id(2).await.unwrap();
+        assert_eq!(new_s2.name, s2_ticker.name);
+
+        let all_tickers = db.get_all_ticker().await.unwrap();
+        assert_eq!(all_tickers.len(), 2);
+
+        let all_tickers = db.get_all_ticker_for_source("s2").await.unwrap();
+        assert_eq!(all_tickers.len(), 1);
+
+        let all_tickers = db.get_all_ticker_for_asset(1).await.unwrap();
+        assert_eq!(all_tickers.len(), 2);
+
+        s2_ticker.tz = Some("UK".to_string());
+        assert!(db.update_ticker(&s2_ticker).await.is_ok());
+        assert!(db.delete_ticker(s2_id).await.is_ok());   
+    }
+
+    #[tokio::test]
+    async fn sqlite_quotes_test() {
+        let sqlite_pool = Arc::new(SqliteDBPool::in_memory().await.unwrap());
+        let db = sqlite_pool.get_conection().await.unwrap();
+        assert!(db.clean().await.is_ok());
+
+        let asset = Asset{
+            id: None,
+            name: "asset A".to_string(),
+            isin: Some("123456789012".to_string()),
+            wkn: Some("A1B2C3".to_string()),
+            note: Some("Just a simple asset for testing".to_string()),
+        };
+
+        let asset = db.insert_asset(&asset).await.unwrap();
+        assert_eq!(asset, 1);
+        let eur = Currency::from_str("EUR").unwrap();
+
+        let ticker = Ticker{
+            id: None,
+            asset,
+            name: "A".to_string(),
+            currency: eur,
+            source: "s1".to_string(),
+            priority: 2,
+            factor: 3.0,
+            tz: None,
+            cal: None,
+        };
+        let ticker = db.insert_ticker(&ticker).await.unwrap();
+        assert_eq!(ticker, 1);
+
+        let time_now = Local::now();
+        let quote1 = Quote{
+            id: None,
+            ticker,
+            price: 2.0,
+            time: time_now,
+            volume: None,
+        };
+        let qid1 = db.insert_quote(&quote1).await.unwrap();
+        assert_eq!(qid1, 1);
+
+        let time2 = make_time(2021,12,6,19,0,0).unwrap();
+        let mut quote2 = Quote{
+            id: None,
+            ticker,
+            price: 1.5,
+            time: time2,
+            volume: None,
+        };
+        let qid2 = db.insert_quote(&quote2).await.unwrap();
+        assert_eq!(qid2, 2);
+
+        let time3 = make_time(2021,12,6,19,1,0).unwrap();
+        let quote_before = db.get_last_quote_before("asset A", time3).await.unwrap();
+        assert_eq!(quote_before.0.price, 1.5);
+        assert_eq!(quote_before.1, eur);
+
+        let quote_before = db.get_last_quote_before_by_id(asset, time3).await.unwrap();
+        assert_eq!(quote_before.0.price, 1.5);
+        
+        quote2.id = Some(qid2);
+        quote2.price = 1.7;
+        assert!(db.update_quote(&quote2).await.is_ok());
+        assert!(db.delete_quote(qid2).await.is_ok());
+
+        let _ = db.insert_quote(&quote1).await.unwrap();
+        let quotes = db.get_all_quotes_for_ticker(ticker).await.unwrap();
+        assert_eq!(quotes.len(), 2);
+        assert!(db.remove_duplicates().await.is_ok());
+        let quotes = db.get_all_quotes_for_ticker(ticker).await.unwrap();
+        assert_eq!(quotes.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn sqlite_rounding_digits_test() {
+        let sqlite_pool = Arc::new(SqliteDBPool::in_memory().await.unwrap());
+        let db = sqlite_pool.get_conection().await.unwrap();
+        assert!(db.clean().await.is_ok());
+        let xxx = Currency::from_str("XXX").unwrap();
+
+        // should equal default of 2
+        assert_eq!(db.get_rounding_digits(xxx).await, 2);
+        assert!(db.set_rounding_digits(xxx, 4).await.is_ok());
+        assert_eq!(db.get_rounding_digits(xxx).await, 4);
     }
 }

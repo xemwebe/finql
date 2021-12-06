@@ -262,6 +262,7 @@ async fn main() {
         eprintln!("Apparently there exists already a file with this path.");
         eprintln!("Please provide another path or remove the file, since a new database will be created.");
     } else {
+        let _= fs::File::create(path);
         let db_pool = SqliteDBPool::open(std::path::Path::new(path)).await.unwrap();
         let db = db_pool.get_conection().await.unwrap();
         db.init().await.unwrap();
