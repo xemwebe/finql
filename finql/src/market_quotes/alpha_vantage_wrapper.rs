@@ -1,6 +1,6 @@
-use chrono::{DateTime, Local, Duration};
+use chrono::{DateTime, Local};
 use async_trait::async_trait;
-use tokio_compat_02::FutureExt;
+use reqwest;
 
 use alpha_vantage as alpha;
 
@@ -9,13 +9,13 @@ use finql_data::{CashFlow, Quote, Ticker, date_time_helper::date_time_from_str_s
 use super::{MarketQuoteError, MarketQuoteProvider};
 
 pub struct AlphaVantage {
-    connector: alpha::user::APIKey,
+    token: String,
 }
 
 impl AlphaVantage {
     pub fn new(token: String) -> AlphaVantage {
         AlphaVantage {
-            connector: alpha::set_api(&token),
+            token
         }
     }
 }
@@ -24,13 +24,9 @@ impl AlphaVantage {
 impl MarketQuoteProvider for AlphaVantage {
     /// Fetch latest quote
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
-        let alpha_quote = self
-            .connector
-            .quote(&ticker.name)
-            .compat()
-            .await
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
-        let time = date_time_from_str_standard(alpha_quote.last_trading(), 0)?;
+        let api_key = alpha::set_api(&self.token, reqwest::Client::new());
+        let alpha_quote = api_key.quote(&ticker.name).json().await.unwrap();
+        let time = date_time_from_str_standard(alpha_quote.last_trading(), 0, ticker.tz.clone())?;
         Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
@@ -46,29 +42,16 @@ impl MarketQuoteProvider for AlphaVantage {
         start: DateTime<Local>,
         end: DateTime<Local>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
-        let now = Local::now();
-        // This estimate is conservative, since we expect less business days than calendar
-        // days, but to be on the conservative side, we use calendar days
-        let output_size = if now.signed_duration_since(start) > Duration::days(100) {
-            alpha::util::OutputSize::Full
-        } else {
-            alpha::util::OutputSize::Compact
-        };
-        let alpha_quotes = self
-            .connector
+        let api_key = alpha::set_api(&self.token, reqwest::Client::new());
+        let alpha_quotes = api_key
             .stock_time(
-                alpha::util::StockFunction::Daily,
+                alpha::stock_time::StockFunction::Daily,
                 &ticker.name,
-                alpha::util::TimeSeriesInterval::None,
-                output_size,
-            )
-            .compat()
-            .await
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+            ).json().await?;
 
         let mut quotes = Vec::new();
         for quote in alpha_quotes.entry() {
-            let time = date_time_from_str_standard(quote.time(), 18)?;
+            let time = date_time_from_str_standard(quote.time(), 18, ticker.tz.clone())?;
             if time >= start && time <= end {
                 quotes.push(Quote {
                     id: None,
@@ -89,7 +72,7 @@ impl MarketQuoteProvider for AlphaVantage {
         _start: DateTime<Local>,
         _end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
-        Err(MarketQuoteError::FetchFailed("The Alpha Vantage API does not support fetching dividends".to_string()))
+        Err(MarketQuoteError::UnexpectedError("The Alpha Vantage API does not support fetching dividends".to_string()))
     }
 }
 

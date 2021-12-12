@@ -3,8 +3,6 @@
 /// source, e.g a database, files, or REST service.
 /// Market data consist of non-static data, like interest rates,
 /// asset prices, or foreign exchange rates.
-use std::error::Error;
-use std::fmt;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -12,8 +10,9 @@ use chrono::{DateTime, NaiveDate, Local, Weekday};
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
+use thiserror::Error;
 
-use finql_data::{Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, date_time_helper::naive_date_to_date_time};
+use finql_data::{Currency, CurrencyConverter, CurrencyError, QuoteHandler, date_time_helper::naive_date_to_date_time};
 use crate::time_period::TimePeriod;
 
 use crate::calendar::{Calendar, Holiday, NthWeek};
@@ -21,47 +20,20 @@ use crate::market_quotes;
 use crate::market_quotes::MarketQuoteProvider;
 
 /// Error related to market data object
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum MarketError {
+    #[error("Unknown calendar")]
     CalendarNotFound,
-    MarketQuoteError(market_quotes::MarketQuoteError),
-    DBError(DataError),
+    #[error("Market quote error")]
+    MarketQuoteError(#[from] market_quotes::MarketQuoteError),
+    #[error("Database error")]
+    DBError(#[from] finql_data::DataError),
+    #[error("Missing market data provider token")]
     MissingProviderToken,
+    #[error("Currency conversion failure")]
     CurrencyError,
-}
-
-impl fmt::Display for MarketError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::CalendarNotFound => write!(f, "unknown calendar"),
-            Self::MarketQuoteError(_) => write!(f, "market quote error"),
-            Self::DBError(_) => write!(f, "database error"),
-            Self::MissingProviderToken => write!(f, "missing market data provider token"),
-            Self::CurrencyError => write!(f, "currency conversion failed"),
-        }
-    }
-}
-
-impl Error for MarketError {
-    fn cause(&self) -> Option<&dyn Error> {
-        match self {
-            Self::MarketQuoteError(err) => Some(err),
-            Self::DBError(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-impl From<market_quotes::MarketQuoteError> for MarketError {
-    fn from(error: market_quotes::MarketQuoteError) -> Self {
-        Self::MarketQuoteError(error)
-    }
-}
-
-impl From<DataError> for MarketError {
-    fn from(error: DataError) -> Self {
-        Self::DBError(error)
-    }
+    #[error("date/time conversion error")]
+    DateTimeError(#[from] finql_data::date_time_helper::DateTimeError),
 }
 
 /// Container or adaptor to market data
@@ -171,21 +143,22 @@ impl Market {
     }
 
     pub async fn get_asset_price(&self, asset_id: usize, currency: Currency, date: NaiveDate) -> Result<f64, MarketError> {
-        let quote_curr = self.db.get_last_quote_before_by_id(asset_id, naive_date_to_date_time(&date, 18)).await;
+        let quote_curr = self.db.get_last_quote_before_by_id(asset_id, naive_date_to_date_time(&date, 18, None)?).await;
         let (price, quote_currency) = if let Ok((quote, currency)) = quote_curr {
             (quote.price, currency)            
         } else {
             // if no valid quote could be found in database, try to fetch quotes for previous week and try again
             let one_week_before = "-7D".parse::<TimePeriod>().unwrap();
             let date_one_week_before = one_week_before.add_to(date, None);
-            self.update_quote_history_for_asset(asset_id, naive_date_to_date_time(&date_one_week_before, 0), naive_date_to_date_time(&date, 20)).await?;
-            let (quote, currency) = self.db.get_last_quote_before_by_id(asset_id, naive_date_to_date_time(&date, 20)).await?;
+            self.update_quote_history_for_asset(asset_id, naive_date_to_date_time(&date_one_week_before, 0, None)?, 
+                naive_date_to_date_time(&date, 20, None)?).await?;
+            let (quote, currency) = self.db.get_last_quote_before_by_id(asset_id, naive_date_to_date_time(&date, 20, None)?).await?;
             (quote.price, currency)
         };
         if currency == quote_currency {
             Ok(price)
         } else  {
-            let fx_rate = self.fx_rate(currency, quote_currency, naive_date_to_date_time(&date, 20)).await
+            let fx_rate = self.fx_rate(currency, quote_currency, naive_date_to_date_time(&date, 20, None)?).await
                 .map_err(|_| MarketError::CurrencyError)?;
             Ok(price*fx_rate)
         }

@@ -5,47 +5,47 @@ use std::sync::Arc;
 use chrono::{DateTime, Local};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-
+use serde_json;
+use thiserror::Error;
+use alpha_vantage;
+use gurufocus_api;
 use finql_data::{QuoteHandler, CashFlow, Quote, Ticker};
 
 
-pub mod alpha_vantage;
+pub mod alpha_vantage_wrapper;
 pub mod comdirect;
 pub mod eod_historical_data;
 pub mod guru_focus;
 pub mod yahoo;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum MarketQuoteError {
-    StoringFailed(String),
-    FetchFailed(String),
-    ParseDateFailed(chrono::format::ParseError),
+    #[error("Storing quote in database failed")]
+    StoringFailed(#[from] finql_data::DataError),
+    #[error("Fetching quote(s) from provider failed")]
+    FetchFailed(#[from] reqwest::Error),
+    #[error("Parsing quote date failed")]
+    ParseDateFailed(#[from] chrono::format::ParseError),
+    #[error("Parsing number failed")]
+    ParseNumberFailed(#[from] std::num::ParseFloatError),
+    #[error("Invalid currency")]
+    InvalidCurrency(#[from] finql_data::currency::CurrencyError),
+    #[error("Conversion of date/time failed")]
+    DateTimeError(#[from] finql_data::date_time_helper::DateTimeError),
+    #[error("Yahoo error")]
+    YahooError(#[from] yahoo_finance_api::YahooError),
+    #[error("EOD historical data error")]
+    EodHistDataError(#[from] eodhistoricaldata_api::EodHistDataError),
+    #[error("AlphaVantage error")]
+    AlphaVantageError(#[from] alpha_vantage::error::Error),
+    #[error("GuruFocus error")]
+    GuruFocusError(#[from] gurufocus_api::GuruFocusError),
+    #[error("JSON parsing error")]
+    JSONError(#[from] serde_json::Error),
+    #[error("Unexpected error: '{0}'")]
+    UnexpectedError(String),
 }
 
-impl std::error::Error for MarketQuoteError {
-    fn cause(&self) -> Option<&dyn std::error::Error> {
-        match self {
-            Self::ParseDateFailed(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-impl std::convert::From<chrono::format::ParseError> for MarketQuoteError {
-    fn from(error: chrono::format::ParseError) -> Self {
-        Self::ParseDateFailed(error)
-    }
-}
-
-impl fmt::Display for MarketQuoteError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::StoringFailed(err) => write!(f, "storing quote in database failed: {}", err),
-            Self::FetchFailed(err) => write!(f, "fetching quote(s) from provider failed: {}", err),
-            Self::ParseDateFailed(_) => write!(f, "parsing a quote date failed"),
-        }
-    }
-}
 
 /// General interface for market data quotes provider
 #[async_trait]
@@ -76,8 +76,7 @@ pub async fn update_ticker<'a>(
 ) -> Result<(), MarketQuoteError> {
     let mut quote = provider.fetch_latest_quote(ticker).await?;
     quote.price *= ticker.factor;
-    db.insert_quote(&quote).await
-        .map_err(|e| MarketQuoteError::StoringFailed(e.to_string()))?;
+    db.insert_quote(&quote).await?;
     Ok(())
 }
 
@@ -92,8 +91,7 @@ pub async fn update_ticker_history<'a>(
     let mut quotes = provider.fetch_quote_history(ticker, start, end).await?;
     for mut quote in &mut quotes {
         quote.price *= ticker.factor;
-        db.insert_quote(quote).await
-            .map_err(|e| MarketQuoteError::StoringFailed(e.to_string()))?;
+        db.insert_quote(quote).await?;
     }
     Ok(())
 }
@@ -158,7 +156,7 @@ impl MarketDataSource {
             Self::EodHistData => Some(Arc::new(
                 eod_historical_data::EODHistData::new(token))),
             Self::AlphaVantage => Some(Arc::new(
-                alpha_vantage::AlphaVantage::new(token))),
+                alpha_vantage_wrapper::AlphaVantage::new(token))),
             Self::Comdirect => Some(Arc::new(comdirect::Comdirect::new())),
             _ => None,
         }

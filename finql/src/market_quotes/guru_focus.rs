@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use gurufocus_api as gfapi;
 
 use super::{MarketQuoteError, MarketQuoteProvider};
+
 use finql_data::{CashFlow, Currency, Quote, Ticker, 
     date_time_helper::{
         date_time_from_str_american, 
@@ -31,14 +32,9 @@ impl GuruFocus {
 impl MarketQuoteProvider for GuruFocus {
     /// Fetch latest quote
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
-        let prices = self
-            .connector
-            .get_quotes(&[&ticker.name])
-            .await
-            .map_err(MarketQuoteError::FetchFailed)?;
+        let prices = self.connector.get_quotes(&[&ticker.name]).await?;
 
-        let quote: gfapi::Quote = serde_json::from_value(prices)
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+        let quote: gfapi::Quote = serde_json::from_value(prices)?;
 
         let time = unix_to_date_time(quote.timestamp as u64);
         Ok(Quote {
@@ -58,16 +54,13 @@ impl MarketQuoteProvider for GuruFocus {
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let gf_quotes = self
             .connector
-            .get_price_hist(&ticker.name)
-            .await
-            .map_err(MarketQuoteError::FetchFailed)?;
+            .get_price_hist(&ticker.name).await?;
 
-        let gf_quotes: Vec<(String, f64)> = serde_json::from_value(gf_quotes)
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+        let gf_quotes: Vec<(String, f64)> = serde_json::from_value(gf_quotes)?;
 
         let mut quotes = Vec::new();
         for (timestamp, price) in &gf_quotes {
-            let time = date_time_from_str_american(timestamp, 18)?;
+            let time = date_time_from_str_american(timestamp, 18, ticker.tz.clone())?;
             if time < start || time > end {
                 continue;
             }
@@ -91,19 +84,14 @@ impl MarketQuoteProvider for GuruFocus {
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let gf_dividends = self
             .connector
-            .get_dividend_history(&ticker.name)
-            .await
-            .map_err(MarketQuoteError::FetchFailed)?;
-        let dividends: DividendHistory = serde_json::from_value(gf_dividends)
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+            .get_dividend_history(&ticker.name).await?;
+        let dividends: DividendHistory = serde_json::from_value(gf_dividends)?;
         let mut div_cash_flows = Vec::new();
         for div in dividends {
             let pay_date = date_from_str(&div.pay_date,"%Y-%m-%d")?;
-            let pay_date_time = naive_date_to_date_time(&pay_date, 18);
+            let pay_date_time = naive_date_to_date_time(&pay_date, 18, ticker.tz.clone())?;
             if pay_date_time >= start && pay_date_time <= end {
-                let currency = Currency::from_str(&div.currency)
-                    .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
-                div_cash_flows.push(CashFlow::new(div.amount.into(), currency, pay_date));
+                let currency = Currency::from_str(&div.currency)?;                div_cash_flows.push(CashFlow::new(div.amount.into(), currency, pay_date));
             }
         }
         Ok(div_cash_flows)

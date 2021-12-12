@@ -12,12 +12,8 @@ impl MarketQuoteProvider for Yahoo {
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new();
         let response = yahoo
-            .get_latest_quotes(&ticker.name, "1m")
-            .await
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
-        let quote = response
-            .last_quote()
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+            .get_latest_quotes(&ticker.name, "1m").await?;
+        let quote = response.last_quote()?;
         Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
@@ -35,12 +31,8 @@ impl MarketQuoteProvider for Yahoo {
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new();
         let response = yahoo
-            .get_quote_history(&ticker.name, start.into(), end.into())
-            .await
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
-        let yahoo_quotes = response
-            .quotes()
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+            .get_quote_history(&ticker.name, start.into(), end.into()).await?;
+        let yahoo_quotes = response.quotes()?;
         let mut quotes = Vec::new();
         for quote in &yahoo_quotes {
             let volume = Some(quote.volume as f64);
@@ -64,13 +56,8 @@ impl MarketQuoteProvider for Yahoo {
         end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new();
-        let response = yahoo
-            .get_quote_history(&ticker.name, start.into(), end.into())
-            .await
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
-        let yahoo_dividends = response
-            .dividends()
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+        let response = yahoo.get_quote_history(&ticker.name, start.into(), end.into()).await?;
+        let yahoo_dividends = response.dividends()?;
         let mut dividends = Vec::new();
         for dividend in &yahoo_dividends {
             let amount = dividend.amount;

@@ -32,9 +32,7 @@ impl MarketQuoteProvider for EODHistData {
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let eod_quote = self
             .connector
-            .get_latest_quote(&ticker.name)
-            .await
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+            .get_latest_quote(&ticker.name).await?;
 
         let time = unix_to_date_time(eod_quote.timestamp as u64);
         Ok(Quote {
@@ -59,13 +57,11 @@ impl MarketQuoteProvider for EODHistData {
                 &ticker.name,
                 start.naive_local().date(),
                 end.naive_local().date(),
-            )
-            .await
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+            ).await?;
 
         let mut quotes = Vec::new();
         for quote in &eod_quotes {
-            let time = date_time_from_str_standard(&quote.date, 18)?;
+            let time = date_time_from_str_standard(&quote.date, 18, ticker.tz.clone())?;
             let volume = quote.volume.map(|vol| vol as f64);
             if let Some(price) = quote.close {
                 quotes.push(Quote {
@@ -92,15 +88,12 @@ impl MarketQuoteProvider for EODHistData {
             .get_dividend_history(
                 &ticker.name,
                 start.naive_local().date()
-            )
-            .await
-            .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+            ).await?;
         let mut div_cash_flows = Vec::new();
         for div in dividends_since_start {
             let pay_date = date_from_str(&div.payment_date,"%Y-%m-%d")?;
-            if naive_date_to_date_time(&pay_date, 18) <= end {
-                let currency = Currency::from_str(&div.currency)
-                    .map_err(|e| MarketQuoteError::FetchFailed(e.to_string()))?;
+            if naive_date_to_date_time(&pay_date, 18, ticker.tz.clone())? <= end {
+                let currency = Currency::from_str(&div.currency)?;
                 div_cash_flows.push(CashFlow::new(div.value, currency, pay_date));
             }
         }

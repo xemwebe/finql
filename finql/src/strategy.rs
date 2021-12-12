@@ -1,9 +1,9 @@
 use chrono::naive::NaiveDate;
 use async_trait::async_trait;
 use log::{debug, trace};
+use thiserror::Error;
 
 use finql_data::{
-    DataError,
     Transaction, 
     TransactionType, 
     CashFlow,
@@ -14,6 +14,15 @@ use crate::{
     Market,
     time_period::TimePeriod, 
 };
+
+
+#[derive(Error, Debug)]
+pub enum StrategyError {
+    #[error("Failed to retreive data from database")]
+    RectreivingDataFailed(#[from] finql_data::DataError),
+    #[error("date/time conversion error")]
+    DateTimeError(#[from] finql_data::date_time_helper::DateTimeError),
+}
 
 #[derive(Default, Debug, Clone)]
 pub struct StockTransactionFee {
@@ -45,7 +54,7 @@ pub struct StockTransactionCosts {
 
 #[async_trait]
 pub trait Strategy {
-    async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>,  DataError>;
+    async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>,  StrategyError>;
     fn next_day(&self, date: NaiveDate) -> NaiveDate;
 }
 
@@ -77,7 +86,7 @@ impl StaticInSingleStock {
 
 #[async_trait]
 impl Strategy for StaticInSingleStock {
-    async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>, DataError> {
+    async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>, StrategyError> {
         let mut transactions = Vec::new();
         if let Some(idx) = cash_flow_idx(date, &self.dividends) {
             let mut dividend = self.dividends[idx];
@@ -142,7 +151,7 @@ impl ReInvestInSingleStock {
 
 #[async_trait]
 impl Strategy for ReInvestInSingleStock {
-    async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>, DataError> {
+    async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>, StrategyError> {
         let mut transactions = Vec::new();
         if let Some(idx) = cash_flow_idx(date, &self.dividends) {
             let mut dividend = self.dividends[idx];
@@ -173,7 +182,7 @@ impl Strategy for ReInvestInSingleStock {
                 transactions.push(tax_transaction);
             }
             // reinvest in stock
-            let (asset_quote, _quote_currency) = self.market.db().get_last_quote_before_by_id(self.ticker_id, naive_date_to_date_time(&date, 20)).await?;
+            let (asset_quote, _quote_currency) = self.market.db().get_last_quote_before_by_id(self.ticker_id, naive_date_to_date_time(&date, 20, None)?).await?;
             let (additional_position, fee) = self.calc_position_and_fee(available_cash, asset_quote.price);
             if additional_position>0.0 {
                 let buy_transaction = Transaction{

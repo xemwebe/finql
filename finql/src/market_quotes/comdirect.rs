@@ -9,8 +9,6 @@ use tokio_compat_02::FutureExt;
 #[derive(Debug)]
 pub struct ComdirectQuote {
     date: DateTime<Local>,
-    high: Option<f64>,
-    low: Option<f64>,
     close: f64,
     volume: Option<f64>,
 }
@@ -33,18 +31,14 @@ impl Comdirect {
     }
 
     pub async fn get_latest_quote(&self, id: &str) -> Result<f64, MarketQuoteError> {
-        let resp = reqwest::get(&format!("{}{}", self.url, id)).compat().await
-            .map_err(|_| MarketQuoteError::FetchFailed("request failed".to_string()))?;
+        let resp = reqwest::get(&format!("{}{}", self.url, id)).compat().await?;        
         if !resp.status().is_success() {
-            return Err(MarketQuoteError::FetchFailed(
+            return Err(MarketQuoteError::UnexpectedError(
                 "unexpected server response".to_string(),
             ));
         }
 
-        let body = resp
-            .text()
-            .await
-            .map_err(|_| MarketQuoteError::FetchFailed("couldn't extract body".to_string()))?;
+        let body = resp.text().await?;
         // parses string of HTML as a document
         let fragment = Html::parse_document(&body);
         // parses based on a CSS selector
@@ -53,15 +47,9 @@ impl Comdirect {
         match fragment.select(&quote_selector).next() {
             Some(first_quote) => {
                 let quote = first_quote.text().collect::<Vec<_>>();
-                quote[0]
-                    .replace(".", "")
-                    .replace(",", ".")
-                    .parse()
-                    .map_err(|_| {
-                        MarketQuoteError::FetchFailed("quote is not a valid number".to_string())
-                    })
+                Ok(quote[0].replace(".", "").replace(",", ".").parse()?)
             }
-            None => Err(MarketQuoteError::FetchFailed(
+            None => Err(MarketQuoteError::UnexpectedError(
                 "couldn't found quote".to_string(),
             )),
         }
@@ -83,18 +71,14 @@ impl Comdirect {
             self.hurl3,
             id
         );
-        let resp = reqwest::get(&url).compat().await
-            .map_err(|_| MarketQuoteError::FetchFailed("request failed".to_string()))?;
+        let resp = reqwest::get(&url).compat().await?;
         if !resp.status().is_success() {
-            return Err(MarketQuoteError::FetchFailed(
+            return Err(MarketQuoteError::UnexpectedError(
                 "unexpected server response".to_string(),
             ));
         }
 
-        let body = resp
-            .text()
-            .await
-            .map_err(|_| MarketQuoteError::FetchFailed("couln't extract body".to_string()))?;
+        let body = resp.text().await?;
 
         Self::parse_csv(&body)
     }
@@ -123,17 +107,14 @@ impl Comdirect {
             if close.is_none() {
                 continue;
             }
-            let date_time_str = record
-                .get(0)
-                .ok_or_else(|| MarketQuoteError::FetchFailed("empty field".to_string()))?;
-            let date = date_time_from_str(date_time_str, "%d.%m.%Y", 18);
+            let date_time_str = record.get(0)
+                .ok_or_else(|| MarketQuoteError::UnexpectedError("empty field".to_string()))?;
+            let date = date_time_from_str(date_time_str, "%d.%m.%Y", 18, None);
             if date.is_err() {
                 continue;
             }
             quotes.push(ComdirectQuote {
                 date: date.unwrap(),
-                high: Self::num_opt(record.get(1)),
-                low: Self::num_opt(record.get(2)),
                 close: close.unwrap(),
                 volume: Self::num_opt(record.get(4)),
             });
@@ -200,7 +181,7 @@ impl MarketQuoteProvider for Comdirect {
         _start: DateTime<Local>,
         _end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
-        Err(MarketQuoteError::FetchFailed("The comdirect interface does not support fetching dividends".to_string()))
+        Err(MarketQuoteError::UnexpectedError("The comdirect interface does not support fetching dividends".to_string()))
     }
 }
 
