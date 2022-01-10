@@ -17,7 +17,7 @@ use crate::time_period::TimePeriod;
 
 use crate::calendar::{Calendar, Holiday, NthWeek};
 use crate::market_quotes;
-use crate::market_quotes::MarketQuoteProvider;
+use crate::market_quotes::{MarketQuoteProvider, MarketDataSourceError};
 
 /// Error related to market data object
 #[derive(Error, Debug)]
@@ -34,6 +34,8 @@ pub enum MarketError {
     CurrencyError,
     #[error("date/time conversion error")]
     DateTimeError(#[from] finql_data::date_time_helper::DateTimeError),
+    #[error("Invalid market data source")]
+    MarketDataSourceError(#[from] MarketDataSourceError),
 }
 
 /// Container or adaptor to market data

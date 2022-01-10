@@ -107,17 +107,14 @@ pub enum MarketDataSource {
     Comdirect,
 }
 
-#[derive(Debug, Clone)]
-pub struct ParseMarketDataSourceError {}
-
-impl fmt::Display for ParseMarketDataSourceError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Parsing market data source failed")
-    }
+#[derive(Error, Debug, Clone)]
+pub enum MarketDataSourceError {
+    #[error("Parsing market data source failed")]
+    ParseError
 }
 
 impl FromStr for MarketDataSource {
-    type Err = ParseMarketDataSourceError;
+    type Err = MarketDataSourceError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -127,7 +124,7 @@ impl FromStr for MarketDataSource {
             "eodhistdata" => Ok(Self::EodHistData),
             "alpha_vantage" => Ok(Self::AlphaVantage),
             "comdirect" => Ok(Self::Comdirect),
-            _ => Err(ParseMarketDataSourceError {}),
+            _ => Err(MarketDataSourceError::ParseError),
         }
     }
 }

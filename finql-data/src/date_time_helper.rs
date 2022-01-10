@@ -14,7 +14,8 @@ pub enum DateTimeError {
 }
 
 
-/// Convert NaiveDate to DateTime at the given hour, assuming local time zone 
+/// Convert NaiveDate to DateTime at the given hour and convert to local time zone
+/// Assuming local time zone if zone is not given 
 pub fn naive_date_to_date_time(
     date: &NaiveDate,
     hour: u32,
