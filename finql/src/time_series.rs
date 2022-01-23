@@ -56,27 +56,31 @@ impl TimeSeries {
        Ok((min_time.naive_local().date(), max_time.naive_local().date(), min_val, max_val))
     }
 
-    pub fn find_gaps(&self, cal: &Calendar) -> Result<Vec<(NaiveDate,NaiveDate)>, TimeSeriesError> {
+    pub fn find_gaps(&self, cal: &Calendar, min_size: usize) -> Result<Vec<(NaiveDate,NaiveDate)>, TimeSeriesError> {
         let mut gaps = Vec::new();
         let (min_date, _, _, _) = self.min_max()?;
         let today = Local::now().naive_local().date();
-        println!("series: {:?}", self.series);
         let dates: HashSet<NaiveDate> = self.series.iter().map(|t| t.time.naive_local().date() ).collect();
         let mut gap_begin = None;
         let mut date = min_date;
+        let mut gap_size = 0;
         while date <= today {
-            println!("contains {}: {}", date, dates.contains(&date));
             match gap_begin {
                 None => {
                     if ! dates.contains(&date) {
                         gap_begin = Some(date);
+                        gap_size = 1;
                     }
                 },
 
                 Some(d) => {
                     if dates.contains(&date) {
-                        gaps.push((d, cal.prev_bday(date)));
+                        if gap_size >= min_size {
+                            gaps.push((d, cal.prev_bday(date)));
+                        }
                         gap_begin = None;
+                    } else {
+                        gap_size += 1;
                     }
                 }
             }
