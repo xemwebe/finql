@@ -3,6 +3,7 @@ use std::convert::From;
 use std::{error, fmt};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use futures::future::join_all;
 
 use serde::{Deserialize, Serialize};
 use chrono::{NaiveDate,DateTime, Local};
@@ -156,9 +157,11 @@ impl PortfolioPosition {
     }
 
     pub async fn add_quote(&mut self, time: DateTime<Local>, market: &Market) {
+        let mut get_quote_futures = Vec::new();
         for pos in self.assets.values_mut() {
-            pos.add_quote(time, market).await;
-        }
+            get_quote_futures.push(pos.add_quote(time, market));
+        }                   
+        let _ = join_all(get_quote_futures).await;
     }
 
     pub fn calc_totals(&mut self) -> PositionTotals {
