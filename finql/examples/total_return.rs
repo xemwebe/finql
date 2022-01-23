@@ -44,7 +44,7 @@ async fn calc_strategy(currency: Currency, start_transactions: &Vec<Transaction>
         Some(start),
         Some(start)).unwrap();
 
-    position.add_quote(naive_date_to_date_time(&start, 20), &market).await;
+    position.add_quote(naive_date_to_date_time(&start, 20, None).unwrap(), &market).await;
     //let totals = position.calc_totals();
     //total_return.push(TimeValue{ value: totals.value, date: current_date});
     
@@ -66,7 +66,7 @@ async fn calc_strategy(currency: Currency, start_transactions: &Vec<Transaction>
         debug!("CalcStrategy: cash position after applying new transactions: {}", position.cash.position);
 
         current_date = next_date;
-        let current_time = naive_date_to_date_time(&current_date, 20);
+        let current_time = naive_date_to_date_time(&current_date, 20, None).unwrap();
         position.add_quote(current_time, &market).await;
         let totals = position.calc_totals();
         total_return.push(TimeValue{ value: totals.value, time: current_time});
@@ -123,8 +123,8 @@ async fn main() {
         cal: None,
 };
     let ticker_id = db.insert_ticker(&ticker).await.unwrap();
-    let start_time = naive_date_to_date_time(&start, 0);
-    let end_time = naive_date_to_date_time(&today, 20);
+    let start_time = naive_date_to_date_time(&start, 0, None).unwrap();
+    let end_time = naive_date_to_date_time(&today, 20, None).unwrap();
     market.update_quote_history(ticker_id, start_time, end_time).await.unwrap();
     
     let dividends = quote_provider.fetch_dividend_history(&ticker, 
