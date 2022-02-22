@@ -53,5 +53,6 @@ pub mod rates;
 pub mod time_period;
 pub mod strategy;
 pub mod time_series;
+pub mod period_date;
 
 pub use market::Market;

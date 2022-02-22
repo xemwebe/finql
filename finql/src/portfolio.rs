@@ -1,9 +1,9 @@
 use std::vec::Vec;
 use std::convert::From;
-use std::{error, fmt};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use futures::future::join_all;
+use thiserror::Error;
 
 use serde::{Deserialize, Serialize};
 use chrono::{NaiveDate,DateTime, Local};
@@ -11,34 +11,19 @@ use chrono::offset::TimeZone;
 
 use finql_data::{AssetHandler, QuoteHandler, DataError,Transaction, 
     TransactionType, Currency, CurrencyConverter};
+
+use crate::period_date::PeriodDateError;
 use crate::Market;
 
 /// Errors related to position calculation
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PositionError {
+    #[error("Failed to fetch position data")]
+    PositionDataError(#[from] DataError),
+    #[error("Failed to parse foreign currency")]
     ForeignCurrency,
-    NoQuote(DataError),
-    NoFxRate(DataError),
-    NoTransaction(DataError),
-    NoAsset(DataError),
-}
-
-impl fmt::Display for PositionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Calculation of P&L failed.")
-    }
-}
-
-impl error::Error for PositionError {
-    fn cause(&self) -> Option<&dyn error::Error> {
-        match self {
-            Self::NoQuote(err) => Some(err),
-            Self::NoFxRate(err) => Some(err),
-            Self::NoTransaction(err) => Some(err),
-            Self::NoAsset(err) => Some(err),
-            _ => None,
-        }
-    }
+    #[error("Invalid start or end date")]
+    DateError(#[from] PeriodDateError),
 }
 
 /// Calculate the total position as of a given date by applying a specified set of filters
@@ -374,7 +359,7 @@ pub fn calc_delta_position(
 pub async fn calculate_position_and_pnl(currency: Currency, transactions: &[Transaction], date: Option<NaiveDate>, db: Arc<dyn QuoteHandler+Send+Sync>) 
     -> Result<(PortfolioPosition, PositionTotals), PositionError> {
     let mut position = calc_position(currency, transactions, date)?;
-    position.get_asset_names(db.clone().into_arc_dispatch()).await.map_err(PositionError::NoAsset)?;
+    position.get_asset_names(db.clone().into_arc_dispatch()).await?;
     let date_time: DateTime<Local> = if let Some(date) = date {
         DateTime::<Local>::from(Local.from_local_datetime(&date.and_hms(0,0,0)).unwrap())
     } else {
@@ -399,7 +384,7 @@ pub async fn calculate_position_for_period(currency: Currency, transactions: &[T
     let (mut position, _) = calculate_position_and_pnl(currency, transactions, Some(start), db.clone()).await?;
     position.reset_pnl();
     calc_delta_position(&mut position, transactions, Some(start), Some(end))?;
-    position.get_asset_names(db.clone().into_arc_dispatch()).await.map_err(PositionError::NoAsset)?;
+    position.get_asset_names(db.clone().into_arc_dispatch()).await?;
     let end_date_time: DateTime<Local> = DateTime::<Local>::from(Local.from_local_datetime(&end.succ().and_hms(0,0,0)).unwrap());
     let quote_handler = db as Arc<dyn QuoteHandler+Send+Sync>;
     let market = Market::new(quote_handler);
