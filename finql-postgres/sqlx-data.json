@@ -1,25 +1,5 @@
 {
   "db": "PostgreSQL",
-  "082f045b2a5c9e5a470e4a04a0a466052c0c49ddf25bef3df0fa8b9432e297f5": {
-    "query": "UPDATE transactions SET \n                trans_type=$2, \n                asset_id=$3, \n                cash_amount=$4, \n                cash_currency=$5,\n                cash_date=$6,\n                related_trans=$7,\n                position=$8,\n                note=$9\n            WHERE id=$1",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Text",
-          "Int4",
-          "Float8",
-          "Text",
-          "Date",
-          "Int4",
-          "Float8",
-          "Text"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "0c9e8192a07199a1834eab312334a3014f4695cfadcdeeb18c6b25d9429c5fed": {
     "query": "DROP TABLE IF EXISTS transactions",
     "describe": {
@@ -141,8 +121,29 @@
       "nullable": []
     }
   },
-  "3011fb4bb3ab347fadcdca73d76f18ad8cb241e3778c9e379c6b379e1952b0aa": {
-    "query": "CREATE TABLE IF NOT EXISTS rounding_digits (\n                id SERIAL PRIMARY KEY,\n                currency TEXT NOT NULL UNIQUE,\n                digits INT NOT NULL\n            )",
+  "363cf39031c0d7e761eadffd5712e79d3e0350c0e22ea03fa175bee7bd32c6a1": {
+    "query": "INSERT INTO assets (name, note) VALUES ($1, $2) RETURNING id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "43b1a71778d028e2d2772628288390288894858ef52127deb42c142cdcfa8c53": {
+    "query": "DROP TABLE IF EXISTS currencies",
     "describe": {
       "columns": [],
       "parameters": {
@@ -151,8 +152,8 @@
       "nullable": []
     }
   },
-  "3e927b6152a3ab36bc85b7d7491ede31d272f2136e124a06da7240d4fc8e73ff": {
-    "query": "SELECT id, name, wkn, note FROM assets WHERE isin=$1",
+  "52ee5c2c4aaa2f4abd55257a8ffa08067fbd838bb18786ca795f56184d788e98": {
+    "query": "SELECT\n                 a.id,\n                 a.name,\n                 a.note,\n                 c.id AS \"currency_id?\",\n                 c.iso_code AS \"iso_code?\",\n                 c.rounding_digits AS \"rounding_digits?\",\n                 s.id AS \"stock_id?\",\n                 s.isin AS \"isin?\",\n                 s.wkn AS \"wkn?\"\n             FROM assets a\n             LEFT JOIN currencies c ON c.id = a.id\n             LEFT JOIN stocks s ON s.id = a.id\n             ORDER BY a.name",
     "describe": {
       "columns": [
         {
@@ -167,181 +168,38 @@
         },
         {
           "ordinal": 2,
-          "name": "wkn",
+          "name": "note",
           "type_info": "Text"
         },
         {
           "ordinal": 3,
-          "name": "note",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        true,
-        true
-      ]
-    }
-  },
-  "44f61d9edeb243c57138e7c34c05b1505974b9fb4b67877054fb56fa72e97a01": {
-    "query": "SELECT trans_type, asset_id, \n        cash_amount, cash_currency, cash_date, related_trans, position, note \n        FROM transactions\n        WHERE id=$1",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "trans_type",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "asset_id",
+          "name": "currency_id?",
           "type_info": "Int4"
         },
         {
-          "ordinal": 2,
-          "name": "cash_amount",
-          "type_info": "Float8"
-        },
-        {
-          "ordinal": 3,
-          "name": "cash_currency",
-          "type_info": "Text"
-        },
-        {
           "ordinal": 4,
-          "name": "cash_date",
-          "type_info": "Date"
+          "name": "iso_code?",
+          "type_info": "Bpchar"
         },
         {
           "ordinal": 5,
-          "name": "related_trans",
+          "name": "rounding_digits?",
           "type_info": "Int4"
         },
         {
           "ordinal": 6,
-          "name": "position",
-          "type_info": "Float8"
-        },
-        {
-          "ordinal": 7,
-          "name": "note",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false,
-        true,
-        false,
-        false,
-        false,
-        true,
-        true,
-        true
-      ]
-    }
-  },
-  "46de91879fdf2570841c684389110060cbd7ff437173b2616bfdeebac5c830ae": {
-    "query": "SELECT id FROM assets WHERE name=$1",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
-  "476c0ea3a334bfcbe9845f544be377331d93ba05ab4241cba8a25446a9624e36": {
-    "query": "INSERT INTO assets (name, wkn, isin, note) VALUES ($1, $2, $3, $4) RETURNING id",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Text",
-          "Text",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
-  "477a18ebcdc948588d246043e085f67e58f6e28e02ab4ec1e0f019eb99dbedd9": {
-    "query": "SELECT id, trans_type, asset_id, \n        cash_amount, cash_currency, cash_date, related_trans, position, note \n        FROM transactions",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "trans_type",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "asset_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "cash_amount",
-          "type_info": "Float8"
-        },
-        {
-          "ordinal": 4,
-          "name": "cash_currency",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 5,
-          "name": "cash_date",
-          "type_info": "Date"
-        },
-        {
-          "ordinal": 6,
-          "name": "related_trans",
+          "name": "stock_id?",
           "type_info": "Int4"
         },
         {
           "ordinal": 7,
-          "name": "position",
-          "type_info": "Float8"
+          "name": "isin?",
+          "type_info": "Bpchar"
         },
         {
           "ordinal": 8,
-          "name": "note",
-          "type_info": "Text"
+          "name": "wkn?",
+          "type_info": "Bpchar"
         }
       ],
       "parameters": {
@@ -354,143 +212,24 @@
         false,
         false,
         false,
-        true,
-        true,
-        true
-      ]
-    }
-  },
-  "503f020f336bab0bfe866429b62bc2c86cc5769896b452106fe3245bf62bb2e5": {
-    "query": "SELECT id FROM assets WHERE isin=$1",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
-  "52cb344d74582372ede69afc15e66eae8ed3b16566481bfd39b5e0493800f7c2": {
-    "query": "SELECT digits FROM rounding_digits WHERE currency=$1;",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "digits",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
-  "561ec4890c71794a88833b4351c2ae6927bf614d430af3185af15625719fdd18": {
-    "query": "INSERT INTO transactions (trans_type, asset_id, cash_amount, \n                cash_currency, cash_date, related_trans, position,\n                note) \n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Int4",
-          "Float8",
-          "Text",
-          "Date",
-          "Int4",
-          "Float8",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
-  "63a9ed77eb6c49109df54f8b4ba0b5fcd0cbe4f1658a9b5330bbf5f3935c4a17": {
-    "query": "SELECT name, asset_id, source, priority, currency, factor, tz, cal FROM ticker WHERE id=$1",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "asset_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 2,
-          "name": "source",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "priority",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 4,
-          "name": "currency",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 5,
-          "name": "factor",
-          "type_info": "Float8"
-        },
-        {
-          "ordinal": 6,
-          "name": "tz",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "cal",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
         false,
         true,
         true
       ]
     }
   },
-  "6548fb3d8903202bb1d9ee0198bcd2b8a5406c29b6f15f383530e62af601df28": {
-    "query": "INSERT INTO ticker (name, asset_id, source, priority, currency, factor, tz, cal) \n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+  "5db584dfe26f5eb524472c46911413849477e87b7677f806686e7e89ccd3c5f9": {
+    "query": "CREATE TABLE IF NOT EXISTS ticker (\n                id SERIAL PRIMARY KEY,\n                name TEXT NOT NULL,\n                asset_id INTEGER NOT NULL,\n                source TEXT NOT NULL,\n                priority INTEGER NOT NULL,\n                currency_id INT NOT NULL,\n                factor FLOAT8 NOT NULL DEFAULT 1.0,\n                tz TEXT,\n                cal TEXT,\n                FOREIGN KEY(asset_id) REFERENCES assets(id),\n                FOREIGN KEY(currency_id) REFERENCES currencies(id)\n            )",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
+  "5e5c284b2154c8062b496e08b50173e651df60fe74fc0aee8697d411448e1641": {
+    "query": "INSERT INTO ticker (name, asset_id, source, priority, currency_id, factor, tz, cal)\n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
     "describe": {
       "columns": [
         {
@@ -505,7 +244,7 @@
           "Int4",
           "Text",
           "Int4",
-          "Text",
+          "Int4",
           "Float8",
           "Text",
           "Text"
@@ -516,8 +255,18 @@
       ]
     }
   },
-  "6d7f78b2fc242a2861c6c20eb1659e9c0d97e31da6758e384d90da00054af5fb": {
-    "query": "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority\n                FROM quotes q, ticker t, assets a \n                WHERE a.name=$1 AND t.asset_id=a.id AND t.id=q.ticker_id AND q.time<= $2\n                ORDER BY q.time DESC, t.priority ASC LIMIT 1",
+  "5fb35ddc11376247f230b14808fd82585815f895f12055f8b638f0cedeaa211d": {
+    "query": "CREATE TABLE IF NOT EXISTS transactions (\n                id SERIAL PRIMARY KEY,\n                trans_type TEXT NOT NULL,\n                asset_id INTEGER,\n                cash_amount FLOAT8 NOT NULL,\n                cash_currency_id INT NOT NULL,\n                cash_date DATE NOT NULL,\n                related_trans INTEGER,\n                position FLOAT8,\n                note TEXT,\n                FOREIGN KEY(asset_id) REFERENCES assets(id),\n                FOREIGN KEY(cash_currency_id) REFERENCES currencies(id),\n                FOREIGN KEY(related_trans) REFERENCES transactions(id)\n            )",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
+  "6a23ee7940d6851dc7eb064e1385b60bf895cc3564c6b1680fbffd5f67803196": {
+    "query": "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency_id, t.priority\n                FROM quotes q\n                JOIN ticker t ON t.id = q.ticker_id\n                WHERE t.asset_id = $1 AND q.time <= $2\n                ORDER BY q.time DESC, t.priority ASC\n                LIMIT 1",
     "describe": {
       "columns": [
         {
@@ -547,8 +296,8 @@
         },
         {
           "ordinal": 5,
-          "name": "currency",
-          "type_info": "Text"
+          "name": "currency_id",
+          "type_info": "Int4"
         },
         {
           "ordinal": 6,
@@ -558,7 +307,7 @@
       ],
       "parameters": {
         "Left": [
-          "Text",
+          "Int4",
           "Timestamptz"
         ]
       },
@@ -573,69 +322,50 @@
       ]
     }
   },
-  "71befd8a497ede027b2915014f3e1c73a64b2c2b6c1034526641c6573d708ca0": {
-    "query": "SELECT id, name, asset_id, priority, source, currency, factor, tz, cal FROM ticker",
+  "6b92ff941fe692c55811052a94e762190e17404526d777be9d83f6ee2db1edb5": {
+    "query": "INSERT INTO transactions (trans_type, asset_id, cash_amount,\n                cash_currency_id, cash_date, related_trans, position,\n                note) \n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
     "describe": {
       "columns": [
         {
           "ordinal": 0,
           "name": "id",
           "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "asset_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "priority",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 4,
-          "name": "source",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 5,
-          "name": "currency",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 6,
-          "name": "factor",
-          "type_info": "Float8"
-        },
-        {
-          "ordinal": 7,
-          "name": "tz",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 8,
-          "name": "cal",
-          "type_info": "Text"
         }
       ],
       "parameters": {
-        "Left": []
+        "Left": [
+          "Text",
+          "Int4",
+          "Float8",
+          "Int4",
+          "Date",
+          "Int4",
+          "Float8",
+          "Text"
+        ]
       },
       "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        true
+        false
+      ]
+    }
+  },
+  "73012346fd7047fb02355fa1e71579fcc24c72a7fe1c626ab2ace16adabad7d9": {
+    "query": "SELECT id FROM currencies WHERE iso_code = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      },
+      "nullable": [
+        false
       ]
     }
   },
@@ -647,68 +377,6 @@
         "Left": []
       },
       "nullable": []
-    }
-  },
-  "81ae9b494ba38499376b1237c7edef5b10ab7fb5374545b1140ff1a358d80024": {
-    "query": "SELECT id, name, asset_id, priority, currency, factor, tz, cal FROM ticker WHERE source=$1",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "asset_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "priority",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 4,
-          "name": "currency",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 5,
-          "name": "factor",
-          "type_info": "Float8"
-        },
-        {
-          "ordinal": 6,
-          "name": "tz",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "cal",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        true
-      ]
     }
   },
   "822d5edb4ae161de1b0ddb8bbb059e151a8e456a65f94fbf9442b1f5893102e2": {
@@ -737,246 +405,8 @@
       "nullable": []
     }
   },
-  "98f3d3185ebd93ea8790423fb55864bb35c5b6365719a2fb5b20633d1cdeac01": {
-    "query": "CREATE TABLE IF NOT EXISTS transactions (\n                id SERIAL PRIMARY KEY,\n                trans_type TEXT NOT NULL,\n                asset_id INTEGER,\n                cash_amount FLOAT8 NOT NULL,\n                cash_currency TEXT NOT NULL,\n                cash_date DATE NOT NULL,\n                related_trans INTEGER,\n                position FLOAT8,\n                note TEXT,\n                FOREIGN KEY(asset_id) REFERENCES assets(id),\n                FOREIGN KEY(related_trans) REFERENCES transactions(id)\n            )",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
-    }
-  },
-  "9e37810174d9acf06d9745f499eb5e9d4e51c9520d7175a26222acbd1cd12e50": {
-    "query": "DELETE FROM transactions WHERE id=$1;",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "a15d6dddda647bdc06668a5e84410d924f7cce05a78627d39eef14ae67fb49ab": {
-    "query": "CREATE TABLE IF NOT EXISTS quotes (\n                id SERIAL PRIMARY KEY,\n                ticker_id INTEGER NOT NULL,\n                price FLOAT8 NOT NULL,\n                time TIMESTAMP WITH TIME ZONE NOT NULL,\n                volume FLOAT8,\n                FOREIGN KEY(ticker_id) REFERENCES ticker(id) \n            )",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
-    }
-  },
-  "a5e9c06317657888f24f261a9ddffef6c062d220f1fef50784c80e03c7cb4f52": {
-    "query": "DELETE FROM assets WHERE id=$1;",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "a7f495ae4d420c39722a1a279811ad645808220e9bb84751e59c067f1b0b991a": {
-    "query": "DELETE FROM ticker WHERE id=$1;",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "b7f407f9af3743c81a4ab992923704e556cf90cbbf713220dc183f93e61ab456": {
-    "query": "DELETE FROM quotes WHERE id=$1;",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "bd9374123583e905b7f829f08ed1b246e8426c2a81bbb7e2f5d92edf56249d99": {
-    "query": "SELECT name, wkn, isin, note FROM assets WHERE id=$1",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "wkn",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "isin",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "note",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false,
-        true,
-        true,
-        true
-      ]
-    }
-  },
-  "bdf93cd1cb770e2a7118692321914a826398bfc27d74c89b2335b805b1a27737": {
-    "query": "CREATE TABLE IF NOT EXISTS assets (\n                id SERIAL PRIMARY KEY,\n                name TEXT NOT NULL UNIQUE,\n                wkn TEXT UNIQUE,\n                isin TEXT UNIQUE,\n                note TEXT\n            )",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
-    }
-  },
-  "c328cb8f99d0ed7270212e6d54caf65682ed6e337fbb84fc8680916a6f8bced1": {
-    "query": "UPDATE ticker SET name=$2, asset_id=$3, source=$4, priority=$5, currency=$6, factor=$7, tz=$8, cal=$9\n                WHERE id=$1",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Text",
-          "Int4",
-          "Text",
-          "Int4",
-          "Text",
-          "Float8",
-          "Text",
-          "Text"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "cb82578b78eeeea5b249f94229a0f66762a9cd2688d886c5b408fec9393484d0": {
-    "query": "DROP TABLE IF EXISTS assets",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
-    }
-  },
-  "cd3ae9e59d380b47177389a6a7aebc28d8faed44c004e258266b3e40fe37b2ed": {
-    "query": "SELECT id, name, source, priority, currency, factor, tz, cal FROM ticker WHERE asset_id=$1",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "source",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "priority",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 4,
-          "name": "currency",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 5,
-          "name": "factor",
-          "type_info": "Float8"
-        },
-        {
-          "ordinal": 6,
-          "name": "tz",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "cal",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        true
-      ]
-    }
-  },
-  "d241a6fcf57078942ce7e3ca19f2fa8a0c2854ddfaf56e7a7f8d6363ca261576": {
-    "query": "CREATE TABLE IF NOT EXISTS ticker (\n                id SERIAL PRIMARY KEY,\n                name TEXT NOT NULL,\n                asset_id INTEGER NOT NULL,\n                source TEXT NOT NULL,\n                priority INTEGER NOT NULL,\n                currency TEXT NOT NULL,\n                factor FLOAT8 NOT NULL DEFAULT 1.0,\n                tz TEXT,\n                cal TEXT,\n                FOREIGN KEY(asset_id) REFERENCES assets(id) \n            )",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
-    }
-  },
-  "d2779c2325688ffb6bb283c077e72a9febc3be785a084e0b1c50b410c9b1d54c": {
-    "query": "SELECT id FROM ticker WHERE name=$1",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
-  "d981c77e602bac323d2e118b3664a913570ed691b6546d66a67e380c21665082": {
-    "query": "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority\n                FROM quotes q, ticker t\n                WHERE t.asset_id=$1 AND t.id=q.ticker_id AND q.time<= $2\n                ORDER BY q.time DESC, t.priority ASC LIMIT 1",
+  "95fe20d3c1556f4b8d560592bb9c6524b3669bf1256c63e30f9dc5792429a890": {
+    "query": "SELECT\n                   q.id,\n                   q.ticker_id,\n                   q.price,\n                   q.time,\n                   q.volume,\n                   c.id AS currency_id,\n                   c.iso_code AS currency_iso_code,\n                   c.rounding_digits AS currency_rounding_digits,\n                   t.priority\n                FROM quotes q\n                JOIN ticker t ON t.id = q.ticker_id\n                JOIN currencies c ON c.id = t.currency_id\n                JOIN assets a ON  a.id = t.asset_id\n                WHERE\n                    a.name = $1\n                    AND q.time <= $2\n                ORDER BY q.time DESC, t.priority ASC\n                LIMIT 1",
     "describe": {
       "columns": [
         {
@@ -1006,18 +436,28 @@
         },
         {
           "ordinal": 5,
-          "name": "currency",
-          "type_info": "Text"
+          "name": "currency_id",
+          "type_info": "Int4"
         },
         {
           "ordinal": 6,
+          "name": "currency_iso_code",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 7,
+          "name": "currency_rounding_digits",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 8,
           "name": "priority",
           "type_info": "Int4"
         }
       ],
       "parameters": {
         "Left": [
-          "Int4",
+          "Text",
           "Timestamptz"
         ]
       },
@@ -1028,22 +468,14 @@
         false,
         true,
         false,
+        false,
+        false,
         false
       ]
     }
   },
-  "e9d31100181f5c13569111d928b5eaedc86766cb78ebdc1c443a374e4d5a0dad": {
-    "query": "DROP TABLE IF EXISTS ticker",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
-    }
-  },
-  "f1b76cf12cd213027fd62a546e6ad716e78484497a108dce3e2a07c5510cac8c": {
-    "query": "SELECT id, name, wkn, isin, note FROM assets ORDER BY name",
+  "9da1a8383ec8d6b9cf2ac764dbb76e3da8559df0109452245d1170aa3e8e2b04": {
+    "query": "SELECT\n                   t.id,\n                   t.name,\n                   t.asset_id,\n                   t.priority,\n                   t.source,\n                   t.factor,\n                   t.tz,\n                   t.cal,\n                   c.id AS currency_id,\n                   c.iso_code AS currency_iso_code,\n                   c.rounding_digits AS currency_rounding_digits\n                 FROM ticker t\n                 JOIN currencies c ON c.id = t.currency_id\n                 WHERE t.asset_id = $1",
     "describe": {
       "columns": [
         {
@@ -1058,16 +490,726 @@
         },
         {
           "ordinal": 2,
-          "name": "wkn",
+          "name": "asset_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "priority",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "source",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "factor",
+          "type_info": "Float8"
+        },
+        {
+          "ordinal": 6,
+          "name": "tz",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "cal",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "currency_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "currency_iso_code",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 10,
+          "name": "currency_rounding_digits",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "9e37810174d9acf06d9745f499eb5e9d4e51c9520d7175a26222acbd1cd12e50": {
+    "query": "DELETE FROM transactions WHERE id=$1;",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "a00c1734c0fca6e76fbe9b3a8bd5dd8f3a7981ad6ab73bf542e9e632f4d77a72": {
+    "query": "SELECT\n                     a.id,\n                     a.name,\n                     a.note,\n                     c.id AS \"currency_id?\",\n                     c.iso_code AS \"iso_code?\",\n                     c.rounding_digits AS \"rounding_digits?\",\n                     s.id AS \"stock_id?\",\n                     s.isin AS \"isin?\",\n                     s.wkn AS \"wkn?\"\n                 FROM assets a\n                 LEFT JOIN currencies c ON c.id = a.id\n                 LEFT JOIN stocks s ON s.id = a.id\n                 WHERE a.id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "note",
           "type_info": "Text"
         },
         {
           "ordinal": 3,
-          "name": "isin",
-          "type_info": "Text"
+          "name": "currency_id?",
+          "type_info": "Int4"
         },
         {
           "ordinal": 4,
+          "name": "iso_code?",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "rounding_digits?",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 6,
+          "name": "stock_id?",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 7,
+          "name": "isin?",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 8,
+          "name": "wkn?",
+          "type_info": "Bpchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
+  "a15d6dddda647bdc06668a5e84410d924f7cce05a78627d39eef14ae67fb49ab": {
+    "query": "CREATE TABLE IF NOT EXISTS quotes (\n                id SERIAL PRIMARY KEY,\n                ticker_id INTEGER NOT NULL,\n                price FLOAT8 NOT NULL,\n                time TIMESTAMP WITH TIME ZONE NOT NULL,\n                volume FLOAT8,\n                FOREIGN KEY(ticker_id) REFERENCES ticker(id) \n            )",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
+  "a5e9c06317657888f24f261a9ddffef6c062d220f1fef50784c80e03c7cb4f52": {
+    "query": "DELETE FROM assets WHERE id=$1;",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "a62faae05cf97b332fed3c3449baa9b81a69684b73d5d7c1c8e37561a08680ba": {
+    "query": "CREATE TABLE IF NOT EXISTS stocks (\n                  id INTEGER PRIMARY KEY,\n                  wkn CHAR(6) UNIQUE,\n                  isin CHAR(4) UNIQUE,\n                  FOREIGN KEY(id) REFERENCES assets(id)\n                )",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
+  "a7ea5eaa7fb647a13c807d41738aa8da63193ca919db07ee6e9fb69a7c0b5130": {
+    "query": "SELECT\n                   t.id AS \"id!\",\n                   t.name AS \"name!\",\n                   t.asset_id AS \"asset_id!\",\n                   t.priority AS \"priority!\",\n                   t.source AS \"source!\",\n                   t.factor AS \"factor!\",\n                   t.tz,\n                   t.cal,\n                   c.id AS \"currency_id!\",\n                   c.iso_code AS \"currency_iso_code!\",\n                   c.rounding_digits AS \"currency_rounding_digits!\"\n                 FROM ticker t\n                 JOIN currencies c ON c.id = t.currency_id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "name!",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "asset_id!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "priority!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "source!",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "factor!",
+          "type_info": "Float8"
+        },
+        {
+          "ordinal": 6,
+          "name": "tz",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "cal",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "currency_id!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "currency_iso_code!",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 10,
+          "name": "currency_rounding_digits!",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    }
+  },
+  "a7f495ae4d420c39722a1a279811ad645808220e9bb84751e59c067f1b0b991a": {
+    "query": "DELETE FROM ticker WHERE id=$1;",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "aa1a4c780ff7fe737c424dbf3fc562dd59de82005cb6c4893e1f9aa47d78e43c": {
+    "query": "SELECT id FROM stocks WHERE wkn = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "ae470d8b1325d32328edd893cb330d1e28bf93099181218c09054a9216f49a38": {
+    "query": "SELECT id FROM stocks WHERE isin = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "afb80e364bdb5b2e50c4a946fcc79f89c404d60ffbaa10f3e71c98cda7680581": {
+    "query": "SELECT\n                t.id,\n                t.trans_type,\n                t.asset_id,\n                t.cash_amount,\n                c.id AS cash_currency_id,\n                c.iso_code AS cash_iso_code,\n                c.rounding_digits AS cash_rounding_digits,\n                t.cash_date,\n                t.related_trans,\n                t.position,\n                t.note\n                FROM transactions t\n                JOIN currencies c ON c.id = t.cash_currency_id\n                WHERE t.id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "trans_type",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "asset_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "cash_amount",
+          "type_info": "Float8"
+        },
+        {
+          "ordinal": 4,
+          "name": "cash_currency_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "cash_iso_code",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "cash_rounding_digits",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 7,
+          "name": "cash_date",
+          "type_info": "Date"
+        },
+        {
+          "ordinal": 8,
+          "name": "related_trans",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "position",
+          "type_info": "Float8"
+        },
+        {
+          "ordinal": 10,
+          "name": "note",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ]
+    }
+  },
+  "b7f407f9af3743c81a4ab992923704e556cf90cbbf713220dc183f93e61ab456": {
+    "query": "DELETE FROM quotes WHERE id=$1;",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "bdf93cd1cb770e2a7118692321914a826398bfc27d74c89b2335b805b1a27737": {
+    "query": "CREATE TABLE IF NOT EXISTS assets (\n                id SERIAL PRIMARY KEY,\n                name TEXT NOT NULL UNIQUE,\n                wkn TEXT UNIQUE,\n                isin TEXT UNIQUE,\n                note TEXT\n            )",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
+  "c99c7d658da9802545b4877f8ba8857cc5e9446fc48c4144b03844944e06157b": {
+    "query": "INSERT INTO currencies (id, iso_code, rounding_digits) VALUES ($1, $2, $3)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Bpchar",
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "cb0cf5062d66c5c6b379939980969f9b3acb92bdeada61fb905ee072d53de223": {
+    "query": "DROP TABLE IF EXISTS stocks",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
+  "cb82578b78eeeea5b249f94229a0f66762a9cd2688d886c5b408fec9393484d0": {
+    "query": "DROP TABLE IF EXISTS assets",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
+  "cdb76f0c643d9b1e8fe1950e396a69b0a5a95c898b2827102872ec12fc7c62b9": {
+    "query": "UPDATE transactions SET \n                trans_type=$2, \n                asset_id=$3, \n                cash_amount=$4, \n                cash_currency_id=$5,\n                cash_date=$6,\n                related_trans=$7,\n                position=$8,\n                note=$9\n            WHERE id=$1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Text",
+          "Int4",
+          "Float8",
+          "Int4",
+          "Date",
+          "Int4",
+          "Float8",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "d2779c2325688ffb6bb283c077e72a9febc3be785a084e0b1c50b410c9b1d54c": {
+    "query": "SELECT id FROM ticker WHERE name=$1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "d3de492ed882e4fc9dddca997b11c8095f753a483e6623add2323f2a6a33cb1d": {
+    "query": "UPDATE assets SET name=$2, note=$3\n                WHERE id=$1;",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "d53655f41fe57fda8e6981e862acb75f7dbbd91632cfea3cbfa5bde1463919ff": {
+    "query": "SELECT\n                   a.id,\n                   a.name,\n                   a.note,\n                   s.id AS \"stock_id!\",\n                   s.isin AS \"isin!\",\n                   s.wkn AS \"wkn?\"\n                 FROM assets a\n                 JOIN stocks s ON s.id = a.id\n                 WHERE s.isin = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "note",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "stock_id!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "isin!",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "wkn?",
+          "type_info": "Bpchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        true,
+        true
+      ]
+    }
+  },
+  "e3694be21665149fba002d28c893d9fb51442af1b4260bd61e4056daa38e631d": {
+    "query": "SELECT\n                    t.name,\n                    t.asset_id,\n                    t.source,\n                    t.priority,\n                    t.factor,\n                    t.tz,\n                    t.cal,\n                    c.id AS currency_id,\n                    c.iso_code AS currency_iso_code,\n                    c.rounding_digits AS currency_rounding_digits\n                 FROM ticker t\n                 JOIN currencies c ON c.id = t.currency_id\n                 WHERE t.id = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "asset_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "source",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "priority",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "factor",
+          "type_info": "Float8"
+        },
+        {
+          "ordinal": 5,
+          "name": "tz",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "cal",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "currency_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 8,
+          "name": "currency_iso_code",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 9,
+          "name": "currency_rounding_digits",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "e8c49d4f15dd7192c70bf4a5dc86ee7c1e86d0601941175a267abb91363cff4b": {
+    "query": "INSERT INTO stocks (id, isin, wkn) VALUES ($1, $2, $3)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Bpchar",
+          "Bpchar"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "e9d31100181f5c13569111d928b5eaedc86766cb78ebdc1c443a374e4d5a0dad": {
+    "query": "DROP TABLE IF EXISTS ticker",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
+  "ebc339686a11e87120a1a31b4e645520155e964d27c8cd30aaaa8602e14abc79": {
+    "query": "SELECT id FROM assets WHERE name = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "ecaaf6e53447d539e4f58dea1d053fcf7ec7b79a4ebd467f3e16dbbc10645ad0": {
+    "query": "SELECT\n                t.id AS \"id!\",\n                t.trans_type AS \"trans_type!\",\n                t.asset_id,\n                t.cash_amount AS \"cash_amount!\",\n                c.id AS \"cash_currency_id!\",\n                c.iso_code AS \"cash_iso_code!\",\n                c.rounding_digits AS \"cash_rounding_digits!\",\n                t.cash_date AS \"cash_date!\",\n                t.related_trans,\n                t.position,\n                t.note\n                FROM transactions t\n                JOIN currencies c ON c.id = t.cash_currency_id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "trans_type!",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "asset_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "cash_amount!",
+          "type_info": "Float8"
+        },
+        {
+          "ordinal": 4,
+          "name": "cash_currency_id!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "cash_iso_code!",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "cash_rounding_digits!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 7,
+          "name": "cash_date!",
+          "type_info": "Date"
+        },
+        {
+          "ordinal": 8,
+          "name": "related_trans",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "position",
+          "type_info": "Float8"
+        },
+        {
+          "ordinal": 10,
           "name": "note",
           "type_info": "Text"
         }
@@ -1076,8 +1218,14 @@
         "Left": []
       },
       "nullable": [
-        false,
-        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
         true,
         true,
         true
@@ -1102,17 +1250,84 @@
       ]
     }
   },
-  "f7190977cdc26ba92d89257e1a2682a53d65ed05929fe6a771a4b43e0e12ce46": {
-    "query": "INSERT INTO rounding_digits (currency, digits) VALUES ($1, $2)",
+  "f7bbcd207c27c51a0e2f72d67dc1c887c807dfa3c5711310e37ffc43cce4a38f": {
+    "query": "SELECT\n                   t.id,\n                   t.name,\n                   t.asset_id,\n                   t.priority,\n                   t.source,\n                   t.factor,\n                   t.tz,\n                   t.cal,\n                   c.id AS currency_id,\n                   c.iso_code AS currency_iso_code,\n                   c.rounding_digits AS currency_rounding_digits\n                 FROM ticker t\n                 JOIN currencies c ON c.id = t.currency_id\n                 WHERE t.source = $1",
     "describe": {
-      "columns": [],
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "asset_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "priority",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "source",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "factor",
+          "type_info": "Float8"
+        },
+        {
+          "ordinal": 6,
+          "name": "tz",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "cal",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "currency_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "currency_iso_code",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 10,
+          "name": "currency_rounding_digits",
+          "type_info": "Int4"
+        }
+      ],
       "parameters": {
         "Left": [
-          "Text",
-          "Int4"
+          "Text"
         ]
       },
-      "nullable": []
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
+      ]
     }
   },
   "f7dd586a7a35ccdb9bd566c2682cd0f304144e7f709d7e293d80d1139f73b6ac": {
@@ -1128,35 +1343,29 @@
       "nullable": []
     }
   },
-  "fe73f86a42561c8eb2a81da00d03b08ecd2f7db259080e5e0b4bca1a325578f9": {
-    "query": "SELECT id FROM assets WHERE wkn=$1",
+  "fdee5000931b7d065b6c1470a7b98616b415de278d84f19f905823c7f933610e": {
+    "query": "CREATE TABLE IF NOT EXISTS currencies (\n                    id INTEGER PRIMARY KEY,\n                    iso_code CHAR(3) NOT NULL,\n                    rounding_digits INT NOT NULL,\n                    note TEXT,\n                    FOREIGN KEY(id) REFERENCES assets(id)\n                 )",
     "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
+      "columns": [],
       "parameters": {
-        "Left": [
-          "Text"
-        ]
+        "Left": []
       },
-      "nullable": [
-        false
-      ]
+      "nullable": []
     }
   },
-  "feb3a7f2036a8e9115daaf5cb31551edbaa4f846c9a44e26f7b2f7480daae914": {
-    "query": "UPDATE assets SET name=$2, wkn=$3, isin=$4, note=$5 \n                WHERE id=$1;",
+  "fdf612acd11d059e9e87e31316bf5cbe8a0b1af1eebfc8441025101db82f22ea": {
+    "query": "UPDATE ticker SET name = $2, asset_id = $3, source = $4, priority = $5, currency_id = $6, factor = $7, tz = $8, cal = $9\n                WHERE id = $1",
     "describe": {
       "columns": [],
       "parameters": {
         "Left": [
           "Int4",
           "Text",
+          "Int4",
           "Text",
+          "Int4",
+          "Int4",
+          "Float8",
           "Text",
           "Text"
         ]

@@ -55,9 +55,4 @@ pub trait QuoteHandler: AssetHandler {
     async fn update_quote(&self, quote: &Quote) -> Result<(), DataError>;
     async fn delete_quote(&self, id: usize) -> Result<(), DataError>;
     async fn remove_duplicates(&self) -> Result<(), DataError>;
-
-    // Get and set cash rounding conventions by currency
-    // This method never throws, if currency could not be found in table, return 2 by default instead
-    async fn get_rounding_digits(&self, currency: Currency) -> i32;
-    async fn set_rounding_digits(&self, currency: Currency, digits: i32) -> Result<(), DataError>;
 }

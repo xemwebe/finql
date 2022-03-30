@@ -14,7 +14,7 @@ pub mod object_handler;
 pub enum SQLiteError {
     #[error("Failed to create pool")]
     CreatePoolFailed(#[from] deadpool_sqlite::CreatePoolError),
-    #[error("Failed to execute SQL statement")]
+    #[error("Failed to execute SQL statement: {0:?}")]
     QueryError(#[from] deadpool_sqlite::rusqlite::Error),
     #[error("Failed to interact with connetion pool")]
     PoolError(#[from] deadpool_sqlite::InteractError),
@@ -74,8 +74,15 @@ impl SqliteDB {
             stmt.execute([])?;
             stmt = conn.prepare("DROP TABLE IF EXISTS ticker")?;
             stmt.execute([])?;
+            stmt = conn.prepare("DROP TABLE IF EXISTS market_data_source")?;
+            stmt.execute([])?;
+            stmt = conn.prepare("DROP TABLE IF EXISTS currencies")?;
+            stmt.execute([])?;
+            stmt = conn.prepare("DROP TABLE IF EXISTS stocks")?;
+            stmt.execute([])?;
             stmt = conn.prepare("DROP TABLE IF EXISTS assets")?;
             stmt.execute([])?;
+            //NOTE: this table no longer exists, this should be removed eventually
             stmt = conn.prepare("DROP TABLE IF EXISTS rounding_digits")?;
             stmt.execute([])?;
             Ok(())
@@ -88,39 +95,55 @@ impl SqliteDB {
         let _ = self.conn.interact(|conn| -> Result<(), SQLiteError> {
             conn.execute(
             "CREATE TABLE IF NOT EXISTS assets (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE,
-                wkn TEXT UNIQUE,
-                isin TEXT UNIQUE,
-                note TEXT)", [])?;
+                  id INTEGER PRIMARY KEY,
+                  name TEXT NOT NULL UNIQUE,
+                  note TEXT
+                 )", [])?;
             conn.execute(
-                    "CREATE TABLE IF NOT EXISTS transactions (
-                id INTEGER PRIMARY KEY,
-                trans_type TEXT NOT NULL,
-                asset_id INTEGER,
-                cash_amount REAL NOT NULL,
-                cash_currency TEXT NOT NULL,
-                cash_date TEXT NOT NULL,
-                related_trans INTEGER,
-                position REAL,
-                note TEXT,
-                time_stamp INTEGER NOT NULL,
-                FOREIGN KEY(asset_id) REFERENCES assets(id),
-                FOREIGN KEY(related_trans) REFERENCES transactions(id)
-            )", [])?;
+                "CREATE TABLE IF NOT EXISTS currencies (
+                    id INTEGER PRIMARY KEY,
+                    iso_code CHAR(3) NOT NULL,
+                    rounding_digits INT NOT NULL,
+                    note TEXT,
+                    FOREIGN KEY(id) REFERENCES assets(id)
+                 )", [])?;
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS stocks (
+                  id INTEGER PRIMARY KEY,
+                  wkn CHAR(6) UNIQUE,
+                  isin CHAR(4) UNIQUE,
+                  FOREIGN KEY(id) REFERENCES assets(id)
+                )", [])?;
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS transactions (
+                  id INTEGER PRIMARY KEY,
+                  trans_type TEXT NOT NULL,
+                  asset_id INTEGER,
+                  cash_amount REAL NOT NULL,
+                  cash_currency_id INT NULL,
+                  cash_date TEXT NOT NULL,
+                  related_trans INTEGER,
+                  position REAL,
+                  note TEXT,
+                  time_stamp INTEGER NOT NULL,
+                  FOREIGN KEY(asset_id) REFERENCES assets(id),
+                  FOREIGN KEY(cash_currency_id) REFERENCES currencies(id),
+                  FOREIGN KEY(related_trans) REFERENCES transactions(id)
+                )", [])?;
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS ticker (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                asset_id INTEGER NOT NULL,
-                source TEXT NOT NULL,
-                priority INTEGER NOT NULL,
-                currency TEXT NOT NULL,
-                factor REAL NOT NULL DEFAULT 1.0,
-                tz TEXT,
-                cal TEXT,
-                FOREIGN KEY(asset_id) REFERENCES assets(id) 
-            )", [])?;
+                    id INTEGER PRIMARY KEY,
+                    name VARCHAR(50) NOT NULL,
+                    asset_id INTEGER NOT NULL,
+                    source TEXT NOT NULL,
+                    priority INTEGER NOT NULL,
+                    currency_id INTEGER NOT NULL,
+                    factor REAL NOT NULL DEFAULT 1.0,
+                    tz TEXT,
+                    cal TEXT,
+                    FOREIGN KEY(asset_id) REFERENCES assets(id)
+                    FOREIGN KEY(currency_id) REFERENCES currencies(id)
+                )", [])?;
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS quotes (
                 id INTEGER PRIMARY KEY,
@@ -129,12 +152,6 @@ impl SqliteDB {
                 time TEXT NOT NULL,
                 volume REAL,
                 FOREIGN KEY(ticker_id) REFERENCES ticker(id) 
-            )", [])?;
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS rounding_digits (
-                id INTEGER PRIMARY KEY,
-                currency TEXT NOT NULL UNIQUE,
-                digits INT NOT NULL
             )", [])?;
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS objects (

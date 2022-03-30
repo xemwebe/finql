@@ -2,35 +2,76 @@ use super::{DataError, DataItem};
 ///! Implementation of a container for basic asset data
 use serde::{Deserialize, Serialize};
 
+use crate::{Currency, CurrencyISOCode, Stock};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AssetCategory {
-    id: usize,
-    pub name: String,
+pub enum Resource {
+    Currency(Currency),
+    Stock(Stock),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Asset {
     pub id: Option<usize>,
     pub name: String,
-    pub wkn: Option<String>,
-    pub isin: Option<String>,
     pub note: Option<String>,
+    pub resource: Resource,
 }
 
 impl Asset {
-    pub fn new(
+    pub fn new_currency(
         id: Option<usize>,
-        name: &str,
-        wkn: Option<String>,
-        isin: Option<String>,
+        name: String,
         note: Option<String>,
-    ) -> Asset {
-        Asset {
+        iso_code: CurrencyISOCode,
+        rounding_digits: i32,
+    ) -> Self {
+        Self {
             id,
-            name: name.to_string(),
-            wkn,
-            isin,
+            name: name.into(),
             note,
+            resource: Resource::Currency(Currency::new(
+                id,
+                iso_code,
+                Some(rounding_digits),
+            )),
+        }
+    }
+
+    pub fn new_stock(
+        id: Option<usize>,
+        name: String,
+        note: Option<String>,
+        isin: String,
+        wkn: Option<String>,
+    ) -> Self {
+        Self {
+            id,
+            name: name.into(),
+            note,
+            resource: Resource::Stock(Stock::new(
+                id,
+                isin,
+                wkn
+            ))
+        }
+    }
+
+    pub fn currency(&self) -> Result<Currency, DataError> {
+        if let Resource::Currency(c) = &self.resource {
+            Ok(c.to_owned())
+        }
+        else {
+            Err(DataError::InvalidResource)
+        }
+    }
+
+    pub fn stock(&self) -> Result<Stock, DataError> {
+        if let Resource::Stock(s) = &self.resource {
+            Ok(s.to_owned())
+        }
+        else {
+            Err(DataError::InvalidResource)
         }
     }
 }
@@ -53,6 +94,16 @@ impl DataItem for Asset {
             )),
             None => {
                 self.id = Some(id);
+
+                match &mut self.resource {
+                    Resource::Currency(c) => {
+                        c.id = Some(id);
+                    },
+                    Resource::Stock(s) => {
+                        s.id = Some(id);
+                    }
+                }
+
                 Ok(())
             }
         }

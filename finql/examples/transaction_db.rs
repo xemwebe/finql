@@ -9,12 +9,12 @@ use finql_sqlite::SqliteDBPool;
 
 async fn transaction_tests(db: &mut dyn TransactionHandler) {
     print!("Store asset...");
-    let asset = Asset::new(
+    let asset = Asset::new_stock(
         None,
-        "Admiral Group plc",
-        Some("AODJ58".to_string()),
-        Some("GB00B02J6398".to_string()),
+        "Admiral Group plc".to_string(),
         Some("Here are my notes".to_string()),
+        "AODJ58".to_string(),
+        Some("GB00B02J6398".to_string()),
     );
     let asset_id = db.insert_asset(&asset).await;
     match asset_id {

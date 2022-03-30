@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 
 use super::DataError;
-use crate::asset::Asset;
-use crate::currency::Currency;
+use crate::Asset;
+use crate::Currency;
 
 /// Handler for globally available data of transactions and related data
 #[async_trait]
@@ -13,12 +13,12 @@ pub trait AssetHandler {
         &self,
         asset: &Asset,
         rename_asset: bool,
-    ) -> Result<usize, DataError>; 
+    ) -> Result<usize, DataError>;
     
     async fn get_asset_id(&self, asset: &Asset) -> Option<usize>;
     async fn get_asset_by_id(&self, id: usize) -> Result<Asset, DataError>;
     async fn get_asset_by_isin(&self, id: &str) -> Result<Asset, DataError>;
-    /// Return a list of all assets ordered by name 
+    /// Return a list of all assets ordered by name
     async fn get_all_assets(&self) -> Result<Vec<Asset>, DataError>;
     async fn update_asset(&self, asset: &Asset) -> Result<(), DataError>;
     async fn delete_asset(&self, id: usize) -> Result<(), DataError>;

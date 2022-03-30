@@ -46,19 +46,82 @@ impl de::Error for CurrencyError {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Copy)]
+pub struct CurrencyISOCode {
+    iso_code: [char; 3],
+}
+
+impl CurrencyISOCode {
+    pub fn new(code: &str) -> Result<CurrencyISOCode, CurrencyError> {
+        let mut iso_code = [' ', ' ', ' '];
+        let mut idx = 0;
+        for c in code.chars() {
+            if idx >= 3 {
+                return Err(CurrencyError::InvalidLength);
+            }
+
+            let c = c.to_ascii_uppercase();
+            if c.is_ascii_alphabetic() {
+                iso_code[idx] = c.to_ascii_uppercase();
+                idx += 1;
+            } else {
+                return Err(CurrencyError::InvalidCharacter);
+            }
+        }
+        if idx != 3 {
+            Err(CurrencyError::InvalidLength)
+        } else {
+            Ok(
+                Self {
+                    iso_code
+                }
+            )
+        }
+    }
+}
+
+impl fmt::Display for CurrencyISOCode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}{}{}",
+            self.iso_code[0], self.iso_code[1], self.iso_code[2]
+        )
+    }
+}
+
+impl FromStr for CurrencyISOCode {
+    type Err = CurrencyError;
+
+    fn from_str(c: &str) -> Result<CurrencyISOCode, CurrencyError> {
+        Ok(Self::new(c)?)
+    }
+}
+
 /// Special type for currencies
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub struct Currency {
-    iso_code: [char; 3],
-    rounding_digits: i32,
+    pub id: Option<usize>,
+    pub iso_code: CurrencyISOCode,
+    pub rounding_digits: i32,
+}
+
+impl Currency {
+    pub fn new(id: Option<usize>, iso_code: CurrencyISOCode, rounding_digits: Option<i32>) -> Self {
+        Self {
+            id,
+            iso_code,
+            rounding_digits: rounding_digits.unwrap_or(default_rounding_digits(&iso_code.to_string())),
+        }
+    }
 }
 
 impl fmt::Display for Currency {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{}{}{}",
-            self.iso_code[0], self.iso_code[1], self.iso_code[2]
+            "{}",
+            self.iso_code.to_string(),
         )
     }
 }
@@ -74,27 +137,8 @@ fn default_rounding_digits(curr: &str) -> i32 {
 impl FromStr for Currency {
     type Err = CurrencyError;
 
-    fn from_str(curr: &str) -> Result<Currency, CurrencyError> {
-        let rounding_digits = default_rounding_digits(curr);
-        let mut iso_code = [' ', ' ', ' '];
-        let mut idx = 0;
-        for c in curr.chars() {
-            if idx >= 3 {
-                return Err(CurrencyError::InvalidLength);
-            }
-            let c = c.to_ascii_uppercase();
-            if c.is_ascii_alphabetic() {
-                iso_code[idx] = c.to_ascii_uppercase();
-                idx += 1;
-            } else {
-                return Err(CurrencyError::InvalidCharacter);
-            }
-        }
-        if idx != 3 {
-            Err(CurrencyError::InvalidLength)
-        } else {
-            Ok(Currency{iso_code, rounding_digits} )
-        }
+    fn from_str(c: &str) -> Result<Currency, CurrencyError> {
+        Ok(Currency::new(None, CurrencyISOCode::from_str(c)?, None))
     }
 }
 
@@ -190,7 +234,9 @@ mod tests {
     #[test]
     fn serialize_currency() {
         let curr = Currency {
-            iso_code: ['E', 'U', 'R'], rounding_digits: 2
+            id: None,
+            iso_code: CurrencyISOCode::from_str("EUR").unwrap(),
+            rounding_digits: 2
         };
         let json = serde_json::to_string(&curr).unwrap();
         assert_eq!(json, r#""EUR""#);

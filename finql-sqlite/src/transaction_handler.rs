@@ -2,7 +2,7 @@ use std::str::FromStr;
 use chrono::NaiveDate;
 use async_trait::async_trait;
 
-use finql_data::currency::Currency;
+use finql_data::currency::{Currency, CurrencyISOCode};
 use finql_data::{DataError, TransactionHandler};
 use finql_data::cash_flow::{CashAmount, CashFlow};
 use finql_data::transaction::{Transaction, TransactionType};
@@ -17,7 +17,7 @@ pub struct RawTransaction {
     pub trans_type: String,
     pub asset: Option<usize>,
     pub cash_amount: f64,
-    pub cash_currency: String,
+    pub cash_currency: Currency,
     pub cash_date: NaiveDate,
     pub related_trans: Option<usize>,
     pub position: Option<f64>,
@@ -35,13 +35,11 @@ const FEE: &str = "f";
 
 impl RawTransaction {
     pub fn to_transaction(&self) -> Result<Transaction, DataError> {
-        let currency = Currency::from_str(&self.cash_currency)
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         let id = self.id.map(|x| x as usize);
         let cash_flow = CashFlow {
             amount: CashAmount {
                 amount: self.cash_amount,
-                currency,
+                currency: self.cash_currency,
             },
             date: self.cash_date,
         };
@@ -87,7 +85,7 @@ impl RawTransaction {
     pub fn from_transaction(transaction: &Transaction) -> RawTransaction {
         let id = transaction.id;
         let cash_amount = transaction.cash_flow.amount.amount;
-        let cash_currency = transaction.cash_flow.amount.currency.to_string();
+        let cash_currency = transaction.cash_flow.amount.currency;
         let note = transaction.note.clone();
         let mut raw_transaction = RawTransaction {
             id,
@@ -136,43 +134,48 @@ impl TransactionHandler for SqliteDB {
         let transaction = RawTransaction::from_transaction(transaction);
         let time_stamp = chrono::offset::Utc::now().timestamp_nanos();
         let transaction2 = transaction.clone();
-        let _ = self.conn.interact(move |conn| -> Result<(), SQLiteError> {
-            conn.execute(
-                "INSERT INTO transactions (trans_type, asset_id, cash_amount, 
-                    cash_currency, cash_date, related_trans, position,
-                    note, time_stamp) 
+
+        self.conn.interact(move |conn| -> Result<usize, SQLiteError> {
+            let r = conn.execute(
+                "INSERT INTO transactions (trans_type, asset_id, cash_amount, cash_currency_id, cash_date, related_trans, position,
+                    note, time_stamp)
                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-                params![                
+                params![
                     &transaction.trans_type,
                     &transaction.asset,
                     &transaction.cash_amount,
-                    &transaction.cash_currency,
+                    &transaction.cash_currency.id.expect("cash currency asset id must be in db"),
                     &transaction.cash_date,
                     &transaction.related_trans,
                     &transaction.position,
                     &transaction.note,
-                    &time_stamp])?;
-            Ok(())
-        }).await.map_err(|e| DataError::DataAccessFailure(e.to_string()))?
-        .map_err(|e| DataError::DataAccessFailure(e.to_string()));
-  
-        self.conn.interact(move |conn| -> Result<usize, SQLiteError> {
-            Ok(conn.query_row(
-                r#"SELECT id FROM transactions 
-                WHERE 
-                trans_type=?
-                AND cash_amount=?
-                AND cash_currency=?
-                AND cash_date=?
-                AND time_stamp=?"#,
-                params![
-                    &transaction2.trans_type,
-                    &transaction2.cash_amount,
-                    &transaction2.cash_currency,
-                    &transaction2.cash_date,
                     &time_stamp
+                ])?;
+
+            let mut sql = "SELECT id FROM transactions WHERE trans_type = ?1".to_string();
+            if transaction.asset.is_some() {
+                sql.push_str(" AND asset_id = ?2");
+            }
+            else {
+                sql.push_str(" AND asset_id IS NULL");
+            }
+            sql.push_str(" AND cash_amount = ?3 AND cash_currency_id = ?4 AND cash_date = ?5");
+
+            let id = conn.query_row(
+                &sql,
+                params![
+                    &transaction.trans_type,
+                    &transaction.asset,
+                    &transaction.cash_amount,
+                    &transaction.cash_currency.id.expect("cash currency asset id must be in db"),
+                    &transaction.cash_date,
                 ],
-                |row| row.get(0) )?)
+                |row| {
+                    let id:usize = row.get(0)?;
+                    Ok(id)
+                })?;
+
+            Ok(id)
         }).await.map_err(|e| DataError::DataAccessFailure(e.to_string()))?
         .map_err(|e| DataError::DataAccessFailure(e.to_string()))
     }
@@ -180,23 +183,41 @@ impl TransactionHandler for SqliteDB {
     async fn get_transaction_by_id(&self, id: usize) -> Result<Transaction, DataError> {
         Ok(self.conn.interact(move |conn| -> Result<RawTransaction, SQLiteError> {
             Ok(conn.query_row(
-                "SELECT trans_type, asset_id, 
-                cash_amount, cash_currency, cash_date, related_trans, position, note 
-                FROM transactions
-                WHERE id=?1",
+                "SELECT
+                t.id,
+                t.trans_type,
+                t.asset_id,
+                t.cash_amount,
+                c.id AS cash_currency_id,
+                c.iso_code AS cash_iso_code,
+                c.rounding_digits AS cash_rounding_digits,
+                t.cash_date,
+                t.related_trans,
+                t.position,
+                t.note
+                FROM transactions t
+                JOIN currencies c ON c.id = t.cash_currency_id
+                WHERE t.id = ?1",
                 params![&id],
-                |row| { Ok(RawTransaction {
-                    id: Some(id),
-                    trans_type: row.get(0)?,
-                    asset: row.get(1)?,
-                    cash_amount: row.get(2)?,
-                    cash_currency: row.get(3)?,
-                    cash_date: row.get(4)?,
-                    related_trans: row.get(5)?,
-                    position: row.get(6)?,
-                    note: row.get(7)?
-                })
-            })?)
+                |row| {
+                    let cic:String = row.get(5)?;
+
+                    Ok(RawTransaction {
+                        id: row.get(0)?,
+                        trans_type: row.get(1)?,
+                        asset: row.get(2)?,
+                        cash_amount: row.get(3)?,
+                        cash_currency: Currency::new(
+                            row.get(4)?,
+                            CurrencyISOCode::from_str(&cic).expect("expected good code from the database"),
+                            row.get(6)?,
+                        ),
+                        cash_date: row.get(7)?,
+                        related_trans: row.get(8)?,
+                        position: row.get(9)?,
+                        note: row.get(10)?
+                    })
+                })?)
         }).await.map_err(|e| DataError::DataAccessFailure(e.to_string()))?
         .map_err(|e| DataError::DataAccessFailure(e.to_string()))?
         .to_transaction()?)
@@ -204,24 +225,43 @@ impl TransactionHandler for SqliteDB {
 
     async fn get_all_transactions(&self) -> Result<Vec<Transaction>, DataError> {
         self.conn.interact(|conn| -> Result<Vec<Transaction>, SQLiteError> {
-            let mut stmt = conn.prepare("SELECT id, trans_type, asset_id, 
-            cash_amount, cash_currency, cash_date, related_trans, position, note 
-            FROM transactions")?;
+            let mut stmt = conn.prepare("
+                SELECT
+                t.id,
+                t.trans_type,
+                t.asset_id,
+                t.cash_amount,
+                c.id AS cash_currency_id,
+                c.iso_code AS cash_iso_code,
+                c.rounding_digits AS cash_rounding_digits,
+                t.cash_date,
+                t.related_trans,
+                t.position,
+                t.note
+                FROM transactions t
+                JOIN currencies c ON c.id = t.cash_currency_id")?;
+
             let assets: Vec<Transaction> = stmt.query_map([], |row| {
+                let cic:String = row.get(5)?;
+
                 Ok(RawTransaction {
                     id: row.get(0)?,
                     trans_type: row.get(1)?,
                     asset: row.get(2)?,
                     cash_amount: row.get(3)?,
-                    cash_currency: row.get(4)?,
-                    cash_date: row.get(5)?,
-                    related_trans: row.get(6)?,
-                    position: row.get(7)?,
-                    note: row.get(8)?,
+                    cash_currency: Currency::new(
+                        row.get(4)?,
+                        CurrencyISOCode::from_str(&cic).expect("expected good code from the database"),
+                        row.get(6)?,
+                    ),
+                    cash_date: row.get(7)?,
+                    related_trans: row.get(8)?,
+                    position: row.get(9)?,
+                    note: row.get(10)?
                 })
-            })?.filter_map(|raw_transaction| raw_transaction.ok() )
-            .map(|raw_transaction| raw_transaction.to_transaction() )
-            .filter_map(|transaction| transaction.ok() ).collect();
+            })?.filter_map(|raw_transaction| raw_transaction.ok())
+            .map(|raw_transaction| raw_transaction.to_transaction())
+            .filter_map(|transaction| transaction.ok()).collect();
             Ok(assets)
         })
         .await.map_err(|e| DataError::DataAccessFailure(e.to_string()))?
@@ -234,27 +274,35 @@ impl TransactionHandler for SqliteDB {
                 "not yet stored to database".to_string(),
             ));
         }
+
         let transaction = RawTransaction::from_transaction(transaction);
+
+        if transaction.cash_currency.id.is_none() {
+            return Err(DataError::NotFound(
+                "transaction currency not yet stored to database".to_string(),
+            ));
+        }
+
         let time_stamp = chrono::offset::Utc::now().timestamp_nanos();
         self.conn.interact(move |conn| -> Result<(), SQLiteError> {
             conn.execute(
                 "UPDATE transactions SET 
-                trans_type=?2, 
-                asset_id=?3, 
-                cash_amount=?4, 
-                cash_currency=?5,
-                cash_date=?6,
-                related_trans=?7,
-                position=?8,
-                note=?9,
-                time_stamp=?10
-                WHERE id=?1",
+                trans_type = ?2,
+                asset_id = ?3,
+                cash_amount = ?4,
+                cash_currency_id = ?5,
+                cash_date = ?6,
+                related_trans = ?7,
+                position = ?8,
+                note = ?9,
+                time_stamp = ?10
+                WHERE id = ?1",
                 params![
                     &transaction.id,                
                     &transaction.trans_type,
                     &transaction.asset,
                     &transaction.cash_amount,
-                    &transaction.cash_currency,
+                    &transaction.cash_currency.id.unwrap(),
                     &transaction.cash_date,
                     &transaction.related_trans,
                     &transaction.position,
@@ -267,7 +315,7 @@ impl TransactionHandler for SqliteDB {
 
     async fn delete_transaction(&self, id: usize) -> Result<(), DataError> {
         self.conn.interact(move |conn| -> Result<(), SQLiteError> {
-            conn.execute("DELETE FROM transactions WHERE id=?;", params![&id])?;
+            conn.execute("DELETE FROM transactions WHERE id = ?;", params![&id])?;
             Ok(())
         }).await.map_err(|e| DataError::DataAccessFailure(e.to_string()))?
         .map_err(|e| DataError::DataAccessFailure(e.to_string()))
@@ -280,7 +328,7 @@ mod test {
     use super::*;
     use std::sync::Arc;
     use super::super::SqliteDBPool;
-    use finql_data::{Asset, AssetHandler};
+    use finql_data::{Asset, AssetHandler, DataItem};
     
     #[tokio::test]
     async fn transaction_handler_test() {
@@ -288,18 +336,29 @@ mod test {
         let db = db_pool.get_conection().await.unwrap();
         assert!(db.clean().await.is_ok());
 
-        let asset = Asset{
-            id: None,
-            name: "A asset".to_string(),
-            isin: Some("123456789012".to_string()),
-            wkn: Some("A1B2C3".to_string()),
-            note: Some("Just a simple asset for testing".to_string()),
-        };
+        let mut asset = Asset::new_stock(
+            None,
+            "A asset".to_string(),
+            Some("Just a simple asset for testing".to_string()),
+            "123456789012".to_string(),
+            Some("A1B2C3".to_string()),
+        );
 
-        let asset_id = db.insert_asset(&asset).await.unwrap();
+        let asset_id = db.insert_asset(&mut asset).await.unwrap();
         assert_eq!(asset_id, 1);
 
-        let eur = Currency::from_str("EUR").unwrap();
+        let mut eur_asset = Asset::new_currency(
+            None,
+            "euro".to_string(),
+            Some("Currency of EU".to_string()),
+            CurrencyISOCode::from_str("EUR").unwrap(),
+            2
+        );
+
+        let eur_id = db.insert_asset(&mut eur_asset).await.unwrap();
+        eur_asset.set_id(eur_id);
+        let eur = eur_asset.currency().unwrap();
+
         let asset_buy = Transaction {
             id: None,
             transaction_type: TransactionType::Asset{ asset_id, position: 100.0 },
@@ -361,6 +420,6 @@ mod test {
         assert!(db.update_transaction(&cash2).await.is_ok());
 
         assert!(db.delete_transaction(interest_id).await.is_ok());
-        assert_eq!(db.get_all_transactions().await.unwrap().len(), 5);
+        assert_eq!(db.get_all_transactions().await.unwrap().len(), 5, "get_all_transactions");
     }
 }
