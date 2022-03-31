@@ -124,7 +124,7 @@ mod tests {
         ts.series.push( TimeValue{ time: make_time(2021, 11, 8, 20, 0, 0).unwrap(), value: 1.0 } );
         ts.series.push( TimeValue{ time: make_time(2021, 11, 9, 20, 0, 0).unwrap(), value: 1.0 } );
         
-        let gaps = ts.find_gaps(&cal).unwrap();
+        let gaps = ts.find_gaps(&cal, 1).unwrap();
         assert_eq!(gaps.len(), 3);
         assert_eq!(gaps[0].0, NaiveDate::from_ymd(2021, 10, 29));
         assert_eq!(gaps[0].1, NaiveDate::from_ymd(2021, 10, 29));
