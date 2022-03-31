@@ -35,9 +35,16 @@ impl PostgresDB {
         sqlx::query!("DROP TYPE IF EXISTS market_data_source")
             .execute(&self.pool)
             .await?;
+        sqlx::query!("DROP TABLE IF EXISTS currencies")
+            .execute(&self.pool)
+            .await?;
+        sqlx::query!("DROP TABLE IF EXISTS stocks")
+            .execute(&self.pool)
+            .await?;
         sqlx::query!("DROP TABLE IF EXISTS assets")
             .execute(&self.pool)
             .await?;
+        //NOTE: this table was dropped but remains for the time being for diligent cleanups
         sqlx::query!("DROP TABLE IF EXISTS rounding_digits")
             .execute(&self.pool)
             .await?;
@@ -58,23 +65,44 @@ impl PostgresDB {
         .execute(&self.pool)
         .await?;
         sqlx::query!(
+                "CREATE TABLE IF NOT EXISTS currencies (
+                    id INTEGER PRIMARY KEY,
+                    iso_code CHAR(3) NOT NULL,
+                    rounding_digits INT NOT NULL,
+                    note TEXT,
+                    FOREIGN KEY(id) REFERENCES assets(id)
+                 )"
+        )
+            .execute(&self.pool)
+            .await?;
+        sqlx::query!(
+                "CREATE TABLE IF NOT EXISTS stocks (
+                  id INTEGER PRIMARY KEY,
+                  wkn CHAR(6) UNIQUE,
+                  isin CHAR(4) UNIQUE,
+                  FOREIGN KEY(id) REFERENCES assets(id)
+                )"
+        )
+            .execute(&self.pool)
+            .await?;
+        sqlx::query!(
             "CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY,
                 trans_type TEXT NOT NULL,
                 asset_id INTEGER,
                 cash_amount FLOAT8 NOT NULL,
-                cash_currency TEXT NOT NULL,
+                cash_currency_id INT NOT NULL,
                 cash_date DATE NOT NULL,
                 related_trans INTEGER,
                 position FLOAT8,
                 note TEXT,
                 FOREIGN KEY(asset_id) REFERENCES assets(id),
+                FOREIGN KEY(cash_currency_id) REFERENCES currencies(id),
                 FOREIGN KEY(related_trans) REFERENCES transactions(id)
             )"
         )
         .execute(&self.pool)
         .await?;
-
         sqlx::query!(
             "CREATE TABLE IF NOT EXISTS ticker (
                 id SERIAL PRIMARY KEY,
@@ -82,11 +110,12 @@ impl PostgresDB {
                 asset_id INTEGER NOT NULL,
                 source TEXT NOT NULL,
                 priority INTEGER NOT NULL,
-                currency TEXT NOT NULL,
+                currency_id INT NOT NULL,
                 factor FLOAT8 NOT NULL DEFAULT 1.0,
                 tz TEXT,
                 cal TEXT,
-                FOREIGN KEY(asset_id) REFERENCES assets(id) 
+                FOREIGN KEY(asset_id) REFERENCES assets(id),
+                FOREIGN KEY(currency_id) REFERENCES currencies(id)
             )"
         )
         .execute(&self.pool)
@@ -99,16 +128,6 @@ impl PostgresDB {
                 time TIMESTAMP WITH TIME ZONE NOT NULL,
                 volume FLOAT8,
                 FOREIGN KEY(ticker_id) REFERENCES ticker(id) 
-            )"
-        )
-        .execute(&self.pool)
-        .await?;
-
-        sqlx::query!(
-            "CREATE TABLE IF NOT EXISTS rounding_digits (
-                id SERIAL PRIMARY KEY,
-                currency TEXT NOT NULL UNIQUE,
-                digits INT NOT NULL
             )"
         )
         .execute(&self.pool)

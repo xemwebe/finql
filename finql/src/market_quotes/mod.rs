@@ -225,13 +225,13 @@ mod tests {
 
     async fn prepare_db(db: Arc<dyn QuoteHandler+Send+Sync>) -> Ticker {
         let asset_id = db
-            .insert_asset(&Asset {
-                id: None,
-                name: "Apple AG".to_string(),
-                wkn: None,
-                isin: None,
-                note: None,
-            })
+            .insert_asset(&Asset::new_stock(
+                None,
+                "Apple AG".to_string(),
+                None,
+                "APPL".to_string(),
+                None,
+            ))
             .await.unwrap();
 
         let mut ticker = Ticker {

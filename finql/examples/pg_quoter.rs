@@ -10,7 +10,7 @@ use finql_data::{Asset, Currency, CurrencyConverter, Quote, Ticker, QuoteHandler
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
-use finql_sqlite::SqliteDBPool;
+use finql_::SqliteDBPool;
 
 fn log(s: &str) {
     print!("{}", s);
@@ -204,7 +204,7 @@ async fn quote_tests(market: &mut Market) {
         println!("failed");
     }
     println!("List of quotes in db: {:?}", quotes);
-    
+
     // correct wrong quote
     log("update quote...");
     wrong_quote.id = Some(wrong_quote_id);
@@ -259,7 +259,7 @@ async fn main() {
         let db = db_pool.get_conection().await.unwrap();
         db.init().await.unwrap();
         let qh: Arc<dyn QuoteHandler+Sync+Send> = Arc::new(db);
-        let mut market = Market::new(qh);            
+        let mut market = Market::new(qh);
         quote_tests(&mut market).await;
         println!("You may have a look at the database for further inspection.");
     }

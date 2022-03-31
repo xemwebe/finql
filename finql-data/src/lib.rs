@@ -8,17 +8,19 @@ pub mod currency;
 pub mod date_time_helper;
 pub mod quote;
 pub mod quote_handler;
+pub mod stock;
 pub mod transaction_handler;
 pub mod transaction;
 pub mod object_handler;
 
-pub use asset::Asset;
+pub use asset::{Asset, Resource};
 pub use asset_handler::AssetHandler;
 pub use quote::{Quote, Ticker};
 pub use quote_handler::QuoteHandler;
+pub use stock::Stock;
 pub use transaction::{Transaction, TransactionType};
 pub use transaction_handler::TransactionHandler;
-pub use currency::{Currency, CurrencyConverter, CurrencyError};
+pub use currency::{Currency, CurrencyConverter, CurrencyError, CurrencyISOCode};
 pub use cash_flow::{CashAmount, CashFlow};
 pub use object_handler::ObjectHandler;
 
@@ -29,7 +31,9 @@ pub enum DataError {
     UpdateFailed(String),
     DeleteFailed(String),
     InsertFailed(String),
+    InvalidAsset(String),
     InvalidTransaction(String),
+    InvalidResource
 }
 
 impl std::error::Error for DataError {
@@ -46,7 +50,9 @@ impl fmt::Display for DataError {
             Self::UpdateFailed(err) => write!(f, "update of object in database failed: {}", err),
             Self::DeleteFailed(err) => write!(f, "removing object from database failed: {}", err),
             Self::InsertFailed(err) => write!(f, "inserting object to database failed: {}", err),
+            Self::InvalidAsset(err) => write!(f, "invalid asset data: {}", err),
             Self::InvalidTransaction(err) => write!(f, "invalid transaction type: {}", err),
+            Self::InvalidResource => write!(f, "invalid resource type requested for asset")
         }
     }
 }

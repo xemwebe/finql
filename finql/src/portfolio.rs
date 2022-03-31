@@ -625,23 +625,23 @@ mod tests {
         db.init().await.unwrap();
         // first add some assets
         let eur_id = db
-            .insert_asset(&Asset {
-                id: None,
-                name: "EUR Stock".to_string(),
-                wkn: None,
-                isin: None,
-                note: None,
-            })
+            .insert_asset(&Asset::new_stock(
+                None,
+                "EUR Stock".to_string(),
+                None,
+                "EURS".to_string(),
+                None,
+            ))
             .await.unwrap();
         // first add some assets
         let us_id = db
-            .insert_asset(&Asset {
-                id: None,
-                name: "US Stock".to_string(),
-                wkn: None,
-                isin: None,
-                note: None,
-            })
+            .insert_asset(&Asset::new_stock(
+                None,
+                "USD Stock".to_string(),
+                None,
+                "USDS".to_string(),
+                None,
+            ))
             .await.unwrap();
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();

@@ -93,11 +93,11 @@ async fn main() {
     let db: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(sqlite_db);
 
     // Define the asset
-    let asset = Asset::new(
+    let asset = Asset::new_stock(
         None,
-        "Broadcom Inc.",
+        "Broadcom Inc.".to_string(),
         None,
-        None,
+        "AVGO".to_string(),
         None,
     );
     let asset_id = db.insert_asset(&asset).await.unwrap();

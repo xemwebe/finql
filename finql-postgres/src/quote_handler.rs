@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 
 use finql_data::currency::Currency;
-use finql_data::{DataError, QuoteHandler, AssetHandler};
+use finql_data::{DataError, QuoteHandler, AssetHandler, CurrencyISOCode};
 use finql_data::quote::{Quote, Ticker};
 
 use super::PostgresDB;
@@ -19,20 +19,21 @@ impl QuoteHandler for PostgresDB {
 
     // insert, get, update and delete for market data sources
     async fn insert_ticker(&self, ticker: &Ticker) -> Result<usize, DataError> {
+        let cid = ticker.currency.id.and_then(|id| Some(id as i32));
         let row = sqlx::query!(
-                "INSERT INTO ticker (name, asset_id, source, priority, currency, factor, tz, cal) 
+                "INSERT INTO ticker (name, asset_id, source, priority, currency_id, factor, tz, cal)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
                 ticker.name,
                 (ticker.asset as i32),
                 (ticker.source.to_string()),
                 ticker.priority,
-                (ticker.currency.to_string()),
+                cid,
                 ticker.factor,
                 ticker.tz,
                 ticker.cal
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id: i32 = row.id;
+        let id:i32 = row.id;
         Ok(id as usize)
     }
 
@@ -57,16 +58,32 @@ impl QuoteHandler for PostgresDB {
 
     async fn get_ticker_by_id(&self, id: usize) -> Result<Ticker, DataError> {
         let row = sqlx::query!(
-                "SELECT name, asset_id, source, priority, currency, factor, tz, cal FROM ticker WHERE id=$1",
+                "SELECT
+                    t.name,
+                    t.asset_id,
+                    t.source,
+                    t.priority,
+                    t.factor,
+                    t.tz,
+                    t.cal,
+                    c.id AS currency_id,
+                    c.iso_code AS currency_iso_code,
+                    c.rounding_digits AS currency_rounding_digits
+                 FROM ticker t
+                 JOIN currencies c ON c.id = t.currency_id
+                 WHERE t.id = $1",
                 (id as i32),
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let name = row.name;
         let asset = row.asset_id;
         let source = row.source;
-        let currency = row.currency;
-        let currency =
-            Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+        let currency = Currency::new(
+            Some(row.currency_id as usize),
+            CurrencyISOCode::from_str(&row.currency_iso_code).expect("expected good iso_code from db"),
+            Some(row.currency_rounding_digits),
+        );
+
         Ok(Ticker {
             id: Some(id),
             name,
@@ -83,21 +100,35 @@ impl QuoteHandler for PostgresDB {
     async fn get_all_ticker(&self) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, name, asset_id, priority, source, currency, factor, tz, cal FROM ticker",
+                r#"SELECT
+                   t.id AS "id!",
+                   t.name AS "name!",
+                   t.asset_id AS "asset_id!",
+                   t.priority AS "priority!",
+                   t.source AS "source!",
+                   t.factor AS "factor!",
+                   t.tz,
+                   t.cal,
+                   c.id AS "currency_id!",
+                   c.iso_code AS "currency_iso_code!",
+                   c.rounding_digits AS "currency_rounding_digits!"
+                 FROM ticker t
+                 JOIN currencies c ON c.id = t.currency_id"#
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
             let id = row.id;
-            let asset = row.asset_id;
             let source = row.source;
-            let currency = row.currency;
-            let currency =
-                Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let currency = Currency::new(
+                Some(row.currency_id as usize),
+                CurrencyISOCode::from_str(&row.currency_iso_code).expect("expected good iso_code from db"),
+                Some(row.currency_rounding_digits),
+            );
             let factor = row.factor;
             all_ticker.push(Ticker {
                 id: Some(id as usize),
                 name: row.name,
-                asset: asset as usize,
+                asset: row.asset_id as usize,
                 source,
                 priority: row.priority,
                 currency,
@@ -115,16 +146,33 @@ impl QuoteHandler for PostgresDB {
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, name, asset_id, priority, currency, factor, tz, cal FROM ticker WHERE source=$1",
+                "SELECT
+                   t.id,
+                   t.name,
+                   t.asset_id,
+                   t.priority,
+                   t.source,
+                   t.factor,
+                   t.tz,
+                   t.cal,
+                   c.id AS currency_id,
+                   c.iso_code AS currency_iso_code,
+                   c.rounding_digits AS currency_rounding_digits
+                 FROM ticker t
+                 JOIN currencies c ON c.id = t.currency_id
+                 WHERE t.source = $1",
                 (source.to_string()),
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
             let id = row.id;
             let asset = row.asset_id;
-            let currency = row.currency;
-            let currency =
-                Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let currency = row.currency_id;
+            let currency = Currency::new(
+                Some(row.currency_id as usize),
+                CurrencyISOCode::from_str(&row.currency_iso_code).expect("expected good iso_code from db"),
+                Some(row.currency_rounding_digits),
+            );
             let factor = row.factor;
             all_ticker.push(Ticker {
                 id: Some(id as usize),
@@ -147,16 +195,32 @@ impl QuoteHandler for PostgresDB {
     ) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, name, source, priority, currency, factor, tz, cal FROM ticker WHERE asset_id=$1",
+                "SELECT
+                   t.id,
+                   t.name,
+                   t.asset_id,
+                   t.priority,
+                   t.source,
+                   t.factor,
+                   t.tz,
+                   t.cal,
+                   c.id AS currency_id,
+                   c.iso_code AS currency_iso_code,
+                   c.rounding_digits AS currency_rounding_digits
+                 FROM ticker t
+                 JOIN currencies c ON c.id = t.currency_id
+                 WHERE t.asset_id = $1",
                 (asset_id as i32),
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
             let id = row.id;
             let source = row.source;
-            let currency = row.currency;
-            let currency =
-                Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+            let currency = Currency::new(
+                Some(row.currency_id as usize),
+                CurrencyISOCode::from_str(&row.currency_iso_code).expect("expected good iso_code from db"),
+                Some(row.currency_rounding_digits),
+            );
             let factor: f64 = row.factor;
             all_ticker.push(Ticker {
                 id: Some(id as usize),
@@ -181,15 +245,16 @@ impl QuoteHandler for PostgresDB {
             ));
         }
         let id = ticker.id.unwrap() as i32;
+        let cid = ticker.currency.id.expect("currency asset_id required");
         sqlx::query!(
-                "UPDATE ticker SET name=$2, asset_id=$3, source=$4, priority=$5, currency=$6, factor=$7, tz=$8, cal=$9
-                WHERE id=$1",
+                "UPDATE ticker SET name = $2, asset_id = $3, source = $4, priority = $5, currency_id = $6, factor = $7, tz = $8, cal = $9
+                WHERE id = $1",
                 id,
                 ticker.name,
                 (ticker.asset as i32),
                 ticker.source.to_string(),
                 ticker.priority,
-                ticker.currency.to_string(),
+                (cid as i32),
                 ticker.factor,
                 ticker.tz,
                 ticker.cal
@@ -227,22 +292,39 @@ impl QuoteHandler for PostgresDB {
         time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError> {
         let row = sqlx::query!(
-                "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
-                FROM quotes q, ticker t, assets a 
-                WHERE a.name=$1 AND t.asset_id=a.id AND t.id=q.ticker_id AND q.time<= $2
-                ORDER BY q.time DESC, t.priority ASC LIMIT 1",
+                "SELECT
+                   q.id,
+                   q.ticker_id,
+                   q.price,
+                   q.time,
+                   q.volume,
+                   c.id AS currency_id,
+                   c.iso_code AS currency_iso_code,
+                   c.rounding_digits AS currency_rounding_digits,
+                   t.priority
+                FROM quotes q
+                JOIN ticker t ON t.id = q.ticker_id
+                JOIN currencies c ON c.id = t.currency_id
+                JOIN assets a ON  a.id = t.asset_id
+                WHERE
+                    a.name = $1
+                    AND q.time <= $2
+                ORDER BY q.time DESC, t.priority ASC
+                LIMIT 1",
                 asset_name, time,
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
 
         let id = row.id;
+        let c = Currency::new(
+            Some(row.currency_id as usize),
+            CurrencyISOCode::from_str(&row.currency_iso_code).expect("unknown currency asset referenced in db"),
+            Some(row.currency_rounding_digits),
+        );
         let ticker = row.ticker_id;
         let price = row.price;
         let time: DateTime<Local> = row.time.into();
         let volume = row.volume;
-        let currency = row.currency;
-        let currency =
-            Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
         Ok((
             Quote {
                 id: Some(id as usize),
@@ -251,7 +333,7 @@ impl QuoteHandler for PostgresDB {
                 time,
                 volume,
             },
-            currency,
+            c,
         ))
     }
 
@@ -261,22 +343,25 @@ impl QuoteHandler for PostgresDB {
         time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError> {
         let row = sqlx::query!(
-                "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency, t.priority
-                FROM quotes q, ticker t
-                WHERE t.asset_id=$1 AND t.id=q.ticker_id AND q.time<= $2
-                ORDER BY q.time DESC, t.priority ASC LIMIT 1",
+                "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency_id, t.priority
+                FROM quotes q
+                JOIN ticker t ON t.id = q.ticker_id
+                WHERE t.asset_id = $1 AND q.time <= $2
+                ORDER BY q.time DESC, t.priority ASC
+                LIMIT 1",
                 (asset_id as i32), time,
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
 
-        let id = row.id;
+        let id = row.id as usize;
         let ticker = row.ticker_id;
         let price = row.price;
         let time: DateTime<Local> = row.time.into();
         let volume = row.volume;
-        let currency = row.currency;
-        let currency =
-            Currency::from_str(&currency).map_err(|e| DataError::NotFound(e.to_string()))?;
+
+        let ca = self.get_asset_by_id(id).await?;
+        let currency = ca.currency().expect("asset should refer to a currency");
+
         Ok((
             Quote {
                 id: Some(id as usize),
@@ -355,33 +440,6 @@ impl QuoteHandler for PostgresDB {
             ")
             .execute(&self.pool).await
             .map_err(|e| DataError::DeleteFailed(e.to_string()))?;
-        Ok(())
-    }
-
-    async fn get_rounding_digits(&self, currency: Currency) -> i32 {
-        let rows = sqlx::query!(
-            "SELECT digits FROM rounding_digits WHERE currency=$1;",
-            currency.to_string(),
-        ).fetch_all(&self.pool).await;
-        match rows {
-            Ok(row_vec) => {
-                if row_vec.is_empty() {
-                    let digits: i32 = row_vec[0].digits;
-                    digits
-                } else {
-                    2
-                }
-            }
-            Err(_) => 2,
-        }
-    }
-
-    async fn set_rounding_digits(&self, currency: Currency, digits: i32) -> Result<(), DataError> {
-        let _row = sqlx::query!(
-                "INSERT INTO rounding_digits (currency, digits) VALUES ($1, $2)",
-                currency.to_string(), digits,
-            ).execute(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
         Ok(())
     }
 }

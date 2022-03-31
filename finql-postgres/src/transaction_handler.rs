@@ -3,7 +3,7 @@ use chrono::NaiveDate;
 use async_trait::async_trait;
 
 use finql_data::currency::Currency;
-use finql_data::{DataError, TransactionHandler};
+use finql_data::{CurrencyISOCode, DataError, TransactionHandler};
 use finql_data::cash_flow::{CashAmount, CashFlow};
 use finql_data::transaction::{Transaction, TransactionType};
 
@@ -15,7 +15,7 @@ pub struct RawTransaction {
     pub trans_type: String,
     pub asset: Option<i32>,
     pub cash_amount: f64,
-    pub cash_currency: String,
+    pub cash_currency: Currency,
     pub cash_date: NaiveDate,
     pub related_trans: Option<i32>,
     pub position: Option<f64>,
@@ -32,8 +32,8 @@ const FEE: &str = "f";
 
 impl RawTransaction {
     pub fn to_transaction(&self) -> Result<Transaction, DataError> {
-        let currency = Currency::from_str(&self.cash_currency)
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+        let currency = self.cash_currency;
+
         let id = self.id.map(|x| x as usize);
         let cash_flow = CashFlow {
             amount: CashAmount {
@@ -84,7 +84,7 @@ impl RawTransaction {
     pub fn from_transaction(transaction: &Transaction) -> RawTransaction {
         let id = transaction.id.map(|x| x as i32);
         let cash_amount = transaction.cash_flow.amount.amount;
-        let cash_currency = transaction.cash_flow.amount.currency.to_string();
+        let cash_currency = transaction.cash_flow.amount.currency;
         let note = transaction.note.clone();
         let mut raw_transaction = RawTransaction {
             id,
@@ -132,30 +132,41 @@ impl TransactionHandler for PostgresDB {
     async fn insert_transaction(&self, transaction: &Transaction) -> Result<usize, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
         let row = sqlx::query!(
-                "INSERT INTO transactions (trans_type, asset_id, cash_amount, 
-                cash_currency, cash_date, related_trans, position,
+                "INSERT INTO transactions (trans_type, asset_id, cash_amount,
+                cash_currency_id, cash_date, related_trans, position,
                 note) 
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
                 transaction.trans_type,
                 transaction.asset,
                 transaction.cash_amount,
-                transaction.cash_currency,
+                transaction.cash_currency.id.unwrap() as i32,
                 transaction.cash_date,
                 transaction.related_trans,
                 transaction.position,
                 transaction.note,
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        let id= row.id;
-        Ok(id as usize)
+        Ok(row.id as usize)
     }
 
     async fn get_transaction_by_id(&self, id: usize) -> Result<Transaction, DataError> {
         let row = sqlx::query!(
-                "SELECT trans_type, asset_id, 
-        cash_amount, cash_currency, cash_date, related_trans, position, note 
-        FROM transactions
-        WHERE id=$1", (id as i32),
+                "SELECT
+                t.id,
+                t.trans_type,
+                t.asset_id,
+                t.cash_amount,
+                c.id AS cash_currency_id,
+                c.iso_code AS cash_iso_code,
+                c.rounding_digits AS cash_rounding_digits,
+                t.cash_date,
+                t.related_trans,
+                t.position,
+                t.note
+                FROM transactions t
+                JOIN currencies c ON c.id = t.cash_currency_id
+                WHERE t.id = $1",
+                (id as i32),
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
         let transaction = RawTransaction {
@@ -163,7 +174,11 @@ impl TransactionHandler for PostgresDB {
             trans_type: row.trans_type,
             asset: row.asset_id,
             cash_amount: row.cash_amount,
-            cash_currency: row.cash_currency,
+            cash_currency: Currency::new(
+                Some(row.cash_currency_id as usize),
+                CurrencyISOCode::from_str(&row.cash_iso_code).expect("Expected a good currency code from db"),
+                Some(row.cash_rounding_digits),
+            ),
             cash_date: row.cash_date,
             related_trans: row.related_trans,
             position: row.position,
@@ -175,9 +190,20 @@ impl TransactionHandler for PostgresDB {
     async fn get_all_transactions(&self) -> Result<Vec<Transaction>, DataError> {
         let mut transactions = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, trans_type, asset_id, 
-        cash_amount, cash_currency, cash_date, related_trans, position, note 
-        FROM transactions",
+                r#"SELECT
+                t.id AS "id!",
+                t.trans_type AS "trans_type!",
+                t.asset_id,
+                t.cash_amount AS "cash_amount!",
+                c.id AS "cash_currency_id!",
+                c.iso_code AS "cash_iso_code!",
+                c.rounding_digits AS "cash_rounding_digits!",
+                t.cash_date AS "cash_date!",
+                t.related_trans,
+                t.position,
+                t.note
+                FROM transactions t
+                JOIN currencies c ON c.id = t.cash_currency_id"#
             ).fetch_all(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?
         {
@@ -186,7 +212,11 @@ impl TransactionHandler for PostgresDB {
                 trans_type: row.trans_type,
                 asset: row.asset_id,
                 cash_amount: row.cash_amount,
-                cash_currency: row.cash_currency,
+                cash_currency: Currency::new(
+                    Some(row.cash_currency_id as usize),
+                CurrencyISOCode::from_str(&row.cash_iso_code).expect("unknown currency asset referenced in db"),
+                Some(row.cash_rounding_digits),
+                ),
                 cash_date: row.cash_date,
                 related_trans: row.related_trans,
                 position: row.position,
@@ -210,7 +240,7 @@ impl TransactionHandler for PostgresDB {
                 trans_type=$2, 
                 asset_id=$3, 
                 cash_amount=$4, 
-                cash_currency=$5,
+                cash_currency_id=$5,
                 cash_date=$6,
                 related_trans=$7,
                 position=$8,
@@ -220,7 +250,7 @@ impl TransactionHandler for PostgresDB {
                 transaction.trans_type,
                 transaction.asset,
                 transaction.cash_amount,
-                transaction.cash_currency,
+                transaction.cash_currency.id.and_then(|i| Some(i as i32)),
                 transaction.cash_date,
                 transaction.related_trans,
                 transaction.position,

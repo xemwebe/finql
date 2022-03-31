@@ -7,7 +7,7 @@ use std::sync::RwLock;
 use chrono::{DateTime, Local};
 use async_trait::async_trait;
 
-use finql_data::{Asset, Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, Quote, Ticker};
+use finql_data::{Asset, Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, Quote, Resource, Ticker};
 
 
 /// Insert fx rate quote in database including the inverse quote
@@ -22,9 +22,8 @@ pub async fn insert_fx_quote(
         .insert_asset(&Asset {
             id: None,
             name: foreign.to_string(),
-            wkn: None,
-            isin: None,
             note: None,
+            resource: Resource::Currency(foreign)
         })
         .await.unwrap();
     let currency_pair = format!("{}/{}", foreign, base);
@@ -53,9 +52,8 @@ pub async fn insert_fx_quote(
         .insert_asset(&Asset {
             id: None,
             name: base.to_string(),
-            wkn: None,
-            isin: None,
             note: None,
+            resource: Resource::Currency(base),
         })
         .await.unwrap();
     let currency_pair = format!("{}/{}", base, foreign);
