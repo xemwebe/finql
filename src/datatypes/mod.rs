@@ -13,7 +13,7 @@ pub mod transaction_handler;
 pub mod transaction;
 pub mod object_handler;
 
-pub use asset::{Asset, Resource};
+pub use asset::Asset;
 pub use asset_handler::AssetHandler;
 pub use quote::{Quote, Ticker};
 pub use quote_handler::QuoteHandler;
@@ -32,8 +32,7 @@ pub enum DataError {
     DeleteFailed(String),
     InsertFailed(String),
     InvalidAsset(String),
-    InvalidTransaction(String),
-    InvalidResource
+    InvalidTransaction(String)
 }
 
 impl std::error::Error for DataError {
@@ -51,8 +50,7 @@ impl fmt::Display for DataError {
             Self::DeleteFailed(err) => write!(f, "removing object from database failed: {}", err),
             Self::InsertFailed(err) => write!(f, "inserting object to database failed: {}", err),
             Self::InvalidAsset(err) => write!(f, "invalid asset data: {}", err),
-            Self::InvalidTransaction(err) => write!(f, "invalid transaction type: {}", err),
-            Self::InvalidResource => write!(f, "invalid resource type requested for asset")
+            Self::InvalidTransaction(err) => write!(f, "invalid transaction type: {}", err)
         }
     }
 }

@@ -7,7 +7,7 @@ use std::sync::RwLock;
 use chrono::{DateTime, Local};
 use async_trait::async_trait;
 
-use crate::datatypes::{Asset, Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, Quote, Resource, Ticker};
+use crate::datatypes::{Asset, Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, Quote, Ticker};
 
 
 /// Insert fx rate quote in database including the inverse quote
@@ -19,12 +19,7 @@ pub async fn insert_fx_quote(
     quotes: Arc<dyn QuoteHandler+Send+Sync>,
 ) -> Result<(), DataError> {
     let foreign_id = quotes
-        .insert_asset(&Asset {
-            id: None,
-            name: foreign.to_string(),
-            note: None,
-            resource: Resource::Currency(foreign)
-        })
+        .insert_asset(&Asset::Currency(foreign))
         .await.unwrap();
     let currency_pair = format!("{}/{}", foreign, base);
     let ticker_id = quotes
@@ -49,12 +44,7 @@ pub async fn insert_fx_quote(
     }).await.unwrap();
     // Insert inverse fx quote
     let base_id = quotes
-        .insert_asset(&Asset {
-            id: None,
-            name: base.to_string(),
-            note: None,
-            resource: Resource::Currency(base),
-        })
+        .insert_asset(&Asset::Currency(base))
         .await.unwrap();
     let currency_pair = format!("{}/{}", base, foreign);
     let ticker_id = quotes
@@ -146,9 +136,9 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_get_fx_rate() {
-        let db_url  = std::env::var("FINQL_TEST_DATBASE_URL");
+        let db_url  = std::env::var("FINQL_TEST_DATABASE_URL");
         assert!(db_url.is_ok(), 
-            "Unit tests with database access need the Environment variable $FINQL_TEST_DATABSE_URL");
+            "environment variable $FINQL_TEST_DATABASE_URL is not set");
         let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
         db.clean().await.unwrap();
 

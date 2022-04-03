@@ -225,13 +225,13 @@ mod tests {
 
     async fn prepare_db(db: Arc<dyn QuoteHandler+Send+Sync>) -> Ticker {
         let asset_id = db
-            .insert_asset(&Asset::new_stock(
+            .insert_asset(&Asset::Stock(Stock::new(
                 None,
                 "Apple AG".to_string(),
-                None,
                 "APPL".to_string(),
                 None,
-            ))
+                None,
+            )))
             .await.unwrap();
 
         let mut ticker = Ticker {
@@ -254,9 +254,9 @@ mod tests {
     async fn test_fetch_latest_quote() {
         let tol = 1.0e-6;
 
-        let db_url  = std::env::var("FINQL_TEST_DATBASE_URL");
+        let db_url  = std::env::var("FINQL_TEST_DATABASE_URL");
         assert!(db_url.is_ok(), 
-            "Unit tests with database access need the Environment variable $FINQL_TEST_DATABSE_URL");
+            "environment variable $FINQL_TEST_DATABASE_URL is not set");
         let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
         db.clean().await.unwrap();
 
@@ -273,9 +273,9 @@ mod tests {
     async fn test_fetch_quote_history() {
         let tol = 1.0e-6;
         
-        let db_url  = std::env::var("FINQL_TEST_DATBASE_URL");
+        let db_url  = std::env::var("FINQL_TEST_DATABASE_URL");
         assert!(db_url.is_ok(), 
-            "Unit tests with database access need the Environment variable $FINQL_TEST_DATABSE_URL");
+            "environment variable $FINQL_TEST_DATABASE_URL is not set");
         let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
         db.clean().await.unwrap();
 

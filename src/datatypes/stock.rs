@@ -5,20 +5,26 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Stock {
     pub id: Option<usize>,
-    pub isin: String,
-    pub wkn: Option<String>
+    pub name: String,
+    pub isin: Option<String>,
+    pub wkn: Option<String>,
+    pub note: Option<String>
 }
 
 impl Stock {
     pub fn new(
         id: Option<usize>,
-        isin: String,
-        wkn: Option<String>
+        name: String,
+        isin: Option<String>,
+        wkn: Option<String>,
+        note: Option<String>,
     ) -> Self {
         Self {
             id,
+            name,
             isin,
             wkn,
+            note,
         }
     }
 }

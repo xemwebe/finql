@@ -1,20 +1,12 @@
 use async_trait::async_trait;
 
-use super::DataError;
-use super::Asset;
-use super::Currency;
+use super::{DataError, Asset, Currency};
 
 /// Handler for globally available data of transactions and related data
 #[async_trait]
 pub trait AssetHandler {
     // insert, get, update and delete for assets
     async fn insert_asset(&self, asset: &Asset) -> Result<usize, DataError>;
-    async fn insert_asset_if_new(
-        &self,
-        asset: &Asset,
-        rename_asset: bool,
-    ) -> Result<usize, DataError>;
-    
     async fn get_asset_id(&self, asset: &Asset) -> Option<usize>;
     async fn get_asset_by_id(&self, id: usize) -> Result<Asset, DataError>;
     async fn get_asset_by_isin(&self, id: &str) -> Result<Asset, DataError>;

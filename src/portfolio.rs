@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use chrono::{NaiveDate,DateTime, Local};
 use chrono::offset::TimeZone;
 
-use crate::datatypes::{AssetHandler, QuoteHandler, DataError,Transaction, 
+use crate::datatypes::{Asset, AssetHandler, QuoteHandler, DataError,Transaction, 
     TransactionType, Currency, CurrencyConverter};
 
 use crate::period_date::PeriodDateError;
@@ -136,7 +136,10 @@ impl PortfolioPosition {
     pub async fn get_asset_names(&mut self, db: Arc<dyn AssetHandler+Send+Sync>) -> Result<(), DataError> {
         for (id, mut pos) in &mut self.assets {
             let asset = db.get_asset_by_id(*id).await?;
-            pos.name = asset.name;
+            pos.name = match asset {
+                Asset::Currency(c) => c.iso_code.to_string(),
+                Asset::Stock(s) => s.name.clone() 
+            };
         }
         Ok(())
     }
@@ -620,31 +623,31 @@ mod tests {
     async fn test_add_quote_to_position() {
         let tol = 1e-4;
         // Setup database connection
-        let db_url  = std::env::var("FINQL_TEST_DATBASE_URL");
+        let db_url  = std::env::var("FINQL_TEST_DATABASE_URL");
         assert!(db_url.is_ok(), 
-            "Unit tests with database access need the Environment variable $FINQL_TEST_DATABSE_URL");
+            "environment variable $FINQL_TEST_DATABASE_URL is not set");
         let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
         db.clean().await.unwrap();
 
         // first add some assets
         let eur_id = db
-            .insert_asset(&Asset::new_stock(
+            .insert_asset(&Asset::Stock(Stock::new(
                 None,
                 "EUR Stock".to_string(),
-                None,
                 "EURS".to_string(),
                 None,
-            ))
+                None,
+            )))
             .await.unwrap();
         // first add some assets
         let us_id = db
-            .insert_asset(&Asset::new_stock(
+            .insert_asset(&Asset::Stock(Stock::new(
                 None,
                 "USD Stock".to_string(),
-                None,
                 "USDS".to_string(),
                 None,
-            ))
+                None,
+            )))
             .await.unwrap();
         let eur = Currency::from_str("EUR").unwrap();
         let usd = Currency::from_str("USD").unwrap();

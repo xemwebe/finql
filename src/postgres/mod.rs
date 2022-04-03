@@ -44,10 +44,6 @@ impl PostgresDB {
         sqlx::query!("DROP TABLE IF EXISTS assets")
             .execute(&self.pool)
             .await?;
-        //NOTE: this table was dropped but remains for the time being for diligent cleanups
-        sqlx::query!("DROP TABLE IF EXISTS rounding_digits")
-            .execute(&self.pool)
-            .await?;
         self.init().await
     }
 
@@ -56,10 +52,7 @@ impl PostgresDB {
         sqlx::query!(
             "CREATE TABLE IF NOT EXISTS assets (
                 id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE,
-                wkn TEXT UNIQUE,
-                isin TEXT UNIQUE,
-                note TEXT
+                asset_class CHAR(20) NOT NULL
             )"
         )
         .execute(&self.pool)
@@ -69,17 +62,18 @@ impl PostgresDB {
                     id INTEGER PRIMARY KEY,
                     iso_code CHAR(3) NOT NULL,
                     rounding_digits INT NOT NULL,
-                    note TEXT,
                     FOREIGN KEY(id) REFERENCES assets(id)
-                 )"
+                )"
         )
             .execute(&self.pool)
             .await?;
         sqlx::query!(
                 "CREATE TABLE IF NOT EXISTS stocks (
                   id INTEGER PRIMARY KEY,
+                  name TEXT NOT NULL UNIQUE,
                   wkn CHAR(6) UNIQUE,
                   isin CHAR(4) UNIQUE,
+                  note TEXT,
                   FOREIGN KEY(id) REFERENCES assets(id)
                 )"
         )

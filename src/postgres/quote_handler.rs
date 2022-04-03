@@ -4,9 +4,16 @@ use chrono::{DateTime, Local};
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use crate::datatypes::currency::Currency;
-use crate::datatypes::{DataError, QuoteHandler, AssetHandler, CurrencyISOCode};
-use crate::datatypes::quote::{Quote, Ticker};
+use crate::datatypes::{
+    Asset,
+    Currency,
+    DataError, 
+    Quote, 
+    Ticker, 
+    QuoteHandler, 
+    AssetHandler, 
+    CurrencyISOCode};
+
 
 use super::PostgresDB;
 
@@ -358,19 +365,20 @@ impl QuoteHandler for PostgresDB {
         let time: DateTime<Local> = row.time.into();
         let volume = row.volume;
 
-        let ca = self.get_asset_by_id(id).await?;
-        let currency = ca.currency().expect("asset should refer to a currency");
-
-        Ok((
-            Quote {
-                id: Some(id as usize),
-                ticker: ticker as usize,
-                price,
-                time,
-                volume,
-            },
-            currency,
-        ))
+        if let Ok(Asset::Currency(ca)) = self.get_asset_by_id(id).await {
+            Ok((
+                Quote {
+                    id: Some(id as usize),
+                    ticker: ticker as usize,
+                    price,
+                    time,
+                    volume,
+                },
+                ca,
+            ))
+        } else {
+            Err(DataError::InvalidAsset(format!("Couldn't find currency with id={}", id)))
+        }
     }
 
     async fn get_all_quotes_for_ticker(&self, ticker_id: usize) -> Result<Vec<Quote>, DataError> {

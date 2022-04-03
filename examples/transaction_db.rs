@@ -1,6 +1,5 @@
 ///! Demonstration of storing Assets in Sqlite3 database
 
-use std::fs;
 use std::str::FromStr;
 use chrono::NaiveDate;
 
