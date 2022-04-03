@@ -15,8 +15,7 @@ struct ID { id: i32, }
 #[async_trait]
 impl AssetHandler for PostgresDB {
     async fn insert_asset(&self, asset: &Asset) -> Result<usize, DataError> {
-        let asset_name = asset.name.clone();
-        let mut asset = asset.to_owned();
+        let asset = asset.to_owned();
 
         let row = sqlx::query!(
                 "INSERT INTO assets (name, note) VALUES ($1, $2) RETURNING id",
@@ -81,8 +80,7 @@ impl AssetHandler for PostgresDB {
             },
             Resource::Stock(s) => {
                 if let Some(wkn) = &s.wkn {
-                    let wkn = wkn.to_owned();
-                    sqlx::query_as!(ID, "SELECT id FROM stocks WHERE wkn = $1", s.wkn).fetch_one(&self.pool).await.ok()
+                    sqlx::query_as!(ID, "SELECT id FROM stocks WHERE wkn = $1", wkn).fetch_one(&self.pool).await.ok()
                 } else {
                     sqlx::query_as!(ID, "SELECT id FROM stocks WHERE isin = $1", s.isin).fetch_one(&self.pool).await.ok()
                 }
@@ -123,7 +121,7 @@ impl AssetHandler for PostgresDB {
         let name = row.name;
         let note = row.note;
 
-        if let Some(cid) = cid {
+        if cid.is_some() {
             let ic:Option<String> = row.iso_code;
             let rd:Option<i32> = row.rounding_digits;
             let rd = rd.expect("missing rounding_digits");
@@ -137,7 +135,7 @@ impl AssetHandler for PostgresDB {
                 ic,
                 rd,
             ));
-        } else if let Some(sid) = sid {
+        } else if sid.is_some() {
             let isin:Option<String> = row.isin;
 
             return Ok(Asset::new_stock(
@@ -205,7 +203,7 @@ impl AssetHandler for PostgresDB {
             let name:String = row.name;
             let note = row.note;
 
-            if let Some(cid) = cid {
+            if cid.is_some() {
                 let ic:Option<String> = row.iso_code;
                 let rd:Option<i32> = row.rounding_digits;
                 let rd = rd.expect("missing rounding_digits");
@@ -219,7 +217,7 @@ impl AssetHandler for PostgresDB {
                     ic,
                     rd,
                 ));
-            } else if let Some(sid) = sid {
+            } else if sid.is_some() {
                 let isin:Option<String> = row.isin;
 
                 assets.push(Asset::new_stock(

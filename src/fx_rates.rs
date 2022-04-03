@@ -134,7 +134,7 @@ mod tests {
     use chrono::offset::TimeZone;
     use chrono::Local;
 
-    use finql_sqlite::SqliteDBPool;
+    use crate::postgres::PostgresDB;
     use crate::market::Market;
 
     async fn prepare_db(db: Arc<dyn QuoteHandler+Send+Sync>) {
@@ -146,10 +146,13 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_get_fx_rate() {
-        let db_pool = SqliteDBPool::in_memory().await.unwrap();
-        let fx_db = db_pool.get_conection().await.unwrap();
-        fx_db.init().await.unwrap();
-        let qh: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(fx_db);
+        let db_url  = std::env::var("FINQL_TEST_DATBASE_URL");
+        assert!(db_url.is_ok(), 
+            "Unit tests with database access need the Environment variable $FINQL_TEST_DATABSE_URL");
+        let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
+        db.clean().await.unwrap();
+
+        let qh: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(db);
         prepare_db(qh.clone()).await;
         let tol = 1.0e-6_f64;
         let eur = Currency::from_str("EUR").unwrap();

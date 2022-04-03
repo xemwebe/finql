@@ -5,9 +5,9 @@ use std::str::FromStr;
 use chrono::NaiveDate;
 
 use finql::datatypes::{Asset, Currency, CashFlow, Transaction, TransactionHandler, TransactionType};
-use finql_sqlite::SqliteDBPool;
+use finql::postgres::PostgresDB;
 
-async fn transaction_tests(db: &mut dyn TransactionHandler) {
+async fn transaction_tests(db: &dyn TransactionHandler) {
     print!("Store asset...");
     let asset = Asset::new_stock(
         None,
@@ -104,33 +104,12 @@ async fn transaction_tests(db: &mut dyn TransactionHandler) {
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
-    assert!(
-        args.len() >= 2 && args.len() <= 3,
-        r#"usage: transaction_db <db_type> [<database connection string>]\n,
-where <db_type> is any of 'sqlite' or 'memory'"#
-    );
-    match args[1].as_str() {
-        "memory" => {
-            let db_pool = SqliteDBPool::in_memory().await.unwrap();
-            let mut db = db_pool.get_conection().await.unwrap();
-            transaction_tests(&mut db).await;
-        }
-        "sqlite" => {
-            if args.len() < 3 {
-                eprintln!("Please give the sqlite database path as parameter");
-            } else {
-                let path = &args[2];
-                if fs::metadata(path).is_ok() {
-                    eprintln!("Apparently there exists already a file with this path.");
-                    eprintln!("Please provide another path or remove the file, since a new database will be created.");
-                } else {
-                    let db_pool = SqliteDBPool::open(std::path::Path::new(path)).await.unwrap();
-                    let mut db = db_pool.get_conection().await.unwrap();
-                    db.init().await.unwrap();
-                    transaction_tests(&mut db).await;
-                }
-            }
-        }
-        other => println!("Unknown database type {}", other),
+    if args.len() != 2 {
+        eprintln!("usage: {} <database connection string>]", args[0]);
+        return;
     }
+    let db = PostgresDB::new(args[1].as_str()).await.unwrap();
+    db.clean().await.unwrap();
+
+    transaction_tests(&db).await;
 }

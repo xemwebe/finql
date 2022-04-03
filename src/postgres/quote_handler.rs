@@ -167,7 +167,6 @@ impl QuoteHandler for PostgresDB {
         {
             let id = row.id;
             let asset = row.asset_id;
-            let currency = row.currency_id;
             let currency = Currency::new(
                 Some(row.currency_id as usize),
                 CurrencyISOCode::from_str(&row.currency_iso_code).expect("expected good iso_code from db"),

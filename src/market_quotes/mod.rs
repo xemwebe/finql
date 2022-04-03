@@ -177,7 +177,7 @@ mod tests {
     use rand::Rng;
 
     use crate::datatypes::{Asset, Currency, QuoteHandler};
-    use finql_sqlite::SqliteDBPool;
+    use crate::postgres::PostgresDB;
 
     struct DummyProvider {}
 
@@ -253,9 +253,13 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_fetch_latest_quote() {
         let tol = 1.0e-6;
-        let db_pool = SqliteDBPool::in_memory().await.unwrap();
-        let db = db_pool.get_conection().await.unwrap();
-        db.init().await.unwrap();
+
+        let db_url  = std::env::var("FINQL_TEST_DATBASE_URL");
+        assert!(db_url.is_ok(), 
+            "Unit tests with database access need the Environment variable $FINQL_TEST_DATABSE_URL");
+        let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
+        db.clean().await.unwrap();
+
         let db = Arc::new(db);
         let ticker = prepare_db(db.clone()).await;
         let provider = DummyProvider {};
@@ -268,9 +272,13 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_fetch_quote_history() {
         let tol = 1.0e-6;
-        let db_pool = SqliteDBPool::in_memory().await.unwrap();
-        let db = db_pool.get_conection().await.unwrap();
-        db.init().await.unwrap();
+        
+        let db_url  = std::env::var("FINQL_TEST_DATBASE_URL");
+        assert!(db_url.is_ok(), 
+            "Unit tests with database access need the Environment variable $FINQL_TEST_DATABSE_URL");
+        let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
+        db.clean().await.unwrap();
+
         let db = Arc::new(db);
         let ticker = prepare_db(db.clone()).await;
         let provider = DummyProvider {};

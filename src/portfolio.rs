@@ -403,7 +403,7 @@ mod tests {
 
     use crate::{assert_fuzzy_eq};
     use crate::datatypes::{Asset, AssetHandler, CashAmount, CashFlow, Quote, Ticker, date_time_helper::make_time};
-    use finql_sqlite::SqliteDBPool;
+    use crate::postgres::PostgresDB;
 
     #[test]
     fn test_portfolio_position() {
@@ -619,10 +619,13 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_add_quote_to_position() {
         let tol = 1e-4;
-        // Make new database
-        let db_pool = SqliteDBPool::in_memory().await.unwrap();
-        let db = db_pool.get_conection().await.unwrap();
-        db.init().await.unwrap();
+        // Setup database connection
+        let db_url  = std::env::var("FINQL_TEST_DATBASE_URL");
+        assert!(db_url.is_ok(), 
+            "Unit tests with database access need the Environment variable $FINQL_TEST_DATABSE_URL");
+        let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
+        db.clean().await.unwrap();
+
         // first add some assets
         let eur_id = db
             .insert_asset(&Asset::new_stock(

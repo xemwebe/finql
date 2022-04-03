@@ -1,4 +1,7 @@
 ///! Demonstrate total return calculation by single investment in dividend stock
+///! Example storing general calendars as JSON object in PostgreSQL
+///! Please note: All existing content of the database will be deleted!
+
 use std::{sync::Arc, str::FromStr};
 use std::cmp::min;
 use std::error::Error;
@@ -28,7 +31,7 @@ use finql::{
     calendar::last_day_of_month,
     time_series::{TimeSeries, TimeValue, TimeSeriesError},
 };
-use finql_sqlite::SqliteDBPool;
+use finql::postgres::PostgresDB;
 
 
 async fn calc_strategy(currency: Currency, start_transactions: &Vec<Transaction>, strategy: &dyn Strategy, start: NaiveDate, end: NaiveDate, market: &Market) -> Vec<TimeValue> {
@@ -77,6 +80,14 @@ async fn calc_strategy(currency: Currency, start_transactions: &Vec<Transaction>
 
 #[tokio::main]
 async fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 2 {
+        eprintln!("usage: {} <database connection string>]", args[0]);
+        return;
+    }
+    let db = PostgresDB::new(args[1].as_str()).await.unwrap();
+    db.clean().await.unwrap();
+
     pretty_env_logger::init();
 
     println!("Calculate total return of single investment of 10'000 USD in Broadcom (AVGO) five years before today");
@@ -85,12 +96,8 @@ async fn main() {
     let start = five_years_before.add_to(today, None);
     println!("The simulation will run from {} until {}.", start, today);
 
-    // Prepare database
-    let db_pool = SqliteDBPool::in_memory().await.unwrap();
-    let sqlite_db = db_pool.get_conection().await.unwrap();
-
-    sqlite_db.init().await.unwrap();
-    let db: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(sqlite_db);
+    db.clean().await.unwrap();
+    let db: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(db);
 
     // Define the asset
     let asset = Asset::new_stock(

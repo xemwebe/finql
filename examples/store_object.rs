@@ -1,14 +1,23 @@
+///! Example storing general calendars as JSON object in PostgreSQL
+///! Please note: All existing content of the database will be deleted!
 
-use std::fs;
 use chrono::Weekday;
 
 use finql::calendar::Holiday;
 use finql::datatypes::ObjectHandler;
-use finql_sqlite::SqliteDBPool;
+use finql::postgres::PostgresDB;
 
 #[tokio::main]
 async fn main() {
-// we use a calendar as sample object
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 2 {
+        eprintln!("usage: {} <database connection string>]", args[0]);
+        return;
+    }
+    let db = PostgresDB::new(args[1].as_str()).await.unwrap();
+    db.clean().await.unwrap();
+
+    // we use a calendar as sample object
     let holidays = vec![
         // Saturdays
         Holiday::WeekDay(Weekday::Sat),
@@ -29,23 +38,9 @@ async fn main() {
         }    
     ];
 
-    let args: Vec<String> = std::env::args().collect();
-    assert!(
-        args.len() >= 2,
-        "usage: store_object <sqlite3 database file path>\n"
-    );
-    let path = &args[1];
-    if fs::metadata(path).is_ok() {
-        eprintln!("Apparently there exists already a file with this path.");
-        eprintln!("Please provide another path or remove the file, since a new database will be created.");
-    } else {
-        let db_pool = SqliteDBPool::open(&std::path::Path::new(path)).await.unwrap();
-        let db = db_pool.get_conection().await.unwrap();
-        db.init().await.unwrap();
+    db.store_object("test", "calendar", &holidays).await.unwrap();
+    
+    let new_holiday: Vec<Holiday> = db.get_object("test").await.unwrap();
+    println!("New holiday struct: {:?}", new_holiday);
 
-        db.store_object("test", "calendar", &holidays).await.unwrap();
-        
-        let new_holiday: Vec<Holiday> = db.get_object("test").await.unwrap();
-        println!("New holiday struct: {:?}", new_holiday);
-    }
 }

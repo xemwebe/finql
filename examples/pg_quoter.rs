@@ -1,16 +1,15 @@
-use std::convert::TryInto;
-///! Demonstration of storing quotes and related data in Sqlite3, PostgreSQL or in-memory database
-///! Please note: The postgres example will delete all existing content of the database
-use std::fs;
+///! Demonstration of storing quotes and related data in PostgreSQL
+///! Please note: All existing content of the database will be deleted!
+
 use std::io::{stdout, Write};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use finql::datatypes::{Asset, Currency, CurrencyConverter, Quote, Ticker, QuoteHandler, date_time_helper::make_time, CurrencyISOCode, DataItem};
+use finql::datatypes::{Asset, CurrencyConverter, Quote, Ticker, QuoteHandler, date_time_helper::make_time, CurrencyISOCode, DataItem};
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
-use finql_sqlite::SqliteDBPool;
+use finql::postgres::PostgresDB;
 
 fn log(s: &str) {
     print!("{}", s);
@@ -245,22 +244,16 @@ async fn quote_tests(market: &mut Market) {
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
-    assert!(
-        args.len() >= 2,
-        "usage: quotes_db <sqlite3 database file path>\n"
-    );
-    let path = &args[1];
-    if fs::metadata(path).is_ok() {
-        eprintln!("Apparently there exists already a file with this path.");
-        eprintln!("Please provide another path or remove the file, since a new database will be created.");
-    } else {
-        let _= fs::File::create(path);
-        let db_pool = SqliteDBPool::open(std::path::Path::new(path)).await.unwrap();
-        let db = db_pool.get_conection().await.unwrap();
-        db.init().await.unwrap();
-        let qh: Arc<dyn QuoteHandler+Sync+Send> = Arc::new(db);
-        let mut market = Market::new(qh);
-        quote_tests(&mut market).await;
-        println!("You may have a look at the database for further inspection.");
+    if args.len() != 2 {
+        eprintln!("usage: {} <database connection string>]", args[0]);
+        return;
     }
+    let db = PostgresDB::new(args[1].as_str()).await.unwrap();
+    db.clean().await.unwrap();
+
+    let qh: Arc<dyn QuoteHandler+Sync+Send> = Arc::new(db);
+    let mut market = Market::new(qh);
+    quote_tests(&mut market).await;
+    println!("You may have a look at the database for further inspection.");
+
 }
