@@ -15,40 +15,34 @@ use serde_json::error::Category::Data;
 #[async_trait]
 impl AssetHandler for SqliteDB {
     async fn insert_asset(&self, asset: &Asset) -> Result<usize, DataError> {
-        let asset_name = asset.name.clone();
-        let mut asset = asset.to_owned();
-        let id = self.conn.interact(move |conn| -> Result<usize, SQLiteError> {
-            let _ = conn.execute(
+        let asset = asset.to_owned();
+     
+        self.conn.interact(move |conn| -> Result<usize, SQLiteError> {
+            let tx = conn.transaction()?;
+            tx.execute(
                 "INSERT INTO assets (name, note) VALUES (?1, ?2)",
                 params![&asset.name, &asset.note])
                 ?;
-
-            let id = conn.query_row(
-                "SELECT id FROM assets WHERE name = ?",
-                params![&asset_name],
-                |row| {
-                    let id:usize = row.get(0)?;
-                     Ok(id)
-                })?;
+            let id = tx.last_insert_rowid();
 
             match asset.resource {
-               Resource::Currency(c) => {
-                   conn.execute(
-                       "INSERT INTO currencies (id, iso_code, rounding_digits) VALUES (?1, ?2, ?3)",
-                       params![id, &c.iso_code.to_string(), &c.rounding_digits]
-                   )?;
-               },
+                Resource::Currency(c) => {
+                    tx.execute(
+                        "INSERT INTO currencies (id, iso_code, rounding_digits) VALUES (?1, ?2, ?3)",
+                        params![id, &c.iso_code.to_string(), &c.rounding_digits]
+                    )?;
+                },
                 Resource::Stock(s) => {
-                    conn.execute(
+                    tx.execute(
                         "INSERT INTO stocks (id, isin, wkn) VALUES (?1, ?2, ?3)",
                         params![id, &s.isin, &s.wkn])?;
                 },
             }
 
-            Ok(id)
-        }).await.map_err(|e| DataError::DataAccessFailure(e.to_string()))?.
-            map_err(|e| DataError::DataAccessFailure(e.to_string()));
-        id
+            tx.commit()?;
+            Ok(id as usize)
+        }).await.map_err(|e| DataError::DataAccessFailure(e.to_string()))?
+        .map_err(|e| DataError::DataAccessFailure(e.to_string()))
     }
 
     async fn insert_asset_if_new(
@@ -376,5 +370,48 @@ mod test {
         assert_eq!(assets.len(), 1);
         assert_eq!(assets[0].id, Some(2));
         assert_eq!(&assets[0].name, "bb");
+    }
+
+    #[tokio::test]
+    async fn unique_asset_test() {
+        let db_pool = Arc::new(SqliteDBPool::in_memory().await.unwrap());
+        let db = db_pool.get_conection().await.unwrap();
+        assert!(db.clean().await.is_ok());
+
+        let mut asset1 = Asset{
+            id: None,
+            name: "EUR".to_string(),
+            note: None,
+            resource: Resource::Currency(Currency {
+                id: None,
+                iso_code: CurrencyISOCode::new("EUR").unwrap(),
+                rounding_digits: 4,
+            }),
+        };
+
+        let id1 = db.insert_asset(&asset1).await.unwrap();
+        asset1.set_id(id1).unwrap();
+        assert_eq!(asset1.id, Some(1), "insert id");
+
+
+        let asset2 = Asset{
+            id: None,
+            name: "EUR2".to_string(),
+            note: None,
+            resource: Resource::Currency(Currency {
+                id: None,
+                iso_code: CurrencyISOCode::new("EUR").unwrap(),
+                rounding_digits: 4,
+            }),
+        };
+
+        // Should return an error, since we tried to store same currency twice
+        let res = db.insert_asset(&asset2).await;
+        assert!(res.is_err());
+
+        let assets = db.get_all_assets().await.unwrap();
+        // Since second transaction failed, we still should have only one entry in database
+        assert_eq!(assets.len(), 1);
+
     }
 }

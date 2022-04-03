@@ -102,7 +102,7 @@ impl SqliteDB {
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS currencies (
                     id INTEGER PRIMARY KEY,
-                    iso_code CHAR(3) NOT NULL,
+                    iso_code CHAR(3) NOT NULL UNIQUE,
                     rounding_digits INT NOT NULL,
                     note TEXT,
                     FOREIGN KEY(id) REFERENCES assets(id)

@@ -10,7 +10,7 @@ use finql_data::{Asset, Currency, CurrencyConverter, Quote, Ticker, QuoteHandler
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
-use finql_::SqliteDBPool;
+use finql_sqlite::SqliteDBPool;
 
 fn log(s: &str) {
     print!("{}", s);
