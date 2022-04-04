@@ -35,7 +35,7 @@ impl DataItem for Stock {
         match self.id {
             Some(id) => Ok(id),
             None => Err(DataError::DataAccessFailure(
-                "tried to get id of temporary asset".to_string(),
+                "Can't get id of temporary stock".to_string(),
             )),
         }
     }
@@ -43,7 +43,7 @@ impl DataItem for Stock {
     fn set_id(&mut self, id: usize) -> Result<(), DataError> {
         match self.id {
             Some(_) => Err(DataError::DataAccessFailure(
-                "tried to change valid asset id".to_string(),
+                "Can't change id of persistent stock".to_string(),
             )),
             None => {
                 self.id = Some(id);

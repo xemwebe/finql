@@ -5,7 +5,10 @@ use std::io::{stdout, Write};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use finql::datatypes::{Asset, CurrencyConverter, Quote, Ticker, QuoteHandler, date_time_helper::make_time, CurrencyISOCode, DataItem};
+use finql::datatypes::{Asset, DataItem,
+    Currency, CurrencyConverter, CurrencyISOCode,
+    Stock, Quote, Ticker, QuoteHandler, 
+    date_time_helper::make_time, };
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
@@ -20,50 +23,50 @@ async fn quote_tests(market: &mut Market) {
     // We need some assets the quotes are related
     let basf_id = market
         .db()
-        .insert_asset(&Asset::new_stock(
+        .insert_asset(&Asset::Stock(Stock::new(
             None,
             "BASF AG".to_string(),
             None,
-            "BASF SE".to_string(),
-            Some("BASF.DE".to_string()),
-        ))
+            None,
+            None,
+        )))
         .await.unwrap();
     let siemens_id = market
         .db()
-        .insert_asset(&Asset::new_stock(
+        .insert_asset(&Asset::Stock(Stock::new(
             None,
             "Siemens AG".to_string(),
             None,
-            "SIEMENS AG".to_string(),
-            Some("SIE.DU".to_string()),
-        ))
+            None,
+            None,
+        )))
         .await.unwrap();
     let bhp_id = market
         .db()
-        .insert_asset(&Asset::new_stock(
+        .insert_asset(&Asset::Stock(Stock::new(
             None,
             "BHP Inc.".to_string(),
             None,
-            "BHP".to_string(),
+            None,
             None
-        ))
+        )))
         .await.unwrap();
 
     // Create some market data sources
     let yahoo = MarketDataSource::Yahoo;
 
     // Dealing with ticker data
-    let mut eur_asset = Asset::new_currency(None, "euro".to_string(), None, CurrencyISOCode::from_str("EUR").unwrap(), 2);
+    let eur = Currency::new(None, CurrencyISOCode::from_str("EUR").unwrap(), Some(2));
+    let mut eur_asset = Asset::Currency(eur);
     let eur_id = market.db().insert_asset(&eur_asset).await.unwrap();
     eur_asset.set_id(eur_id).unwrap();
-    let eur = eur_asset.currency().unwrap();
 
     println!("eur: {:?}", eur);
 
-    let mut aus_asset = Asset::new_currency(None, "aus".to_string(), None, CurrencyISOCode::from_str("AUS").unwrap(), 2);
+    let aus = Currency::new(None, CurrencyISOCode::from_str("AUS").unwrap(), Some(2));
+    let mut aus_asset = Asset::Currency(aus);
     let aus_id = market.db().insert_asset(&aus_asset).await.unwrap();
     aus_asset.set_id(aus_id).unwrap();
-    let aus = aus_asset.currency().unwrap();
 
     println!("aus: {:?}", aus);
 
@@ -80,9 +83,9 @@ async fn quote_tests(market: &mut Market) {
         tz: None,
         cal: None,
     };
-    let basf_id = market.db().insert_ticker(&basf).await.unwrap();
+    let basf_ticker_id = market.db().insert_ticker(&basf).await.unwrap();
     // Get ticker back
-    market.db().get_ticker_by_id(basf_id).await.unwrap();
+    market.db().get_ticker_by_id(basf_ticker_id).await.unwrap();
     // Insert another ticker, same source
     let siemens = Ticker {
         id: None,
@@ -135,7 +138,7 @@ async fn quote_tests(market: &mut Market) {
     let time = make_time(2019, 12, 30, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
-        ticker: basf_id,
+        ticker: basf_ticker_id,
         price: 67.35,
         time,
         volume: None,
@@ -144,7 +147,7 @@ async fn quote_tests(market: &mut Market) {
     let time = make_time(2020, 1, 2, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
-        ticker: basf_id,
+        ticker: basf_ticker_id,
         price: 68.29,
         time,
         volume: None,
@@ -153,7 +156,7 @@ async fn quote_tests(market: &mut Market) {
     let time = make_time(2020, 1, 3, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
-        ticker: basf_id,
+        ticker: basf_ticker_id,
         price: 67.27,
         time,
         volume: None,
@@ -162,7 +165,7 @@ async fn quote_tests(market: &mut Market) {
     let time = make_time(2020, 1, 6, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
-        ticker: basf_id,
+        ticker: basf_ticker_id,
         price: 66.27,
         time,
         volume: None,
@@ -171,7 +174,7 @@ async fn quote_tests(market: &mut Market) {
     let time = make_time(2020, 1, 7, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
-        ticker: basf_id,
+        ticker: basf_ticker_id,
         price: 66.30,
         time,
         volume: None,
@@ -189,14 +192,14 @@ async fn quote_tests(market: &mut Market) {
     println!("ok");
     let time = make_time(2020, 1, 4, 0, 0, 0).unwrap();
     log("get last quote...");
-    let (quote, currency) = market.db().get_last_quote_before("BASF AG", time).await.unwrap();
+    let (quote, currency) = market.db().get_last_quote_before_by_id(basf_id, time).await.unwrap();
     if currency == eur && (quote.price - 67.27) < 1e-10 {
         println!("ok");
     } else {
         println!("failed");
     }
     log("get all quotes for ticker...");
-    let quotes = market.db().get_all_quotes_for_ticker(basf_id).await.unwrap();
+    let quotes = market.db().get_all_quotes_for_ticker(basf_ticker_id).await.unwrap();
     if quotes.len() == 5 {
         println!("ok");
     } else {
@@ -207,7 +210,7 @@ async fn quote_tests(market: &mut Market) {
     // correct wrong quote
     log("update quote...");
     wrong_quote.id = Some(wrong_quote_id);
-    wrong_quote.ticker = basf_id;
+    wrong_quote.ticker = basf_ticker_id;
     market.db().update_quote(&wrong_quote).await.unwrap();
     println!("ok");
     // Maybe deleting strange quote is better...

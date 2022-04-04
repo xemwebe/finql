@@ -11,7 +11,8 @@ use log::debug;
 use chrono::{Local, NaiveDate, Datelike};
 use plotters::prelude::*;
 
-use finql::datatypes::{Asset, CashFlow, Currency, Ticker, QuoteHandler, Transaction, TransactionType, date_time_helper::{make_time, naive_date_to_date_time}};
+use finql::datatypes::{Asset, CashFlow, Currency, Ticker, Stock, QuoteHandler, 
+    Transaction, TransactionType, date_time_helper::{make_time, naive_date_to_date_time}};
 use finql::{
     Market,
     time_period::TimePeriod, 
@@ -100,13 +101,13 @@ async fn main() {
     let db: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(db);
 
     // Define the asset
-    let asset = Asset::new_stock(
+    let asset = Asset::Stock(Stock::new(
         None,
         "Broadcom Inc.".to_string(),
         None,
-        "AVGO".to_string(),
         None,
-    );
+        None,
+    ));
     let asset_id = db.insert_asset(&asset).await.unwrap();
 
     println!("Get price history and dividends for AVGO");

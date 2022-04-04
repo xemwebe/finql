@@ -3,18 +3,18 @@
 use std::str::FromStr;
 use chrono::NaiveDate;
 
-use finql::datatypes::{Asset, Currency, CashFlow, Transaction, TransactionHandler, TransactionType};
+use finql::datatypes::{Asset, Currency, CashFlow, Stock, Transaction, TransactionHandler, TransactionType};
 use finql::postgres::PostgresDB;
 
 async fn transaction_tests(db: &dyn TransactionHandler) {
     print!("Store asset...");
-    let asset = Asset::new_stock(
+    let asset = Asset::Stock(Stock::new(
         None,
         "Admiral Group plc".to_string(),
-        Some("Here are my notes".to_string()),
-        "AODJ58".to_string(),
         Some("GB00B02J6398".to_string()),
-    );
+        Some("AODJ58".to_string()),
+        Some("Here are my notes".to_string()),
+    ));
     let asset_id = db.insert_asset(&asset).await;
     match asset_id {
         Ok(_) => println!("ok"),

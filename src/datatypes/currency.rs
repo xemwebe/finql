@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use chrono::{DateTime, Local};
-
+use super::{DataError, DataItem};
 
 /// Error type related to the Currency
 #[derive(Debug, Clone, PartialEq)]
@@ -123,6 +123,27 @@ impl fmt::Display for Currency {
             "{}",
             self.iso_code.to_string(),
         )
+    }
+}
+
+impl DataItem for Currency {
+    fn get_id(&self) -> Result<usize, DataError> {
+        match self.id {
+            Some(id) => Ok(id),
+            None => Err(DataError::DataAccessFailure(
+                "Can't get id of temporary currency".to_string()))
+        }
+    }
+
+    fn set_id(&mut self, id: usize) -> Result<(), DataError> {
+        match self.id {
+            Some(_) => Err(DataError::DataAccessFailure(
+                "Can't change id of persistent currency".to_string())),
+            None => { 
+                self.id = Some(id);
+                Ok(())
+            }
+        }
     }
 }
 
