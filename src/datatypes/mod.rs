@@ -1,6 +1,7 @@
 ///! Implementation of a data handler trait to deal with global data
 use thiserror::Error;
 use sqlx;
+use serde_json;
 
 pub mod asset;
 pub mod asset_handler;
@@ -30,16 +31,12 @@ pub use object_handler::ObjectHandler;
 pub enum DataError {
     #[error("Database transaction error")]
     DatabaseError(#[from] sqlx::Error),
+    #[error("Object (de)serialization error")]
+    SerializeError(#[from] serde_json::Error),
     #[error("Connection to database failed: {0}")]
     DataAccessFailure(String),
     #[error("could not found request object in database: {0}")]
     NotFound(String),
-    #[error("update of object in database failed: {0}")]
-    UpdateFailed(String),
-    #[error("removing object from database failed: {0}")]
-    DeleteFailed(String),
-    #[error("inserting object to database failed: {0}")]
-    InsertFailed(String),
     #[error("invalid asset data: {0}")]
     InvalidAsset(String),
     #[error("invalid transaction type: {0}")]

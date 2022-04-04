@@ -144,8 +144,7 @@ impl TransactionHandler for PostgresDB {
                 transaction.related_trans,
                 transaction.position,
                 transaction.note,
-            ).fetch_one(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            ).fetch_one(&self.pool).await?;
         Ok(row.id as usize)
     }
 
@@ -167,8 +166,7 @@ impl TransactionHandler for PostgresDB {
                 JOIN currencies c ON c.id = t.cash_currency_id
                 WHERE t.id = $1",
                 (id as i32),
-            ).fetch_one(&self.pool).await
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
+            ).fetch_one(&self.pool).await?;
         let transaction = RawTransaction {
             id: Some(id as i32),
             trans_type: row.trans_type,
@@ -204,8 +202,7 @@ impl TransactionHandler for PostgresDB {
                 t.note
                 FROM transactions t
                 JOIN currencies c ON c.id = t.cash_currency_id"#
-            ).fetch_all(&self.pool).await
-            .map_err(|e| DataError::NotFound(e.to_string()))?
+            ).fetch_all(&self.pool).await?
         {
             let transaction = RawTransaction {
                 id: Some(row.id),
@@ -255,15 +252,13 @@ impl TransactionHandler for PostgresDB {
                 transaction.related_trans,
                 transaction.position,
                 transaction.note,
-            ).execute(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            ).execute(&self.pool).await?;
         Ok(())
     }
 
     async fn delete_transaction(&self, id: usize) -> Result<(), DataError> {
         sqlx::query!("DELETE FROM transactions WHERE id=$1;", (id as i32))
-            .execute(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            .execute(&self.pool).await?;
         Ok(())
     }
 }

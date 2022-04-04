@@ -18,8 +18,7 @@ impl AssetHandler for PostgresDB {
         let row = sqlx::query!(
                 "INSERT INTO assets (asset_class) VALUES ($1) RETURNING id",
                 asset.class(),
-            ).fetch_one(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            ).fetch_one(&self.pool).await?;
         let id = row.id;
 
         match asset {
@@ -66,8 +65,7 @@ impl AssetHandler for PostgresDB {
              FROM assets 
              WHERE id = $1"#,
             (id as i32),
-        ).fetch_one(&self.pool).await
-        .map_err(|e| DataError::NotFound(e.to_string()))?;
+        ).fetch_one(&self.pool).await?;
 
         match row.asset_class.as_str() {
             "currency" => {
@@ -79,8 +77,7 @@ impl AssetHandler for PostgresDB {
                      FROM currencies 
                      WHERE id = $1"#,
                     (id as i32),
-                ).fetch_one(&self.pool).await
-                .map_err(|e| DataError::NotFound(e.to_string()))?;
+                ).fetch_one(&self.pool).await?;
 
                 Ok(Asset::Currency(Currency::new(
                     Some(row.id as usize), 
@@ -98,8 +95,7 @@ impl AssetHandler for PostgresDB {
                      FROM stocks s
                      WHERE id = $1"#,
                     (id as i32),
-                ).fetch_one(&self.pool).await
-                .map_err(|e| DataError::NotFound(e.to_string()))?;
+                ).fetch_one(&self.pool).await?;
 
                 Ok(Asset::Stock(
                     Stock::new(
@@ -126,8 +122,8 @@ impl AssetHandler for PostgresDB {
                  FROM stocks
                  WHERE isin = $1"#,
                 isin.to_string(),
-            ).fetch_one(&self.pool).await
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
+            ).fetch_one(&self.pool).await?;
+
         Ok(Asset::Stock(
             Stock::new(
             Some(row.id as usize),
@@ -143,11 +139,9 @@ impl AssetHandler for PostgresDB {
             r#"SELECT
                 id
              FROM assets"#
-        ).fetch_all(&self.pool).await
-        .map_err(|e| DataError::NotFound(e.to_string()))?
+        ).fetch_all(&self.pool).await?
         {
-            assets.push(self.get_asset_by_id(row.id as usize).await
-                .map_err(|e| DataError::NotFound(e.to_string()))?
+            assets.push(self.get_asset_by_id(row.id as usize).await?
             );
         }
         Ok(assets)
@@ -164,8 +158,7 @@ impl AssetHandler for PostgresDB {
                             rounding_digits=$3
                         WHERE id=$1;",
                         id as i32, c.iso_code.to_string(), c.rounding_digits
-                    ).execute(&self.pool).await
-                    .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+                    ).execute(&self.pool).await?;
                     Ok(())
                 } else {
                     Err(DataError::NotFound(
@@ -184,8 +177,7 @@ impl AssetHandler for PostgresDB {
                             note=$5
                         WHERE id=$1;",
                         id as i32, s.name, s.isin, s.wkn, s.note
-                    ).execute(&self.pool).await
-                    .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+                    ).execute(&self.pool).await?;
                     Ok(())
                 } else {
                     Err(DataError::NotFound(
@@ -232,8 +224,7 @@ impl AssetHandler for PostgresDB {
                  iso_code,
                  rounding_digits
              FROM currencies"#)
-             .fetch_all(&self.pool).await
-             .map_err(|e| DataError::NotFound(e.to_string()))?
+             .fetch_all(&self.pool).await?
         {
             currencies.push(Currency::new(
                 Some(row.id as usize),

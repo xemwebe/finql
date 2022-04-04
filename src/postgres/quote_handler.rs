@@ -38,8 +38,7 @@ impl QuoteHandler for PostgresDB {
                 ticker.factor,
                 ticker.tz,
                 ticker.cal
-            ).fetch_one(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            ).fetch_one(&self.pool).await?;
         let id:i32 = row.id;
         Ok(id as usize)
     }
@@ -80,8 +79,7 @@ impl QuoteHandler for PostgresDB {
                  JOIN currencies c ON c.id = t.currency_id
                  WHERE t.id = $1",
                 (id as i32),
-            ).fetch_one(&self.pool).await
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
+            ).fetch_one(&self.pool).await?;
         let name = row.name;
         let asset = row.asset_id;
         let source = row.source;
@@ -121,8 +119,7 @@ impl QuoteHandler for PostgresDB {
                    c.rounding_digits AS "currency_rounding_digits!"
                  FROM ticker t
                  JOIN currencies c ON c.id = t.currency_id"#
-            ).fetch_all(&self.pool).await
-            .map_err(|e| DataError::NotFound(e.to_string()))?
+            ).fetch_all(&self.pool).await?
         {
             let id = row.id;
             let source = row.source;
@@ -169,8 +166,7 @@ impl QuoteHandler for PostgresDB {
                  JOIN currencies c ON c.id = t.currency_id
                  WHERE t.source = $1",
                 (source.to_string()),
-            ).fetch_all(&self.pool).await
-            .map_err(|e| DataError::NotFound(e.to_string()))?
+            ).fetch_all(&self.pool).await?
         {
             let id = row.id;
             let asset = row.asset_id;
@@ -217,8 +213,7 @@ impl QuoteHandler for PostgresDB {
                  JOIN currencies c ON c.id = t.currency_id
                  WHERE t.asset_id = $1",
                 (asset_id as i32),
-            ).fetch_all(&self.pool).await
-            .map_err(|e| DataError::NotFound(e.to_string()))?
+            ).fetch_all(&self.pool).await?
         {
             let id = row.id;
             let source = row.source;
@@ -265,15 +260,13 @@ impl QuoteHandler for PostgresDB {
                 ticker.tz,
                 ticker.cal
             )
-            .execute(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            .execute(&self.pool).await?;
         Ok(())
     }
 
     async fn delete_ticker(&self, id: usize) -> Result<(), DataError> {
         sqlx::query!("DELETE FROM ticker WHERE id=$1;", (id as i32))
-            .execute(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            .execute(&self.pool).await?;
         Ok(())
     }
 
@@ -286,8 +279,7 @@ impl QuoteHandler for PostgresDB {
                 quote.price,
                 quote.time,
                 quote.volume,
-            ).fetch_one(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            ).fetch_one(&self.pool).await?;
         let id = row.id;
         Ok(id as usize)
     }
@@ -317,8 +309,7 @@ impl QuoteHandler for PostgresDB {
                 ORDER BY q.time DESC, t.priority ASC
                 LIMIT 1",
                 curr.to_string(), time,
-            ).fetch_one(&self.pool).await
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
+            ).fetch_one(&self.pool).await?;
 
         let id = row.id;
         let c = Currency::new(
@@ -355,8 +346,7 @@ impl QuoteHandler for PostgresDB {
                 ORDER BY q.time DESC, t.priority ASC
                 LIMIT 1",
                 (asset_id as i32), time,
-            ).fetch_one(&self.pool).await
-            .map_err(|e| DataError::NotFound(e.to_string()))?;
+            ).fetch_one(&self.pool).await?;
 
         let id = row.id as usize;
         let ticker = row.ticker_id;
@@ -386,8 +376,7 @@ impl QuoteHandler for PostgresDB {
                 "SELECT id, price, time, volume FROM quotes 
                 WHERE ticker_id=$1 ORDER BY time ASC;",
                 (ticker_id as i32),
-            ).fetch_all(&self.pool).await
-            .map_err(|e| DataError::NotFound(e.to_string()))?
+            ).fetch_all(&self.pool).await?
         {
             let id = row.id;
             let time = row.time.into();
@@ -418,15 +407,13 @@ impl QuoteHandler for PostgresDB {
                 quote.time,
                 quote.volume,
             )
-            .execute(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            .execute(&self.pool).await?;
         Ok(())
     }
 
     async fn delete_quote(&self, id: usize) -> Result<(), DataError> {
         sqlx::query!("DELETE FROM quotes WHERE id=$1;", (id as i32))
-            .execute(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
+            .execute(&self.pool).await?;
         Ok(())
     }
 
@@ -444,8 +431,7 @@ impl QuoteHandler for PostgresDB {
             and q1.time = q2.time
             and q1.price = q2.price) 
             ")
-            .execute(&self.pool).await
-            .map_err(|e| DataError::DeleteFailed(e.to_string()))?;
+            .execute(&self.pool).await?;
         Ok(())
     }
 }

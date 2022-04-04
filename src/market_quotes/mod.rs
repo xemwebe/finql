@@ -176,7 +176,7 @@ mod tests {
     use chrono::{Duration, Local};
     use rand::Rng;
 
-    use crate::datatypes::{Asset, Currency, QuoteHandler};
+    use crate::datatypes::{Stock, Asset, Currency, QuoteHandler};
     use crate::postgres::PostgresDB;
 
     struct DummyProvider {}
