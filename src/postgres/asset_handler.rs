@@ -26,7 +26,7 @@ impl AssetHandler for PostgresDB {
                 sqlx::query!(
                     "INSERT INTO currencies (id, iso_code, rounding_digits) VALUES ($1, $2, $3)",
                     id, c.iso_code.to_string(), c.rounding_digits,
-                );
+                ).execute(&self.pool).await?;
                 tx.commit().await?;
                 Ok(id as usize)
             },
@@ -34,7 +34,7 @@ impl AssetHandler for PostgresDB {
                 sqlx::query!(
                         "INSERT INTO stocks (id, name, isin, wkn, note) VALUES ($1, $2, $3, $4, $5)",
                         id, s.name, s.isin, s.wkn, s.note
-                );
+                ).execute(&self.pool).await?;
                 tx.commit().await?;
                 Ok(id as usize)
             }
