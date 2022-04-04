@@ -9,7 +9,7 @@ use serde_json;
 use thiserror::Error;
 use alpha_vantage;
 use gurufocus_api;
-use crate::datatypes::{QuoteHandler, CashFlow, Quote, Stock, Ticker};
+use crate::datatypes::{QuoteHandler, CashFlow, Quote, Ticker};
 
 
 pub mod alpha_vantage_wrapper;

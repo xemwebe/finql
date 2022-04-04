@@ -13,7 +13,8 @@ struct ID { id: i32, }
 impl AssetHandler for PostgresDB {
     async fn insert_asset(&self, asset: &Asset) -> Result<usize, DataError> {
         let asset = asset.to_owned();
-
+        // begin transaction
+        let tx = self.pool.begin().await?;
         let row = sqlx::query!(
                 "INSERT INTO assets (asset_class) VALUES ($1) RETURNING id",
                 asset.class(),
@@ -27,7 +28,7 @@ impl AssetHandler for PostgresDB {
                     "INSERT INTO currencies (id, iso_code, rounding_digits) VALUES ($1, $2, $3)",
                     id, c.iso_code.to_string(), c.rounding_digits,
                 );
-
+                tx.commit().await?;
                 Ok(id as usize)
             },
             Asset::Stock(s) => {
@@ -35,7 +36,7 @@ impl AssetHandler for PostgresDB {
                         "INSERT INTO stocks (id, name, isin, wkn, note) VALUES ($1, $2, $3, $4, $5)",
                         id, s.name, s.isin, s.wkn, s.note
                 );
-
+                tx.commit().await?;
                 Ok(id as usize)
             }
         }
@@ -196,10 +197,31 @@ impl AssetHandler for PostgresDB {
     }
 
     async fn delete_asset(&self, id: usize) -> Result<(), DataError> {
-        sqlx::query!("DELETE FROM assets WHERE id=$1;", (id as i32))
-            .execute(&self.pool).await
-            .map_err(|e| DataError::InsertFailed(e.to_string()))?;
-        Ok(())
+        let row = sqlx::query!(
+                "SELECT asset_class FROM assets WHERE id=$1",
+                id as i32,
+            ).fetch_one(&self.pool).await?;
+        match row.asset_class.as_str() {
+            "currency" => {
+                let tx = self.pool.begin().await?;
+                sqlx::query!("DELETE FROM currencies WHERE id=$1;", (id as i32))
+                    .execute(&self.pool).await?;
+                sqlx::query!("DELETE FROM assets WHERE id=$1;", (id as i32))
+                    .execute(&self.pool).await?;
+                tx.commit().await?;
+                Ok(())
+            },
+            "stock" => {
+                let tx = self.pool.begin().await?;
+                sqlx::query!("DELETE FROM stocks WHERE id=$1;", (id as i32))
+                    .execute(&self.pool).await?;
+                sqlx::query!("DELETE FROM assets WHERE id=$1;", (id as i32))
+                    .execute(&self.pool).await?;      
+                tx.commit().await?;
+                Ok(())
+            },
+            _ => Err(DataError::InvalidAsset("Could not delete unknown asset".to_string()))
+        }
     }
 
     async fn get_all_currencies(&self) -> Result<Vec<Currency>, DataError> {
