@@ -9,7 +9,7 @@ use serde_json;
 use thiserror::Error;
 use alpha_vantage;
 use gurufocus_api;
-use crate::datatypes::{QuoteHandler, CashFlow, Quote, Ticker};
+use crate::datatypes::{QuoteHandler, CashFlow, Quote, Stock, Ticker};
 
 
 pub mod alpha_vantage_wrapper;
@@ -228,7 +228,7 @@ mod tests {
             .insert_asset(&Asset::Stock(Stock::new(
                 None,
                 "Apple AG".to_string(),
-                "APPL".to_string(),
+                Some("APPL".to_string()),
                 None,
                 None,
             )))

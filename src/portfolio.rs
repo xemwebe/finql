@@ -405,7 +405,9 @@ mod tests {
     use chrono::NaiveDate;
 
     use crate::{assert_fuzzy_eq};
-    use crate::datatypes::{Asset, AssetHandler, CashAmount, CashFlow, Quote, Ticker, date_time_helper::make_time};
+    use crate::datatypes::{
+        Asset, AssetHandler, CashAmount, CashFlow, 
+        Stock, Quote, Ticker, date_time_helper::make_time};
     use crate::postgres::PostgresDB;
 
     #[test]
@@ -634,7 +636,7 @@ mod tests {
             .insert_asset(&Asset::Stock(Stock::new(
                 None,
                 "EUR Stock".to_string(),
-                "EURS".to_string(),
+                Some("EURS".to_string()),
                 None,
                 None,
             )))
@@ -644,7 +646,7 @@ mod tests {
             .insert_asset(&Asset::Stock(Stock::new(
                 None,
                 "USD Stock".to_string(),
-                "USDS".to_string(),
+                Some("USDS".to_string()),
                 None,
                 None,
             )))

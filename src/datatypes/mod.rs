@@ -1,5 +1,5 @@
 ///! Implementation of a data handler trait to deal with global data
-use std::fmt;
+use thiserror::Error;
 
 pub mod asset;
 pub mod asset_handler;
@@ -24,35 +24,25 @@ pub use currency::{Currency, CurrencyConverter, CurrencyError, CurrencyISOCode};
 pub use cash_flow::{CashAmount, CashFlow};
 pub use object_handler::ObjectHandler;
 
-#[derive(Debug)]
+
+#[derive(Error, Debug)]
 pub enum DataError {
+    #[error("Connection to database failed: {0}")]
     DataAccessFailure(String),
+    #[error("could not found request object in database: {0}")]
     NotFound(String),
+    #[error("update of object in database failed: {0}")]
     UpdateFailed(String),
+    #[error("removing object from database failed: {0}")]
     DeleteFailed(String),
+    #[error("inserting object to database failed: {0}")]
     InsertFailed(String),
+    #[error("invalid asset data: {0}")]
     InvalidAsset(String),
-    InvalidTransaction(String)
-}
-
-impl std::error::Error for DataError {
-    fn cause(&self) -> Option<&dyn std::error::Error> {
-        Some(self)
-    }
-}
-
-impl fmt::Display for DataError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::DataAccessFailure(err) => write!(f, "connection to database failed: {}", err),
-            Self::NotFound(err) => write!(f, "could not found request object in database: {}", err),
-            Self::UpdateFailed(err) => write!(f, "update of object in database failed: {}", err),
-            Self::DeleteFailed(err) => write!(f, "removing object from database failed: {}", err),
-            Self::InsertFailed(err) => write!(f, "inserting object to database failed: {}", err),
-            Self::InvalidAsset(err) => write!(f, "invalid asset data: {}", err),
-            Self::InvalidTransaction(err) => write!(f, "invalid transaction type: {}", err)
-        }
-    }
+    #[error("invalid transaction type: {0}")]
+    InvalidTransaction(String),
+    #[error("Invalid currency")]
+    InvalidCurrency(#[from] CurrencyError),
 }
 
 pub trait DataItem {

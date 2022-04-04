@@ -180,7 +180,7 @@ impl CurrencyConverter for Market {
             return Ok(1.0);
         } else {
             let (fx_quote, quote_currency) = self.db.deref().deref()
-                .get_last_quote_before(&foreign.to_string(), time)
+                .get_last_fx_quote_before(&foreign.iso_code, time)
                 .await
                 .map_err(|_| CurrencyError::ConversionFailed)?;
             if quote_currency == base {

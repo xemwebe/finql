@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use super::AssetHandler;
 use super::DataError;
-use super::{Currency, Quote, Ticker};
+use super::{Currency, CurrencyISOCode, Quote, Ticker};
 
 /// Handler for globally available market quotes data
 #[async_trait]
@@ -37,9 +37,9 @@ pub trait QuoteHandler: AssetHandler {
     async fn insert_quote(&self, quote: &Quote) -> Result<usize, DataError>;
 
     /// Get the last quote in database for a specific asset name on or before the given time
-    async fn get_last_quote_before(
+    async fn get_last_fx_quote_before(
         &self,
-        asset_name: &str,
+        curr: &CurrencyISOCode,
         time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError>;
 

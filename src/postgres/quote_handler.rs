@@ -87,7 +87,7 @@ impl QuoteHandler for PostgresDB {
         let source = row.source;
         let currency = Currency::new(
             Some(row.currency_id as usize),
-            CurrencyISOCode::from_str(&row.currency_iso_code).expect("expected good iso_code from db"),
+            CurrencyISOCode::from_str(&row.currency_iso_code)?,
             Some(row.currency_rounding_digits),
         );
 
@@ -128,7 +128,7 @@ impl QuoteHandler for PostgresDB {
             let source = row.source;
             let currency = Currency::new(
                 Some(row.currency_id as usize),
-                CurrencyISOCode::from_str(&row.currency_iso_code).expect("expected good iso_code from db"),
+                CurrencyISOCode::from_str(&row.currency_iso_code)?,
                 Some(row.currency_rounding_digits),
             );
             let factor = row.factor;
@@ -176,7 +176,7 @@ impl QuoteHandler for PostgresDB {
             let asset = row.asset_id;
             let currency = Currency::new(
                 Some(row.currency_id as usize),
-                CurrencyISOCode::from_str(&row.currency_iso_code).expect("expected good iso_code from db"),
+                CurrencyISOCode::from_str(&row.currency_iso_code)?,
                 Some(row.currency_rounding_digits),
             );
             let factor = row.factor;
@@ -224,7 +224,7 @@ impl QuoteHandler for PostgresDB {
             let source = row.source;
             let currency = Currency::new(
                 Some(row.currency_id as usize),
-                CurrencyISOCode::from_str(&row.currency_iso_code).expect("expected good iso_code from db"),
+                CurrencyISOCode::from_str(&row.currency_iso_code)?,
                 Some(row.currency_rounding_digits),
             );
             let factor: f64 = row.factor;
@@ -292,9 +292,9 @@ impl QuoteHandler for PostgresDB {
         Ok(id as usize)
     }
 
-    async fn get_last_quote_before(
+    async fn get_last_fx_quote_before(
         &self,
-        asset_name: &str,
+        curr: &CurrencyISOCode,
         time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError> {
         let row = sqlx::query!(
@@ -311,20 +311,19 @@ impl QuoteHandler for PostgresDB {
                 FROM quotes q
                 JOIN ticker t ON t.id = q.ticker_id
                 JOIN currencies c ON c.id = t.currency_id
-                JOIN assets a ON  a.id = t.asset_id
                 WHERE
-                    a.name = $1
+                    c.iso_code = $1
                     AND q.time <= $2
                 ORDER BY q.time DESC, t.priority ASC
                 LIMIT 1",
-                asset_name, time,
+                curr.to_string(), time,
             ).fetch_one(&self.pool).await
             .map_err(|e| DataError::NotFound(e.to_string()))?;
 
         let id = row.id;
         let c = Currency::new(
             Some(row.currency_id as usize),
-            CurrencyISOCode::from_str(&row.currency_iso_code).expect("unknown currency asset referenced in db"),
+            CurrencyISOCode::from_str(&row.currency_iso_code)?,
             Some(row.currency_rounding_digits),
         );
         let ticker = row.ticker_id;
