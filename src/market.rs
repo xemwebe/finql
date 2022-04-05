@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use async_trait::async_trait;
 use thiserror::Error;
 
-use crate::datatypes::{Currency, CurrencyConverter, CurrencyError, QuoteHandler, date_time_helper::naive_date_to_date_time};
+use crate::datatypes::{Currency, CurrencyISOCode, CurrencyConverter, CurrencyError, QuoteHandler, date_time_helper::naive_date_to_date_time};
 use crate::time_period::TimePeriod;
 
 use crate::calendar::{Calendar, Holiday, NthWeek};
@@ -36,6 +36,8 @@ pub enum MarketError {
     DateTimeError(#[from] crate::datatypes::date_time_helper::DateTimeError),
     #[error("Invalid market data source")]
     MarketDataSourceError(#[from] MarketDataSourceError),
+    #[error("Invalid currency")]
+    InvalidCurrency(#[from] CurrencyError),
 }
 
 /// Container or adaptor to market data
@@ -69,6 +71,13 @@ impl Market {
         } else {
             Err(MarketError::CalendarNotFound)
         }
+    }
+
+    /// Get currency from market
+    pub async fn get_currency(&self, currency_string: &str) -> Result<Currency, MarketError> {
+        let iso_code = CurrencyISOCode::new(currency_string)?;
+        let currency = self.db.get_or_new_currency(iso_code).await?;
+        Ok(currency)
     }
 
     /// Add market data provider

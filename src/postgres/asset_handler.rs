@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::datatypes::{Asset, Currency, CurrencyISOCode, Stock, AssetHandler, DataError};
+use crate::datatypes::{Asset, Currency, CurrencyISOCode, Stock, AssetHandler, DataError, DataItem};
 
 use super::PostgresDB;
 
@@ -218,11 +218,11 @@ impl AssetHandler for PostgresDB {
     async fn get_all_currencies(&self) -> Result<Vec<Currency>, DataError> {
         let mut currencies = Vec::new();
         for row in sqlx::query!(
-            r#"SELECT
-                 id,
-                 iso_code,
-                 rounding_digits
-             FROM currencies"#)
+            "SELECT
+                id,
+                iso_code,
+                rounding_digits
+            FROM currencies")
              .fetch_all(&self.pool).await?
         {
             currencies.push(Currency::new(
@@ -232,5 +232,30 @@ impl AssetHandler for PostgresDB {
             ));
         }
         Ok(currencies)
+    }
+
+    async fn get_or_new_currency(&self, iso_code: CurrencyISOCode) -> Result<Currency, DataError> {
+        self.get_or_new_currency_with_digits(iso_code, 2).await
+    }
+
+    async fn get_or_new_currency_with_digits(&self, iso_code: CurrencyISOCode, rounding_digits: i32) -> Result<Currency, DataError>
+    {
+        let row = sqlx::query!(
+            "SELECT
+                id,
+                rounding_digits
+            FROM currencies
+            WHERE iso_code=$1",
+            iso_code.to_string())
+            .fetch_one(&self.pool).await;
+        
+        if let Ok(row) = row {
+            Ok(Currency::new(Some(row.id as usize), iso_code, Some(row.rounding_digits)))
+        } else {
+            let mut currency = Currency::new(None, iso_code, Some(rounding_digits));
+            let id = self.insert_asset(&Asset::Currency(currency)).await?;
+            currency.set_id(id)?;
+            Ok(currency)
+        }
     }
 }

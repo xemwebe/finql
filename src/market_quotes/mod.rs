@@ -171,12 +171,11 @@ impl MarketDataSource {
 mod tests {
     use super::*;
 
-    use std::str::FromStr;
     use chrono::offset::TimeZone;
     use chrono::{Duration, Local};
     use rand::Rng;
 
-    use crate::datatypes::{Stock, Asset, Currency, QuoteHandler};
+    use crate::datatypes::{Stock, Asset, CurrencyISOCode, QuoteHandler};
     use crate::postgres::PostgresDB;
 
     struct DummyProvider {}
@@ -234,11 +233,12 @@ mod tests {
             )))
             .await.unwrap();
 
+        let eur = db.get_or_new_currency(CurrencyISOCode::new("EUR").unwrap()).await.unwrap();
         let mut ticker = Ticker {
             id: None,
             asset: asset_id,
             name: "TestTicker".to_string(),
-            currency: Currency::from_str("EUR").unwrap(),
+            currency: eur,
             source: "manual".to_string(),
             priority: 1,
             factor: 1.0,

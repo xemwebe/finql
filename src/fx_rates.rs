@@ -127,18 +127,18 @@ impl Default for SimpleCurrencyConverter{
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use std::str::FromStr;
 
     use chrono::offset::TimeZone;
     use chrono::Local;
 
     use crate::postgres::PostgresDB;
     use crate::market::Market;
+    use crate::datatypes::CurrencyISOCode;
 
     async fn prepare_db(db: Arc<dyn QuoteHandler+Send+Sync>) {
         let time = Local.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);
-        let eur = Currency::from_str("EUR").unwrap();
-        let usd = Currency::from_str("USD").unwrap();
+        let eur = db.get_or_new_currency(CurrencyISOCode::new("EUR").unwrap()).await.unwrap();
+        let usd = db.get_or_new_currency(CurrencyISOCode::new("USD").unwrap()).await.unwrap();
         insert_fx_quote(0.9, usd, eur, time, db).await.unwrap();
     }
 
@@ -153,10 +153,10 @@ mod tests {
         let qh: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(db);
         prepare_db(qh.clone()).await;
         let tol = 1.0e-6_f64;
-        let eur = Currency::from_str("EUR").unwrap();
-        let usd = Currency::from_str("USD").unwrap();
-        let time = Local::now();
         let market = Market::new(qh);
+        let eur = market.get_currency("EUR").await.unwrap();
+        let usd = market.get_currency("USD").await.unwrap();
+        let time = Local::now();
         let fx = market.fx_rate(usd, eur, time).await.unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);
     }
