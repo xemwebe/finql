@@ -52,7 +52,7 @@ impl PostgresDB {
         sqlx::query!(
             "CREATE TABLE IF NOT EXISTS assets (
                 id SERIAL PRIMARY KEY,
-                asset_class CHAR(20) NOT NULL
+                asset_class VARCHAR(20) NOT NULL
             )"
         )
         .execute(&self.pool)
@@ -60,7 +60,7 @@ impl PostgresDB {
         sqlx::query!(
                 "CREATE TABLE IF NOT EXISTS currencies (
                     id INTEGER PRIMARY KEY,
-                    iso_code CHAR(3) NOT NULL,
+                    iso_code CHAR(3) NOT NULL UNIQUE,
                     rounding_digits INT NOT NULL,
                     FOREIGN KEY(id) REFERENCES assets(id)
                 )"
@@ -72,7 +72,7 @@ impl PostgresDB {
                   id INTEGER PRIMARY KEY,
                   name TEXT NOT NULL UNIQUE,
                   wkn CHAR(6) UNIQUE,
-                  isin CHAR(4) UNIQUE,
+                  isin CHAR(12) UNIQUE,
                   note TEXT,
                   FOREIGN KEY(id) REFERENCES assets(id)
                 )"

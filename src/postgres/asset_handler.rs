@@ -189,8 +189,7 @@ impl AssetHandler for PostgresDB {
     }
 
     async fn delete_asset(&self, id: usize) -> Result<(), DataError> {
-        let row = sqlx::query!(
-                "SELECT asset_class FROM assets WHERE id=$1",
+        let row = sqlx::query!("SELECT asset_class FROM assets WHERE id=$1",
                 id as i32,
             ).fetch_one(&self.pool).await?;
         match row.asset_class.as_str() {

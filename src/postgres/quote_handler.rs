@@ -296,13 +296,14 @@ impl QuoteHandler for PostgresDB {
                    q.price,
                    q.time,
                    q.volume,
-                   c.id AS currency_id,
-                   c.iso_code AS currency_iso_code,
-                   c.rounding_digits AS currency_rounding_digits,
+                   qc.id AS currency_id,
+                   qc.iso_code,
+                   qc.rounding_digits,
                    t.priority
                 FROM quotes q
                 JOIN ticker t ON t.id = q.ticker_id
-                JOIN currencies c ON c.id = t.currency_id
+                JOIN currencies c ON c.id = t.asset_id
+                JOIN currencies qc ON qc.id = t.currency_id
                 WHERE
                     c.iso_code = $1
                     AND q.time <= $2
@@ -310,12 +311,11 @@ impl QuoteHandler for PostgresDB {
                 LIMIT 1",
                 curr.to_string(), time,
             ).fetch_one(&self.pool).await?;
-
         let id = row.id;
         let c = Currency::new(
             Some(row.currency_id as usize),
-            CurrencyISOCode::from_str(&row.currency_iso_code)?,
-            Some(row.currency_rounding_digits),
+            CurrencyISOCode::new(&row.iso_code)?,
+            Some(row.rounding_digits),
         );
         let ticker = row.ticker_id;
         let price = row.price;
@@ -353,8 +353,9 @@ impl QuoteHandler for PostgresDB {
         let price = row.price;
         let time: DateTime<Local> = row.time.into();
         let volume = row.volume;
-
-        if let Ok(Asset::Currency(ca)) = self.get_asset_by_id(id).await {
+        let currency_id = row.currency_id as usize;
+        
+        if let Ok(Asset::Currency(ca)) = self.get_asset_by_id(currency_id).await {
             Ok((
                 Quote {
                     id: Some(id as usize),
@@ -366,7 +367,7 @@ impl QuoteHandler for PostgresDB {
                 ca,
             ))
         } else {
-            Err(DataError::InvalidAsset(format!("Couldn't find currency with id={}", id)))
+            Err(DataError::InvalidAsset(format!("Couldn't find currency with id={}", currency_id)))
         }
     }
 

@@ -44,3 +44,25 @@ impl DataItem for Asset {
         Ok(())
     }
 }
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::datatypes::CurrencyISOCode;
+
+    #[test]
+    fn set_asset_id() {
+        let mut asset = Asset::Currency(Currency::new(None, CurrencyISOCode::new("EUR").unwrap(), Some(4)));
+        asset.set_id(1).unwrap();
+        assert_eq!(asset.get_id().unwrap(), 1);
+
+
+        let aus = Currency::new(None, CurrencyISOCode::new("AUS").unwrap(), Some(2));
+        let mut aus_asset = Asset::Currency(aus);
+        aus_asset.set_id(1).unwrap();
+        assert_eq!(aus_asset.get_id().unwrap(), 1);
+        assert!(aus.get_id().is_err());
+    }
+}

@@ -2,7 +2,6 @@
 ///! Please note: All existing content of the database will be deleted!
 
 use std::io::{stdout, Write};
-use std::str::FromStr;
 use std::sync::Arc;
 
 use finql::datatypes::{Asset, DataItem,
@@ -56,17 +55,17 @@ async fn quote_tests(market: &mut Market) {
     let yahoo = MarketDataSource::Yahoo;
 
     // Dealing with ticker data
-    let eur = Currency::new(None, CurrencyISOCode::from_str("EUR").unwrap(), Some(2));
-    let mut eur_asset = Asset::Currency(eur);
+    let mut eur = Currency::new(None, CurrencyISOCode::new("EUR").unwrap(), Some(2));
+    let eur_asset = Asset::Currency(eur);
     let eur_id = market.db().insert_asset(&eur_asset).await.unwrap();
-    eur_asset.set_id(eur_id).unwrap();
+    eur.set_id(eur_id).unwrap();
 
     println!("eur: {:?}", eur);
 
-    let aus = Currency::new(None, CurrencyISOCode::from_str("AUS").unwrap(), Some(2));
-    let mut aus_asset = Asset::Currency(aus);
+    let mut aus = Currency::new(None, CurrencyISOCode::new("AUS").unwrap(), Some(2));
+    let aus_asset = Asset::Currency(aus);
     let aus_id = market.db().insert_asset(&aus_asset).await.unwrap();
-    aus_asset.set_id(aus_id).unwrap();
+    aus.set_id(aus_id).unwrap();
 
     println!("aus: {:?}", aus);
 

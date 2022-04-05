@@ -406,7 +406,7 @@ mod tests {
 
     use crate::{assert_fuzzy_eq};
     use crate::datatypes::{
-        Asset, AssetHandler, CashAmount, CashFlow, 
+        Asset, AssetHandler, Currency, CurrencyISOCode, CashAmount, CashFlow, 
         Stock, Quote, Ticker, date_time_helper::make_time};
     use crate::postgres::PostgresDB;
 
@@ -621,8 +621,10 @@ mod tests {
         assert_fuzzy_eq!(asset_pos_3.interest, 6.6, tol);
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    #[tokio::test]
     async fn test_add_quote_to_position() {
+        use crate::datatypes::DataItem;
+
         let tol = 1e-4;
         // Setup database connection
         let db_url  = std::env::var("FINQL_TEST_DATABASE_URL");
@@ -631,8 +633,8 @@ mod tests {
         let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
         db.clean().await.unwrap();
 
-        // first add some assets
-        let eur_id = db
+        // first add some assets and currencies
+        let eur_stock_id = db
             .insert_asset(&Asset::Stock(Stock::new(
                 None,
                 "EUR Stock".to_string(),
@@ -641,8 +643,7 @@ mod tests {
                 None,
             )))
             .await.unwrap();
-        // first add some assets
-        let us_id = db
+        let us_stock_id = db
             .insert_asset(&Asset::Stock(Stock::new(
                 None,
                 "USD Stock".to_string(),
@@ -651,14 +652,20 @@ mod tests {
                 None,
             )))
             .await.unwrap();
-        let eur = Currency::from_str("EUR").unwrap();
-        let usd = Currency::from_str("USD").unwrap();
+        let mut eur = Currency::new(None, CurrencyISOCode::new("EUR").unwrap(), Some(2));
+        let eur_id = db.insert_asset(&Asset::Currency(eur)).await.unwrap();
+        eur.set_id(eur_id).unwrap();
+
+        let mut usd = Currency::new(None, CurrencyISOCode::new("USD").unwrap(), Some(2));
+        let usd_id = db.insert_asset(&Asset::Currency(usd)).await.unwrap();
+        usd.set_id(usd_id).unwrap();
+
         // add ticker
-        let _eur_ticker_id = db
+        let eur_ticker_id = db
             .insert_ticker(&Ticker {
                 id: None,
                 name: "EUR_STOCK.DE".to_string(),
-                asset: eur_id,
+                asset: eur_stock_id,
                 priority: 10,
                 currency: eur,
                 source: "manual".to_string(),
@@ -667,11 +674,11 @@ mod tests {
                 cal: None,
                 })
             .await.unwrap();
-        let _us_ticker_id = db
+        let us_ticker_id = db
             .insert_ticker(&Ticker {
                 id: None,
                 name: "US_STOCK.DE".to_string(),
-                asset: us_id,
+                asset: us_stock_id,
                 priority: 10,
                 currency: usd,
                 source: "manual".to_string(),
@@ -685,7 +692,7 @@ mod tests {
         let _ = db
             .insert_quote(&Quote {
                 id: None,
-                ticker: eur_id,
+                ticker: eur_ticker_id,
                 price: 12.34,
                 time,
                 volume: None,
@@ -694,17 +701,17 @@ mod tests {
         let _ = db
             .insert_quote(&Quote {
                 id: None,
-                ticker: us_id,
+                ticker: us_ticker_id,
                 price: 43.21,
                 time,
                 volume: None,
             })
             .await.unwrap();
-        let mut eur_position = Position::new(Some(eur_id), eur);
+        let mut eur_position = Position::new(Some(eur_stock_id), eur);
         eur_position.name = "EUR Stock".to_string();
         eur_position.position = 1000.0;
 
-        let mut usd_position = Position::new(Some(us_id), eur); 
+        let mut usd_position = Position::new(Some(us_stock_id), eur); 
         usd_position.name = "US Stock".to_string();
         usd_position.position = 1000.0;
 
@@ -712,12 +719,14 @@ mod tests {
         crate::fx_rates::insert_fx_quote(2.0, usd, eur, time, qh.clone()).await.unwrap();
         let time = make_time(2019, 12, 30, 12, 0, 0).unwrap();
         let market = Market::new(qh.clone());
+
         eur_position.add_quote(time, &market).await;
         assert_fuzzy_eq!(eur_position.last_quote.unwrap(), 12.34, tol);
         assert_eq!(
             eur_position.last_quote_time.unwrap().format("%F %H:%M:%S").to_string(),
             "2019-12-30 10:00:00"
         );
+
         usd_position.add_quote(time, &market).await;
         assert_fuzzy_eq!(usd_position.last_quote.unwrap(), 86.42, tol);
         assert_eq!(

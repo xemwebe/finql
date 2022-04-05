@@ -250,7 +250,7 @@ mod tests {
         ticker
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    #[tokio::test]
     async fn test_fetch_latest_quote() {
         let tol = 1.0e-6;
 
@@ -269,7 +269,7 @@ mod tests {
         assert_fuzzy_eq!(quotes[0].price, 1.23, tol);
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    #[tokio::test]
     async fn test_fetch_quote_history() {
         let tol = 1.0e-6;
         

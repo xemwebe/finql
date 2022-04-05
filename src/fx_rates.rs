@@ -7,7 +7,7 @@ use std::sync::RwLock;
 use chrono::{DateTime, Local};
 use async_trait::async_trait;
 
-use crate::datatypes::{Asset, Currency, CurrencyConverter, CurrencyError, DataError, QuoteHandler, Quote, Ticker};
+use crate::datatypes::{Asset, Currency, CurrencyConverter, CurrencyError, DataError, DataItem, QuoteHandler, Quote, Ticker};
 
 
 /// Insert fx rate quote in database including the inverse quote
@@ -18,9 +18,13 @@ pub async fn insert_fx_quote(
     time: DateTime<Local>,
     quotes: Arc<dyn QuoteHandler+Send+Sync>,
 ) -> Result<(), DataError> {
-    let foreign_id = quotes
+    let foreign_id = if let Ok(id) = foreign.get_id() {
+        id
+    } else {
+        quotes
         .insert_asset(&Asset::Currency(foreign))
-        .await.unwrap();
+        .await?
+    };
     let currency_pair = format!("{}/{}", foreign, base);
     let ticker_id = quotes
         .insert_ticker(&Ticker {
@@ -34,18 +38,22 @@ pub async fn insert_fx_quote(
             tz: None,
             cal: None,
         })
-        .await.unwrap();
+        .await?;
     quotes.insert_quote(&Quote {
         id: None,
         ticker: ticker_id,
         price: fx_rate,
         time,
         volume: None,
-    }).await.unwrap();
+    }).await?;
     // Insert inverse fx quote
-    let base_id = quotes
+    let base_id = if let Ok(id) = base.get_id() {
+        id
+    } else {
+        quotes
         .insert_asset(&Asset::Currency(base))
-        .await.unwrap();
+        .await?
+    };
     let currency_pair = format!("{}/{}", base, foreign);
     let ticker_id = quotes
         .insert_ticker(&Ticker {
@@ -59,14 +67,14 @@ pub async fn insert_fx_quote(
             tz: None,
             cal: None,
         })
-        .await.unwrap();
+        .await?;
     quotes.insert_quote(&Quote {
         id: None,
         ticker: ticker_id,
         price: 1.0 / fx_rate,
         time,
         volume: None,
-    }).await.unwrap();
+    }).await?;
     Ok(())
 }
 
@@ -134,7 +142,7 @@ mod tests {
         insert_fx_quote(0.9, usd, eur, time, db).await.unwrap();
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    #[tokio::test]
     async fn test_get_fx_rate() {
         let db_url  = std::env::var("FINQL_TEST_DATABASE_URL");
         assert!(db_url.is_ok(), 

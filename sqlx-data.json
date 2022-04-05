@@ -32,6 +32,18 @@
       ]
     }
   },
+  "0aa2d5572dba82f079cf22ce3f5d126e652b341d3e08bca891a54afb1a1257b7": {
+    "query": "DELETE FROM currencies WHERE id=$1;",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "0c9e8192a07199a1834eab312334a3014f4695cfadcdeeb18c6b25d9429c5fed": {
     "query": "DROP TABLE IF EXISTS transactions",
     "describe": {
@@ -96,6 +108,26 @@
           "Float8",
           "Timestamptz",
           "Float8"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "24c989fd415351c5176167cdaea6925f6ce4a39659d5d5d94050fae42ae1c93c": {
+    "query": "SELECT asset_class FROM assets WHERE id=$1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "asset_class",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
         ]
       },
       "nullable": [
@@ -217,16 +249,6 @@
       "nullable": []
     }
   },
-  "310565d077b317e1acf2e26ca9c29a101dfb7d359f578c626ab4ffee451f4be8": {
-    "query": "CREATE TABLE IF NOT EXISTS currencies (\n                    id INTEGER PRIMARY KEY,\n                    iso_code CHAR(3) NOT NULL,\n                    rounding_digits INT NOT NULL,\n                    FOREIGN KEY(id) REFERENCES assets(id)\n                )",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
-    }
-  },
   "43b1a71778d028e2d2772628288390288894858ef52127deb42c142cdcfa8c53": {
     "query": "DROP TABLE IF EXISTS currencies",
     "describe": {
@@ -253,8 +275,8 @@
       "nullable": []
     }
   },
-  "5d9c12a44caf80d8c02e5543c54a13f844632ddc7686c85ec50149b1d0b40236": {
-    "query": "CREATE TABLE IF NOT EXISTS stocks (\n                  id INTEGER PRIMARY KEY,\n                  name TEXT NOT NULL UNIQUE,\n                  wkn CHAR(6) UNIQUE,\n                  isin CHAR(4) UNIQUE,\n                  note TEXT,\n                  FOREIGN KEY(id) REFERENCES assets(id)\n                )",
+  "5525ce82deecc00996561f9e072cb8f347770cbd07fc7db0800a0707613cc17f": {
+    "query": "CREATE TABLE IF NOT EXISTS assets (\n                id SERIAL PRIMARY KEY,\n                asset_class VARCHAR(20) NOT NULL\n            )",
     "describe": {
       "columns": [],
       "parameters": {
@@ -298,16 +320,6 @@
       "nullable": [
         false
       ]
-    }
-  },
-  "5e5e747fad1db192e65d23006d68a0e3dd8957adc1f1d34e9bc55898dfe783ce": {
-    "query": "CREATE TABLE IF NOT EXISTS assets (\n                id SERIAL PRIMARY KEY,\n                asset_class CHAR(20) NOT NULL\n            )",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
     }
   },
   "5fb35ddc11376247f230b14808fd82585815f895f12055f8b638f0cedeaa211d": {
@@ -404,38 +416,8 @@
       ]
     }
   },
-  "73012346fd7047fb02355fa1e71579fcc24c72a7fe1c626ab2ace16adabad7d9": {
-    "query": "SELECT id FROM currencies WHERE iso_code = $1",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Bpchar"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
-  "77bfa54342b8ccc1169241ee8d47280c8aecc762ed0667b1daa6396c9d9da73f": {
-    "query": "DROP TABLE IF EXISTS quotes",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": []
-    }
-  },
-  "7f4ec9523a0f3898d60d0a9ec916d2f66a234f32cc7aa3a2df8e0c26a931bc5e": {
-    "query": "SELECT\n                   q.id,\n                   q.ticker_id,\n                   q.price,\n                   q.time,\n                   q.volume,\n                   c.id AS currency_id,\n                   c.iso_code AS currency_iso_code,\n                   c.rounding_digits AS currency_rounding_digits,\n                   t.priority\n                FROM quotes q\n                JOIN ticker t ON t.id = q.ticker_id\n                JOIN currencies c ON c.id = t.currency_id\n                WHERE\n                    c.iso_code = $1\n                    AND q.time <= $2\n                ORDER BY q.time DESC, t.priority ASC\n                LIMIT 1",
+  "707002a559e2eabbcbd75d70f3c9160f08c5eb80d68355f5ff4cbc7d245a362a": {
+    "query": "SELECT\n                   q.id,\n                   q.ticker_id,\n                   q.price,\n                   q.time,\n                   q.volume,\n                   qc.id AS currency_id,\n                   qc.iso_code,\n                   qc.rounding_digits,\n                   t.priority\n                FROM quotes q\n                JOIN ticker t ON t.id = q.ticker_id\n                JOIN currencies c ON c.id = t.asset_id\n                JOIN currencies qc ON qc.id = t.currency_id\n                WHERE\n                    c.iso_code = $1\n                    AND q.time <= $2\n                ORDER BY q.time DESC, t.priority ASC\n                LIMIT 1",
     "describe": {
       "columns": [
         {
@@ -470,12 +452,12 @@
         },
         {
           "ordinal": 6,
-          "name": "currency_iso_code",
+          "name": "iso_code",
           "type_info": "Bpchar"
         },
         {
           "ordinal": 7,
-          "name": "currency_rounding_digits",
+          "name": "rounding_digits",
           "type_info": "Int4"
         },
         {
@@ -501,6 +483,36 @@
         false,
         false
       ]
+    }
+  },
+  "73012346fd7047fb02355fa1e71579fcc24c72a7fe1c626ab2ace16adabad7d9": {
+    "query": "SELECT id FROM currencies WHERE iso_code = $1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "77bfa54342b8ccc1169241ee8d47280c8aecc762ed0667b1daa6396c9d9da73f": {
+    "query": "DROP TABLE IF EXISTS quotes",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
     }
   },
   "822d5edb4ae161de1b0ddb8bbb059e151a8e456a65f94fbf9442b1f5893102e2": {
@@ -923,6 +935,16 @@
       "nullable": []
     }
   },
+  "bbf738c7dba5c99facb354fde56d02550f1af65b062d2bcde863af2208ef9685": {
+    "query": "CREATE TABLE IF NOT EXISTS currencies (\n                    id INTEGER PRIMARY KEY,\n                    iso_code CHAR(3) NOT NULL UNIQUE,\n                    rounding_digits INT NOT NULL,\n                    FOREIGN KEY(id) REFERENCES assets(id)\n                )",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
   "c91365a7e71065956d808013ca7873c6271ead90547c0f1f3916c2041dc93980": {
     "query": "INSERT INTO assets (asset_class) VALUES ($1) RETURNING id",
     "describe": {
@@ -935,7 +957,7 @@
       ],
       "parameters": {
         "Left": [
-          "Bpchar"
+          "Varchar"
         ]
       },
       "nullable": [
@@ -969,6 +991,16 @@
   },
   "cb82578b78eeeea5b249f94229a0f66762a9cd2688d886c5b408fec9393484d0": {
     "query": "DROP TABLE IF EXISTS assets",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
+  "cc3a80a66fe9e159d049df9c2bfa54f0e52d9348ff2c35007a8039fede254aa8": {
+    "query": "CREATE TABLE IF NOT EXISTS stocks (\n                  id INTEGER PRIMARY KEY,\n                  name TEXT NOT NULL UNIQUE,\n                  wkn CHAR(6) UNIQUE,\n                  isin CHAR(12) UNIQUE,\n                  note TEXT,\n                  FOREIGN KEY(id) REFERENCES assets(id)\n                )",
     "describe": {
       "columns": [],
       "parameters": {
@@ -1220,7 +1252,7 @@
         {
           "ordinal": 0,
           "name": "asset_class",
-          "type_info": "Bpchar"
+          "type_info": "Varchar"
         }
       ],
       "parameters": {
@@ -1321,6 +1353,18 @@
         "Left": [
           "Text",
           "Json"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "fcb3bdb335c2b9a7beed54ccb13d028546b5f4eba6eb7e9bf47cf855dae8901b": {
+    "query": "DELETE FROM stocks WHERE id=$1;",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
         ]
       },
       "nullable": []
