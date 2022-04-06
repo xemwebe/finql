@@ -146,20 +146,21 @@ could be set to something like
 export DATABASE_URL="postgresql:///<dbname>?user=<user>&password=<password>&ssl=false"
 ```
 
-and for sqlite3 the string would look like
-
-```bash
-export DATABASE_URL="sqlite:memory"
-```
-
-or 
-
-```bash
-export DATABASE_URL="sqlite:<absolute_path>/finql-sqlite/data/test.db"
-```
-
 Alternatively, you could follow the instructions on 
 https://docs.rs/sqlx/0.5.1/sqlx/macro.query.html#offline-mode-requires-the-offline-feature.
-This requires some preparation, but without the necessity to have a live database connection. Try 
-this approach also if you want to compile more than one database adapter (e.g. finql-sqlite 
-and finql-postgres).
+This requires some preparation, but without the necessity to have a live database connection. 
+
+Support for sqlite3 is no longer supported since version 0.11.
+
+## Unit tests
+
+Some of the unit tests need access to a properly (but possibly empty) test database. 
+The access string to the database is read from the environment variable `FINQL_TEST_DATABASE_URL`. If this variable is not set, these tests will fail with error 
+message '`environment variable $FINQL_TEST_DATABASE_URL is not set`'.
+
+**NOTE: Before running the test the database will be cleaned, destroying all data**.
+
+Therefore, make sure to never set this variable to the connection string for a productive 
+database.
+
+
