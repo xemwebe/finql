@@ -1,9 +1,8 @@
 ///! Demonstration of storing Assets in Sqlite3 database
 
-use std::str::FromStr;
 use chrono::NaiveDate;
 
-use finql::datatypes::{Asset, Currency, CashFlow, Stock, Transaction, TransactionHandler, TransactionType};
+use finql::datatypes::{Asset, CurrencyISOCode, CashFlow, Stock, Transaction, TransactionHandler, TransactionType};
 use finql::postgres::PostgresDB;
 
 async fn transaction_tests(db: &dyn TransactionHandler) {
@@ -28,7 +27,7 @@ async fn transaction_tests(db: &dyn TransactionHandler) {
 
     // put some cash into the account
     print!("Store cash transaction...");
-    let eur = Currency::from_str("EUR").unwrap();
+    let eur = db.get_or_new_currency(CurrencyISOCode::new("EUR").unwrap()).await.unwrap();
     let cash_flow = CashFlow::new(10_000.0, eur, NaiveDate::from_ymd(2020, 01, 15));
     let cash_in = Transaction {
         id: None,

@@ -2,7 +2,7 @@
 ///! Example storing general calendars as JSON object in PostgreSQL
 ///! Please note: All existing content of the database will be deleted!
 
-use std::{sync::Arc, str::FromStr};
+use std::sync::Arc;
 use std::cmp::min;
 use std::error::Error;
 
@@ -118,7 +118,7 @@ async fn main() {
         yahoo.to_string(),
         quote_provider.clone(),
     );
-    let usd = Currency::from_str("USD").unwrap();
+    let usd = market.get_currency("USD").await.unwrap();
     let ticker = Ticker {
         id: None,
         asset: asset_id,

@@ -165,36 +165,6 @@
       "nullable": []
     }
   },
-  "2c39c5da11510bac14da57bffb923b424450f734f5dc81ec0e529d17cc5b779c": {
-    "query": "SELECT\n                 id,\n                 iso_code,\n                 rounding_digits\n             FROM currencies",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "iso_code",
-          "type_info": "Bpchar"
-        },
-        {
-          "ordinal": 2,
-          "name": "rounding_digits",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false
-      ]
-    }
-  },
   "2fc6efc70b97b1af4429e8bf69eecf3b4e2faa407ed9ab7349f03664ce9115fe": {
     "query": "SELECT\n                        id,\n                        name,\n                        isin,\n                        wkn,\n                        note\n                     FROM stocks s\n                     WHERE id = $1",
     "describe": {
@@ -247,6 +217,36 @@
         "Left": []
       },
       "nullable": []
+    }
+  },
+  "3d207bb8559ddc213e3f4d8bbb2dd98f270443cc008483acf1611e3b02dc6aef": {
+    "query": "SELECT\n                id,\n                iso_code,\n                rounding_digits\n            FROM currencies",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "iso_code",
+          "type_info": "Bpchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "rounding_digits",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false
+      ]
     }
   },
   "43b1a71778d028e2d2772628288390288894858ef52127deb42c142cdcfa8c53": {
@@ -943,6 +943,32 @@
         "Left": []
       },
       "nullable": []
+    }
+  },
+  "c87c22f84b94740c43e8328731cd35daa164c614cb3fe25880b4a3453f728a79": {
+    "query": "SELECT\n                id,\n                rounding_digits\n            FROM currencies\n            WHERE iso_code=$1",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "rounding_digits",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Bpchar"
+        ]
+      },
+      "nullable": [
+        false,
+        false
+      ]
     }
   },
   "c91365a7e71065956d808013ca7873c6271ead90547c0f1f3916c2041dc93980": {
