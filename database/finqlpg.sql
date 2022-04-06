@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 13.1
--- Dumped by pg_dump version 13.1
+-- Dumped from database version 13.6
+-- Dumped by pg_dump version 13.6
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -16,27 +16,38 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: assets; Type: TABLE; Schema: public; Owner: finqltester
+-- Name: assets; Type: TABLE; Schema: public; Owner: qltester
 --
 
 CREATE TABLE public.assets (
     id integer NOT NULL,
-    name text NOT NULL,
-    wkn text,
-    isin text,
-    note text
+    asset_class character varying(20) NOT NULL
 );
 
 
-ALTER TABLE public.assets OWNER TO finqltester;
+ALTER TABLE public.assets OWNER TO qltester;
 
 --
--- Name: assets_id_seq; Type: SEQUENCE; Schema: public; Owner: finqltester
+-- Name: assets_id_seq; Type: SEQUENCE; Schema: public; Owner: qltester
 --
 
 CREATE SEQUENCE public.assets_id_seq
@@ -48,17 +59,42 @@ CREATE SEQUENCE public.assets_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.assets_id_seq OWNER TO finqltester;
+ALTER TABLE public.assets_id_seq OWNER TO qltester;
 
 --
--- Name: assets_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: finqltester
+-- Name: assets_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: qltester
 --
 
 ALTER SEQUENCE public.assets_id_seq OWNED BY public.assets.id;
 
 
 --
--- Name: quotes; Type: TABLE; Schema: public; Owner: finqltester
+-- Name: currencies; Type: TABLE; Schema: public; Owner: qltester
+--
+
+CREATE TABLE public.currencies (
+    id integer NOT NULL,
+    iso_code character(3) NOT NULL,
+    rounding_digits integer NOT NULL
+);
+
+
+ALTER TABLE public.currencies OWNER TO qltester;
+
+--
+-- Name: objects; Type: TABLE; Schema: public; Owner: qltester
+--
+
+CREATE TABLE public.objects (
+    id text NOT NULL,
+    object json NOT NULL
+);
+
+
+ALTER TABLE public.objects OWNER TO qltester;
+
+--
+-- Name: quotes; Type: TABLE; Schema: public; Owner: qltester
 --
 
 CREATE TABLE public.quotes (
@@ -70,10 +106,10 @@ CREATE TABLE public.quotes (
 );
 
 
-ALTER TABLE public.quotes OWNER TO finqltester;
+ALTER TABLE public.quotes OWNER TO qltester;
 
 --
--- Name: quotes_id_seq; Type: SEQUENCE; Schema: public; Owner: finqltester
+-- Name: quotes_id_seq; Type: SEQUENCE; Schema: public; Owner: qltester
 --
 
 CREATE SEQUENCE public.quotes_id_seq
@@ -85,52 +121,32 @@ CREATE SEQUENCE public.quotes_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.quotes_id_seq OWNER TO finqltester;
+ALTER TABLE public.quotes_id_seq OWNER TO qltester;
 
 --
--- Name: quotes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: finqltester
+-- Name: quotes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: qltester
 --
 
 ALTER SEQUENCE public.quotes_id_seq OWNED BY public.quotes.id;
 
 
 --
--- Name: rounding_digits; Type: TABLE; Schema: public; Owner: finqltester
+-- Name: stocks; Type: TABLE; Schema: public; Owner: qltester
 --
 
-CREATE TABLE public.rounding_digits (
+CREATE TABLE public.stocks (
     id integer NOT NULL,
-    currency text NOT NULL,
-    digits integer NOT NULL
+    name text NOT NULL,
+    wkn character(6),
+    isin character(12),
+    note text
 );
 
 
-ALTER TABLE public.rounding_digits OWNER TO finqltester;
+ALTER TABLE public.stocks OWNER TO qltester;
 
 --
--- Name: rounding_digits_id_seq; Type: SEQUENCE; Schema: public; Owner: finqltester
---
-
-CREATE SEQUENCE public.rounding_digits_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.rounding_digits_id_seq OWNER TO finqltester;
-
---
--- Name: rounding_digits_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: finqltester
---
-
-ALTER SEQUENCE public.rounding_digits_id_seq OWNED BY public.rounding_digits.id;
-
-
---
--- Name: ticker; Type: TABLE; Schema: public; Owner: finqltester
+-- Name: ticker; Type: TABLE; Schema: public; Owner: qltester
 --
 
 CREATE TABLE public.ticker (
@@ -139,15 +155,17 @@ CREATE TABLE public.ticker (
     asset_id integer NOT NULL,
     source text NOT NULL,
     priority integer NOT NULL,
-    currency text NOT NULL,
-    factor double precision DEFAULT 1.0 NOT NULL
+    currency_id integer NOT NULL,
+    factor double precision DEFAULT 1.0 NOT NULL,
+    tz text,
+    cal text
 );
 
 
-ALTER TABLE public.ticker OWNER TO finqltester;
+ALTER TABLE public.ticker OWNER TO qltester;
 
 --
--- Name: ticker_id_seq; Type: SEQUENCE; Schema: public; Owner: finqltester
+-- Name: ticker_id_seq; Type: SEQUENCE; Schema: public; Owner: qltester
 --
 
 CREATE SEQUENCE public.ticker_id_seq
@@ -159,17 +177,17 @@ CREATE SEQUENCE public.ticker_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.ticker_id_seq OWNER TO finqltester;
+ALTER TABLE public.ticker_id_seq OWNER TO qltester;
 
 --
--- Name: ticker_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: finqltester
+-- Name: ticker_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: qltester
 --
 
 ALTER SEQUENCE public.ticker_id_seq OWNED BY public.ticker.id;
 
 
 --
--- Name: transactions; Type: TABLE; Schema: public; Owner: finqltester
+-- Name: transactions; Type: TABLE; Schema: public; Owner: qltester
 --
 
 CREATE TABLE public.transactions (
@@ -177,7 +195,7 @@ CREATE TABLE public.transactions (
     trans_type text NOT NULL,
     asset_id integer,
     cash_amount double precision NOT NULL,
-    cash_currency text NOT NULL,
+    cash_currency_id integer NOT NULL,
     cash_date date NOT NULL,
     related_trans integer,
     "position" double precision,
@@ -185,10 +203,10 @@ CREATE TABLE public.transactions (
 );
 
 
-ALTER TABLE public.transactions OWNER TO finqltester;
+ALTER TABLE public.transactions OWNER TO qltester;
 
 --
--- Name: transactions_id_seq; Type: SEQUENCE; Schema: public; Owner: finqltester
+-- Name: transactions_id_seq; Type: SEQUENCE; Schema: public; Owner: qltester
 --
 
 CREATE SEQUENCE public.transactions_id_seq
@@ -200,160 +218,139 @@ CREATE SEQUENCE public.transactions_id_seq
     CACHE 1;
 
 
-ALTER TABLE public.transactions_id_seq OWNER TO finqltester;
+ALTER TABLE public.transactions_id_seq OWNER TO qltester;
 
 --
--- Name: transactions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: finqltester
+-- Name: transactions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: qltester
 --
 
 ALTER SEQUENCE public.transactions_id_seq OWNED BY public.transactions.id;
 
 
 --
--- Name: assets id; Type: DEFAULT; Schema: public; Owner: finqltester
+-- Name: assets id; Type: DEFAULT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.assets ALTER COLUMN id SET DEFAULT nextval('public.assets_id_seq'::regclass);
 
 
 --
--- Name: quotes id; Type: DEFAULT; Schema: public; Owner: finqltester
+-- Name: quotes id; Type: DEFAULT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.quotes ALTER COLUMN id SET DEFAULT nextval('public.quotes_id_seq'::regclass);
 
 
 --
--- Name: rounding_digits id; Type: DEFAULT; Schema: public; Owner: finqltester
---
-
-ALTER TABLE ONLY public.rounding_digits ALTER COLUMN id SET DEFAULT nextval('public.rounding_digits_id_seq'::regclass);
-
-
---
--- Name: ticker id; Type: DEFAULT; Schema: public; Owner: finqltester
+-- Name: ticker id; Type: DEFAULT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.ticker ALTER COLUMN id SET DEFAULT nextval('public.ticker_id_seq'::regclass);
 
 
 --
--- Name: transactions id; Type: DEFAULT; Schema: public; Owner: finqltester
+-- Name: transactions id; Type: DEFAULT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.transactions ALTER COLUMN id SET DEFAULT nextval('public.transactions_id_seq'::regclass);
 
 
 --
--- Data for Name: assets; Type: TABLE DATA; Schema: public; Owner: finqltester
+-- Data for Name: assets; Type: TABLE DATA; Schema: public; Owner: qltester
 --
 
-COPY public.assets (id, name, wkn, isin, note) FROM stdin;
-1	BASF AG	\N	\N	\N
-2	Siemens AG	\N	\N	\N
-3	BHP Inc.	\N	\N	\N
-4	AUS	\N	\N	\N
-5	EUR	\N	\N	\N
+COPY public.assets (id, asset_class) FROM stdin;
+1	stock
+2	currency
 \.
 
 
 --
--- Data for Name: quotes; Type: TABLE DATA; Schema: public; Owner: finqltester
+-- Data for Name: currencies; Type: TABLE DATA; Schema: public; Owner: qltester
+--
+
+COPY public.currencies (id, iso_code, rounding_digits) FROM stdin;
+2	EUR	2
+\.
+
+
+--
+-- Data for Name: objects; Type: TABLE DATA; Schema: public; Owner: qltester
+--
+
+COPY public.objects (id, object) FROM stdin;
+test	[{"WeekDay": "Sat"}, {"WeekDay": "Sun"}, {"MovableYearlyDay": {"day": 1, "last": null, "first": null, "month": 1}}, {"EasterOffset": {"last": null, "first": null, "offset": -2}}]
+\.
+
+
+--
+-- Data for Name: quotes; Type: TABLE DATA; Schema: public; Owner: qltester
 --
 
 COPY public.quotes (id, ticker_id, price, "time", volume) FROM stdin;
-1	1	67.35	2019-12-30 20:00:00+01	\N
-2	1	68.29	2020-01-02 20:00:00+01	\N
-3	1	67.27	2020-01-03 20:00:00+01	\N
-4	1	66.27	2020-01-06 20:00:00+01	\N
-5	1	66.3	2020-01-07 20:00:00+01	\N
-7	4	0.9	2020-01-04 00:00:00+01	\N
-8	5	1.1111111111111112	2020-01-04 00:00:00+01	\N
 \.
 
 
 --
--- Data for Name: rounding_digits; Type: TABLE DATA; Schema: public; Owner: finqltester
+-- Data for Name: stocks; Type: TABLE DATA; Schema: public; Owner: qltester
 --
 
-COPY public.rounding_digits (id, currency, digits) FROM stdin;
-1	XXX	3
+COPY public.stocks (id, name, wkn, isin, note) FROM stdin;
+1	Admiral Group plc	AODJ58	GB00B02J6398	Here are my notes
 \.
 
 
 --
--- Data for Name: ticker; Type: TABLE DATA; Schema: public; Owner: finqltester
+-- Data for Name: ticker; Type: TABLE DATA; Schema: public; Owner: qltester
 --
 
-COPY public.ticker (id, name, asset_id, source, priority, currency, factor) FROM stdin;
-1	BAS.DE	1	yahoo	10	EUR	1
-2	SIE.DE	2	yahoo	10	EUR	1
-4	AUS/EUR	4	manual	10	EUR	1
-5	EUR/AUS	5	manual	10	AUS	1
+COPY public.ticker (id, name, asset_id, source, priority, currency_id, factor, tz, cal) FROM stdin;
 \.
 
 
 --
--- Data for Name: transactions; Type: TABLE DATA; Schema: public; Owner: finqltester
+-- Data for Name: transactions; Type: TABLE DATA; Schema: public; Owner: qltester
 --
 
-COPY public.transactions (id, trans_type, asset_id, cash_amount, cash_currency, cash_date, related_trans, "position", note) FROM stdin;
+COPY public.transactions (id, trans_type, asset_id, cash_amount, cash_currency_id, cash_date, related_trans, "position", note) FROM stdin;
+1	c	\N	10000	2	2020-01-15	\N	\N	start capital
+2	a	1	-9000	2	2020-01-15	\N	10	\N
+3	f	\N	-30	2	2020-01-15	2	\N	\N
+4	d	1	90	2	2020-01-30	\N	\N	\N
+5	t	\N	-40	2	2020-01-30	4	\N	\N
 \.
 
 
 --
--- Name: assets_id_seq; Type: SEQUENCE SET; Schema: public; Owner: finqltester
+-- Name: assets_id_seq; Type: SEQUENCE SET; Schema: public; Owner: qltester
 --
 
-SELECT pg_catalog.setval('public.assets_id_seq', 5, true);
-
-
---
--- Name: quotes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: finqltester
---
-
-SELECT pg_catalog.setval('public.quotes_id_seq', 8, true);
+SELECT pg_catalog.setval('public.assets_id_seq', 2, true);
 
 
 --
--- Name: rounding_digits_id_seq; Type: SEQUENCE SET; Schema: public; Owner: finqltester
+-- Name: quotes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: qltester
 --
 
-SELECT pg_catalog.setval('public.rounding_digits_id_seq', 1, true);
-
-
---
--- Name: ticker_id_seq; Type: SEQUENCE SET; Schema: public; Owner: finqltester
---
-
-SELECT pg_catalog.setval('public.ticker_id_seq', 5, true);
+SELECT pg_catalog.setval('public.quotes_id_seq', 1, false);
 
 
 --
--- Name: transactions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: finqltester
+-- Name: ticker_id_seq; Type: SEQUENCE SET; Schema: public; Owner: qltester
 --
 
-SELECT pg_catalog.setval('public.transactions_id_seq', 1, false);
-
-
---
--- Name: assets assets_isin_key; Type: CONSTRAINT; Schema: public; Owner: finqltester
---
-
-ALTER TABLE ONLY public.assets
-    ADD CONSTRAINT assets_isin_key UNIQUE (isin);
+SELECT pg_catalog.setval('public.ticker_id_seq', 1, false);
 
 
 --
--- Name: assets assets_name_key; Type: CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: transactions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: qltester
 --
 
-ALTER TABLE ONLY public.assets
-    ADD CONSTRAINT assets_name_key UNIQUE (name);
+SELECT pg_catalog.setval('public.transactions_id_seq', 5, true);
 
 
 --
--- Name: assets assets_pkey; Type: CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: assets assets_pkey; Type: CONSTRAINT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.assets
@@ -361,15 +358,31 @@ ALTER TABLE ONLY public.assets
 
 
 --
--- Name: assets assets_wkn_key; Type: CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: currencies currencies_iso_code_key; Type: CONSTRAINT; Schema: public; Owner: qltester
 --
 
-ALTER TABLE ONLY public.assets
-    ADD CONSTRAINT assets_wkn_key UNIQUE (wkn);
+ALTER TABLE ONLY public.currencies
+    ADD CONSTRAINT currencies_iso_code_key UNIQUE (iso_code);
 
 
 --
--- Name: quotes quotes_pkey; Type: CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: currencies currencies_pkey; Type: CONSTRAINT; Schema: public; Owner: qltester
+--
+
+ALTER TABLE ONLY public.currencies
+    ADD CONSTRAINT currencies_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: objects objects_pkey; Type: CONSTRAINT; Schema: public; Owner: qltester
+--
+
+ALTER TABLE ONLY public.objects
+    ADD CONSTRAINT objects_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: quotes quotes_pkey; Type: CONSTRAINT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.quotes
@@ -377,23 +390,39 @@ ALTER TABLE ONLY public.quotes
 
 
 --
--- Name: rounding_digits rounding_digits_currency_key; Type: CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: stocks stocks_isin_key; Type: CONSTRAINT; Schema: public; Owner: qltester
 --
 
-ALTER TABLE ONLY public.rounding_digits
-    ADD CONSTRAINT rounding_digits_currency_key UNIQUE (currency);
-
-
---
--- Name: rounding_digits rounding_digits_pkey; Type: CONSTRAINT; Schema: public; Owner: finqltester
---
-
-ALTER TABLE ONLY public.rounding_digits
-    ADD CONSTRAINT rounding_digits_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.stocks
+    ADD CONSTRAINT stocks_isin_key UNIQUE (isin);
 
 
 --
--- Name: ticker ticker_pkey; Type: CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: stocks stocks_name_key; Type: CONSTRAINT; Schema: public; Owner: qltester
+--
+
+ALTER TABLE ONLY public.stocks
+    ADD CONSTRAINT stocks_name_key UNIQUE (name);
+
+
+--
+-- Name: stocks stocks_pkey; Type: CONSTRAINT; Schema: public; Owner: qltester
+--
+
+ALTER TABLE ONLY public.stocks
+    ADD CONSTRAINT stocks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: stocks stocks_wkn_key; Type: CONSTRAINT; Schema: public; Owner: qltester
+--
+
+ALTER TABLE ONLY public.stocks
+    ADD CONSTRAINT stocks_wkn_key UNIQUE (wkn);
+
+
+--
+-- Name: ticker ticker_pkey; Type: CONSTRAINT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.ticker
@@ -401,7 +430,7 @@ ALTER TABLE ONLY public.ticker
 
 
 --
--- Name: transactions transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: transactions transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.transactions
@@ -409,7 +438,15 @@ ALTER TABLE ONLY public.transactions
 
 
 --
--- Name: quotes quotes_ticker_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: currencies currencies_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qltester
+--
+
+ALTER TABLE ONLY public.currencies
+    ADD CONSTRAINT currencies_id_fkey FOREIGN KEY (id) REFERENCES public.assets(id);
+
+
+--
+-- Name: quotes quotes_ticker_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.quotes
@@ -417,7 +454,15 @@ ALTER TABLE ONLY public.quotes
 
 
 --
--- Name: ticker ticker_asset_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: stocks stocks_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qltester
+--
+
+ALTER TABLE ONLY public.stocks
+    ADD CONSTRAINT stocks_id_fkey FOREIGN KEY (id) REFERENCES public.assets(id);
+
+
+--
+-- Name: ticker ticker_asset_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.ticker
@@ -425,7 +470,15 @@ ALTER TABLE ONLY public.ticker
 
 
 --
--- Name: transactions transactions_asset_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: ticker ticker_currency_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qltester
+--
+
+ALTER TABLE ONLY public.ticker
+    ADD CONSTRAINT ticker_currency_id_fkey FOREIGN KEY (currency_id) REFERENCES public.currencies(id);
+
+
+--
+-- Name: transactions transactions_asset_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.transactions
@@ -433,7 +486,15 @@ ALTER TABLE ONLY public.transactions
 
 
 --
--- Name: transactions transactions_related_trans_fkey; Type: FK CONSTRAINT; Schema: public; Owner: finqltester
+-- Name: transactions transactions_cash_currency_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qltester
+--
+
+ALTER TABLE ONLY public.transactions
+    ADD CONSTRAINT transactions_cash_currency_id_fkey FOREIGN KEY (cash_currency_id) REFERENCES public.currencies(id);
+
+
+--
+-- Name: transactions transactions_related_trans_fkey; Type: FK CONSTRAINT; Schema: public; Owner: qltester
 --
 
 ALTER TABLE ONLY public.transactions

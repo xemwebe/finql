@@ -48,12 +48,12 @@ Therefore, please follow the following steps to build the library:
 
 1. Setup a postgreSQL server, e.g. following the documentation on https://www.postgresql.org
 2. Setup a postgreSQL user named `finqltester`
-3. Upload the file `data/finqlpg.sql` to a database of your choice, e.g. by
+3. A small sample database could be crated by uploading the file `database/finqlpg.sql` to a database of your choice, e.g. by
 
 ```bash
 psql <databasename> < data/finqlpg.sql
 ``` 
-as some user with write to create new databases, PostgreSQL's default user
+as some user with write permission to create new databases, e.g. PostgreSQL's default user
 `postgres`. 
 
 4. export the database connection string on the command line with
@@ -68,8 +68,7 @@ for a http connection or
 export DATABASE_URL="postgresql:///<databasename>?user=finqltester&password=<password>&ssl=false"
 ``` 
 
-for a connection 
-via UNIX socket, depending on your setup.
+for a connection via UNIX socket, depending on your setup.
 
 5. build the library with `cargo build`
 
@@ -155,12 +154,19 @@ Support for sqlite3 is no longer supported since version 0.11.
 ## Unit tests
 
 Some of the unit tests need access to a properly (but possibly empty) test database. 
-The access string to the database is read from the environment variable `FINQL_TEST_DATABASE_URL`. If this variable is not set, these tests will fail with error 
+The access string to the database is read from the environment variable `FINQL_TEST_DATABASE_URL`. 
+If this variable is not set, these tests will fail with error 
 message '`environment variable $FINQL_TEST_DATABASE_URL is not set`'.
 
 **NOTE: Before running the test the database will be cleaned, destroying all data**.
 
 Therefore, make sure to never set this variable to the connection string for a productive 
-database.
+database. For the same reason, the tests can not be run safely concurrently. To run
+the test synchronously, use
+
+```bash
+cargo test -- --test-threads=1
+```
+
 
 
