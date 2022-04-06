@@ -1,4 +1,12 @@
 Version 0.11
+  * Breaking change: A new enum `Asset` has been introduced. `Stock` and `Currency` are
+    the first two asset classes that could be the underlying of a transaction. On database
+    level it is ensured that each asset regardless of its class has a unique id. In most 
+    cases, a `Currency` needs to be stored in the database to get its unique id before it
+    could used in any meaningful way.
+  * Breaking change: Sqlite3 is no longer supported, leaving PostgreSQL as the sole supported
+    database. As a consequence, sub-crates `finql-data` and `finql-postgres` have been
+    reintegrated into the main (and again single) crate as separate modules.
   * Breaking change: Switch to Local time zone. Originally, internally Utc has been used 
     for all DateTime values (mainly related to quote times). On the other hand, input values
     have been assumed to be in local time, resulting in a lot of conversions which (some
