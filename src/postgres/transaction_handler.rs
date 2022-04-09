@@ -34,7 +34,6 @@ impl RawTransaction {
     pub fn to_transaction(&self) -> Result<Transaction, DataError> {
         let currency = self.cash_currency;
 
-        let id = self.id.map(|x| x as usize);
         let cash_flow = CashFlow {
             amount: CashAmount {
                 amount: self.cash_amount,
@@ -48,7 +47,7 @@ impl RawTransaction {
             ASSET => TransactionType::Asset {
                 asset_id: self.asset.ok_or_else(|| DataError::InvalidTransaction(
                     "missing asset id".to_string(),
-                ))? as usize,
+                ))?,
                 position: self.position.ok_or_else(|| DataError::InvalidTransaction(
                     "missing position value".to_string(),
                 ))?,
@@ -56,25 +55,25 @@ impl RawTransaction {
             DIVIDEND => TransactionType::Dividend {
                 asset_id: self.asset.ok_or_else(|| DataError::InvalidTransaction(
                     "missing asset id".to_string(),
-                ))? as usize,
+                ))?,
             },
             INTEREST => TransactionType::Interest {
                 asset_id: self.asset.ok_or_else(|| DataError::InvalidTransaction(
                     "missing asset id".to_string(),
-                ))? as usize,
+                ))?,
             },
             TAX => TransactionType::Tax {
-                transaction_ref: self.related_trans.map(|x| x as usize),
+                transaction_ref: self.related_trans.map(|x| x),
             },
             FEE => TransactionType::Fee {
-                transaction_ref: self.related_trans.map(|x| x as usize),
+                transaction_ref: self.related_trans.map(|x| x),
             },
             unknown => {
                 return Err(DataError::InvalidTransaction(unknown.to_string()));
             }
         };
         Ok(Transaction {
-            id,
+            id: self.id,
             transaction_type,
             cash_flow,
             note,
@@ -82,12 +81,11 @@ impl RawTransaction {
     }
 
     pub fn from_transaction(transaction: &Transaction) -> RawTransaction {
-        let id = transaction.id.map(|x| x as i32);
         let cash_amount = transaction.cash_flow.amount.amount;
         let cash_currency = transaction.cash_flow.amount.currency;
         let note = transaction.note.clone();
         let mut raw_transaction = RawTransaction {
-            id,
+            id: transaction.id,
             trans_type: String::new(),
             asset: None,
             cash_amount,
@@ -101,24 +99,24 @@ impl RawTransaction {
             TransactionType::Cash => raw_transaction.trans_type = CASH.to_string(),
             TransactionType::Asset { asset_id, position } => {
                 raw_transaction.trans_type = ASSET.to_string();
-                raw_transaction.asset = Some(asset_id as i32);
+                raw_transaction.asset = Some(asset_id);
                 raw_transaction.position = Some(position);
             }
             TransactionType::Dividend { asset_id } => {
                 raw_transaction.trans_type = DIVIDEND.to_string();
-                raw_transaction.asset = Some(asset_id as i32);
+                raw_transaction.asset = Some(asset_id);
             }
             TransactionType::Interest { asset_id } => {
                 raw_transaction.trans_type = INTEREST.to_string();
-                raw_transaction.asset = Some(asset_id as i32);
+                raw_transaction.asset = Some(asset_id);
             }
             TransactionType::Tax { transaction_ref } => {
                 raw_transaction.trans_type = TAX.to_string();
-                raw_transaction.related_trans = transaction_ref.map(|x| x as i32);
+                raw_transaction.related_trans = transaction_ref;
             }
             TransactionType::Fee { transaction_ref } => {
                 raw_transaction.trans_type = FEE.to_string();
-                raw_transaction.related_trans = transaction_ref.map(|x| x as i32);
+                raw_transaction.related_trans = transaction_ref;
             }
         };
         raw_transaction
@@ -129,7 +127,7 @@ impl RawTransaction {
 #[async_trait]
 impl TransactionHandler for PostgresDB {
     // insert, get, update and delete for transactions
-    async fn insert_transaction(&self, transaction: &Transaction) -> Result<usize, DataError> {
+    async fn insert_transaction(&self, transaction: &Transaction) -> Result<i32, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
         let row = sqlx::query!(
                 "INSERT INTO transactions (trans_type, asset_id, cash_amount,
@@ -139,16 +137,16 @@ impl TransactionHandler for PostgresDB {
                 transaction.trans_type,
                 transaction.asset,
                 transaction.cash_amount,
-                transaction.cash_currency.id.unwrap() as i32,
+                transaction.cash_currency.id.unwrap(),
                 transaction.cash_date,
                 transaction.related_trans,
                 transaction.position,
                 transaction.note,
             ).fetch_one(&self.pool).await?;
-        Ok(row.id as usize)
+        Ok(row.id)
     }
 
-    async fn get_transaction_by_id(&self, id: usize) -> Result<Transaction, DataError> {
+    async fn get_transaction_by_id(&self, id: i32) -> Result<Transaction, DataError> {
         let row = sqlx::query!(
                 "SELECT
                 t.id,
@@ -165,15 +163,15 @@ impl TransactionHandler for PostgresDB {
                 FROM transactions t
                 JOIN currencies c ON c.id = t.cash_currency_id
                 WHERE t.id = $1",
-                (id as i32),
+                id,
             ).fetch_one(&self.pool).await?;
         let transaction = RawTransaction {
-            id: Some(id as i32),
+            id: Some(id),
             trans_type: row.trans_type,
             asset: row.asset_id,
             cash_amount: row.cash_amount,
             cash_currency: Currency::new(
-                Some(row.cash_currency_id as usize),
+                Some(row.cash_currency_id),
                 CurrencyISOCode::from_str(&row.cash_iso_code).expect("Expected a good currency code from db"),
                 Some(row.cash_rounding_digits),
             ),
@@ -210,7 +208,7 @@ impl TransactionHandler for PostgresDB {
                 asset: row.asset_id,
                 cash_amount: row.cash_amount,
                 cash_currency: Currency::new(
-                    Some(row.cash_currency_id as usize),
+                    Some(row.cash_currency_id),
                 CurrencyISOCode::from_str(&row.cash_iso_code).expect("unknown currency asset referenced in db"),
                 Some(row.cash_rounding_digits),
                 ),
@@ -230,7 +228,6 @@ impl TransactionHandler for PostgresDB {
                 "not yet stored to database".to_string(),
             ));
         }
-        let id = transaction.id.unwrap() as i32;
         let transaction = RawTransaction::from_transaction(transaction);
         sqlx::query!(
                 "UPDATE transactions SET 
@@ -243,11 +240,11 @@ impl TransactionHandler for PostgresDB {
                 position=$8,
                 note=$9
             WHERE id=$1",
-                id,
+                transaction.id,
                 transaction.trans_type,
                 transaction.asset,
                 transaction.cash_amount,
-                transaction.cash_currency.id.and_then(|i| Some(i as i32)),
+                transaction.cash_currency.id,
                 transaction.cash_date,
                 transaction.related_trans,
                 transaction.position,
@@ -256,8 +253,8 @@ impl TransactionHandler for PostgresDB {
         Ok(())
     }
 
-    async fn delete_transaction(&self, id: usize) -> Result<(), DataError> {
-        sqlx::query!("DELETE FROM transactions WHERE id=$1;", (id as i32))
+    async fn delete_transaction(&self, id: i32) -> Result<(), DataError> {
+        sqlx::query!("DELETE FROM transactions WHERE id=$1;", id)
             .execute(&self.pool).await?;
         Ok(())
     }

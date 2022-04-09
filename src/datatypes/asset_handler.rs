@@ -6,14 +6,14 @@ use super::{DataError, Asset, Currency, CurrencyISOCode};
 #[async_trait]
 pub trait AssetHandler {
     // insert, get, update and delete for assets
-    async fn insert_asset(&self, asset: &Asset) -> Result<usize, DataError>;
-    async fn get_asset_id(&self, asset: &Asset) -> Option<usize>;
-    async fn get_asset_by_id(&self, id: usize) -> Result<Asset, DataError>;
+    async fn insert_asset(&self, asset: &Asset) -> Result<i32, DataError>;
+    async fn get_asset_id(&self, asset: &Asset) -> Option<i32>;
+    async fn get_asset_by_id(&self, id: i32) -> Result<Asset, DataError>;
     async fn get_asset_by_isin(&self, id: &str) -> Result<Asset, DataError>;
     /// Return a list of all assets ordered by name
     async fn get_all_assets(&self) -> Result<Vec<Asset>, DataError>;
     async fn update_asset(&self, asset: &Asset) -> Result<(), DataError>;
-    async fn delete_asset(&self, id: usize) -> Result<(), DataError>;
+    async fn delete_asset(&self, id: i32) -> Result<(), DataError>;
     /// We assume here that a currency is an Asset with a three letter name and no ISIN nor WKN
     async fn get_all_currencies(&self) -> Result<Vec<Currency>, DataError>;
     /// Either read currency from database or create new currency and store it in database with default rounding digits

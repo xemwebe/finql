@@ -101,13 +101,13 @@ impl FromStr for CurrencyISOCode {
 /// Special type for currencies
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub struct Currency {
-    pub id: Option<usize>,
+    pub id: Option<i32>,
     pub iso_code: CurrencyISOCode,
     pub rounding_digits: i32,
 }
 
 impl Currency {
-    pub fn new(id: Option<usize>, iso_code: CurrencyISOCode, rounding_digits: Option<i32>) -> Self {
+    pub fn new(id: Option<i32>, iso_code: CurrencyISOCode, rounding_digits: Option<i32>) -> Self {
         Self {
             id,
             iso_code,
@@ -127,7 +127,7 @@ impl fmt::Display for Currency {
 }
 
 impl DataItem for Currency {
-    fn get_id(&self) -> Result<usize, DataError> {
+    fn get_id(&self) -> Result<i32, DataError> {
         match self.id {
             Some(id) => Ok(id),
             None => Err(DataError::DataAccessFailure(
@@ -135,7 +135,7 @@ impl DataItem for Currency {
         }
     }
 
-    fn set_id(&mut self, id: usize) -> Result<(), DataError> {
+    fn set_id(&mut self, id: i32) -> Result<(), DataError> {
         match self.id {
             Some(_) => Err(DataError::DataAccessFailure(
                 "Can't change id of persistent currency".to_string())),

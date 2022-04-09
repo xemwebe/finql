@@ -1,3 +1,6 @@
+Version 0.xx
+  * Breaking change: change `id` members of assets to `i32` to align with postgresql 
+    datatype `SERIAL`
 Version 0.11
   * Breaking change: A new enum `Asset` has been introduced. `Stock` and `Currency` are
     the first two asset classes that could be the underlying of a transaction. On database

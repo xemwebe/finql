@@ -11,7 +11,7 @@ struct ID { id: i32, }
 /// Handler for globally available Asset data
 #[async_trait]
 impl AssetHandler for PostgresDB {
-    async fn insert_asset(&self, asset: &Asset) -> Result<usize, DataError> {
+    async fn insert_asset(&self, asset: &Asset) -> Result<i32, DataError> {
         let asset = asset.to_owned();
         // begin transaction
         let tx = self.pool.begin().await?;
@@ -28,7 +28,7 @@ impl AssetHandler for PostgresDB {
                     id, c.iso_code.to_string(), c.rounding_digits,
                 ).execute(&self.pool).await?;
                 tx.commit().await?;
-                Ok(id as usize)
+                Ok(id)
             },
             Asset::Stock(s) => {
                 sqlx::query!(
@@ -36,12 +36,12 @@ impl AssetHandler for PostgresDB {
                         id, s.name, s.isin, s.wkn, s.note
                 ).execute(&self.pool).await?;
                 tx.commit().await?;
-                Ok(id as usize)
+                Ok(id)
             }
         }
     }
     
-    async fn get_asset_id(&self, asset: &Asset) -> Option<usize> {
+    async fn get_asset_id(&self, asset: &Asset) -> Option<i32> {
         let id = match asset {
             Asset::Currency(c) => {
                 sqlx::query_as!(ID, "SELECT id FROM currencies WHERE iso_code = $1", &c.iso_code.to_string()).fetch_one(&self.pool).await.ok()
@@ -55,16 +55,16 @@ impl AssetHandler for PostgresDB {
             }
         };
 
-        id.map(|x| x.id as usize)
+        id.map(|x| x.id)
     }
 
-    async fn get_asset_by_id(&self, id: usize) -> Result<Asset, DataError> {
+    async fn get_asset_by_id(&self, id: i32) -> Result<Asset, DataError> {
         let row = sqlx::query!(
             r#"SELECT
                 asset_class
              FROM assets 
              WHERE id = $1"#,
-            (id as i32),
+            id,
         ).fetch_one(&self.pool).await?;
 
         match row.asset_class.as_str() {
@@ -76,11 +76,11 @@ impl AssetHandler for PostgresDB {
                          rounding_digits
                      FROM currencies 
                      WHERE id = $1"#,
-                    (id as i32),
+                    id,
                 ).fetch_one(&self.pool).await?;
 
                 Ok(Asset::Currency(Currency::new(
-                    Some(row.id as usize), 
+                    Some(row.id), 
                     CurrencyISOCode::new(&row.iso_code)?, 
                     Some(row.rounding_digits))))
             },
@@ -94,12 +94,12 @@ impl AssetHandler for PostgresDB {
                         note
                      FROM stocks s
                      WHERE id = $1"#,
-                    (id as i32),
+                   id,
                 ).fetch_one(&self.pool).await?;
 
                 Ok(Asset::Stock(
                     Stock::new(
-                    Some(row.id as usize),
+                    Some(row.id),
                     row.name,
                     row.isin,
                     row.wkn,
@@ -126,7 +126,7 @@ impl AssetHandler for PostgresDB {
 
         Ok(Asset::Stock(
             Stock::new(
-            Some(row.id as usize),
+            Some(row.id),
             row.name,
             row.isin,
             row.wkn,
@@ -141,7 +141,7 @@ impl AssetHandler for PostgresDB {
              FROM assets"#
         ).fetch_all(&self.pool).await?
         {
-            assets.push(self.get_asset_by_id(row.id as usize).await?
+            assets.push(self.get_asset_by_id(row.id).await?
             );
         }
         Ok(assets)
@@ -188,25 +188,25 @@ impl AssetHandler for PostgresDB {
         }
     }
 
-    async fn delete_asset(&self, id: usize) -> Result<(), DataError> {
+    async fn delete_asset(&self, id: i32) -> Result<(), DataError> {
         let row = sqlx::query!("SELECT asset_class FROM assets WHERE id=$1",
                 id as i32,
             ).fetch_one(&self.pool).await?;
         match row.asset_class.as_str() {
             "currency" => {
                 let tx = self.pool.begin().await?;
-                sqlx::query!("DELETE FROM currencies WHERE id=$1;", (id as i32))
+                sqlx::query!("DELETE FROM currencies WHERE id=$1;",id)
                     .execute(&self.pool).await?;
-                sqlx::query!("DELETE FROM assets WHERE id=$1;", (id as i32))
+                sqlx::query!("DELETE FROM assets WHERE id=$1;",id)
                     .execute(&self.pool).await?;
                 tx.commit().await?;
                 Ok(())
             },
             "stock" => {
                 let tx = self.pool.begin().await?;
-                sqlx::query!("DELETE FROM stocks WHERE id=$1;", (id as i32))
+                sqlx::query!("DELETE FROM stocks WHERE id=$1;",id)
                     .execute(&self.pool).await?;
-                sqlx::query!("DELETE FROM assets WHERE id=$1;", (id as i32))
+                sqlx::query!("DELETE FROM assets WHERE id=$1;",id)
                     .execute(&self.pool).await?;      
                 tx.commit().await?;
                 Ok(())
@@ -226,7 +226,7 @@ impl AssetHandler for PostgresDB {
              .fetch_all(&self.pool).await?
         {
             currencies.push(Currency::new(
-                Some(row.id as usize),
+                Some(row.id),
                 CurrencyISOCode::new(&row.iso_code)?,
                 Some(row.rounding_digits)
             ));
@@ -250,7 +250,7 @@ impl AssetHandler for PostgresDB {
             .fetch_one(&self.pool).await;
         
         if let Ok(row) = row {
-            Ok(Currency::new(Some(row.id as usize), iso_code, Some(row.rounding_digits)))
+            Ok(Currency::new(Some(row.id), iso_code, Some(row.rounding_digits)))
         } else {
             let mut currency = Currency::new(None, iso_code, Some(rounding_digits));
             let id = self.insert_asset(&Asset::Currency(currency)).await?;

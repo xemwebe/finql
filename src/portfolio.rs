@@ -29,7 +29,7 @@ pub enum PositionError {
 /// Calculate the total position as of a given date by applying a specified set of filters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Position {
-    pub asset_id: Option<usize>,
+    pub asset_id: Option<i32>,
     pub name: String,
     pub position: f64,
     pub purchase_value: f64,
@@ -58,7 +58,7 @@ pub struct PositionTotals {
 
 
 impl Position {
-    pub fn new(asset_id: Option<usize>, currency: Currency) -> Position {
+    pub fn new(asset_id: Option<i32>, currency: Currency) -> Position {
         Position {
             asset_id,
             name: String::new(),
@@ -122,7 +122,7 @@ impl Position {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PortfolioPosition {
     pub cash: Position,
-    pub assets: BTreeMap<usize, Position>,
+    pub assets: BTreeMap<i32, Position>,
 }
 
 impl PortfolioPosition {
@@ -212,7 +212,7 @@ impl PortfolioPosition {
 }
 
 /// Search for transaction referred to by transaction_ref and return associated asset_id
-fn get_asset_id(transactions: &[Transaction], trans_ref: Option<usize>) -> Option<usize> {
+fn get_asset_id(transactions: &[Transaction], trans_ref: Option<i32>) -> Option<i32> {
     trans_ref?;
     for trans in transactions {
         if trans.id == trans_ref {

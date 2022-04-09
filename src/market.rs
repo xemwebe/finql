@@ -87,7 +87,7 @@ impl Market {
 
     /// Fetch latest quotes for all active ticker
     /// Returns a list of ticker for which the update failed.
-    pub async fn update_quotes(&self) -> Result<Vec<usize>, MarketError> {
+    pub async fn update_quotes(&self) -> Result<Vec<i32>, MarketError> {
         let tickers = self.db.get_all_ticker().await?;
         let mut failed_ticker = Vec::new();
         for ticker in tickers {
@@ -110,7 +110,7 @@ impl Market {
     /// Fetch latest quotes for all active ticker
     pub async fn update_quote_history(
         &self,
-        ticker_id: usize,
+        ticker_id: i32,
         start: DateTime<Local>,
         end: DateTime<Local>,
     ) -> Result<(), MarketError> {
@@ -132,7 +132,7 @@ impl Market {
     /// Update quote history using all tickers of given asset
     pub async fn update_quote_history_for_asset(
         &self,
-        asset_id: usize,
+        asset_id: i32,
         start: DateTime<Local>,
         end: DateTime<Local>,
     ) -> Result<(), MarketError> {
@@ -153,7 +153,7 @@ impl Market {
         Ok(())
     }
 
-    pub async fn get_asset_price(&self, asset_id: usize, currency: Currency, date: NaiveDate) -> Result<f64, MarketError> {
+    pub async fn get_asset_price(&self, asset_id: i32, currency: Currency, date: NaiveDate) -> Result<f64, MarketError> {
         let quote_curr = self.db.get_last_quote_before_by_id(asset_id, naive_date_to_date_time(&date, 18, None)?).await;
         let (price, quote_currency) = if let Ok((quote, currency)) = quote_curr {
             (quote.price, currency)            

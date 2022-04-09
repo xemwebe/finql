@@ -69,13 +69,13 @@ fn cash_flow_idx(date: NaiveDate, cash_flows: &[CashFlow]) -> Option<usize> {
 }
 
 pub struct StaticInSingleStock {
-    asset_id: usize,
+    asset_id: i32,
     dividends: Vec<CashFlow>,
     costs: StockTransactionCosts,
 }
 
 impl StaticInSingleStock {
-    pub fn new(asset_id: usize, dividends: Vec<CashFlow>, costs: StockTransactionCosts) -> StaticInSingleStock {
+    pub fn new(asset_id: i32, dividends: Vec<CashFlow>, costs: StockTransactionCosts) -> StaticInSingleStock {
         StaticInSingleStock{
             asset_id,
             dividends,
@@ -130,15 +130,15 @@ impl Strategy for StaticInSingleStock {
 
 
 pub struct ReInvestInSingleStock {
-    asset_id: usize,
-    ticker_id: usize,
+    asset_id: i32,
+    ticker_id: i32,
     market: Market,
     dividends: Vec<CashFlow>,
     costs: StockTransactionCosts,
 }
 
 impl ReInvestInSingleStock {
-    pub fn new(asset_id: usize, ticker_id: usize, market: Market, dividends: Vec<CashFlow>, costs: StockTransactionCosts) -> ReInvestInSingleStock {
+    pub fn new(asset_id: i32, ticker_id: i32, market: Market, dividends: Vec<CashFlow>, costs: StockTransactionCosts) -> ReInvestInSingleStock {
         ReInvestInSingleStock {
             asset_id,
             ticker_id,

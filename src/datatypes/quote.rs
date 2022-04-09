@@ -9,8 +9,8 @@ use super::{DataError, DataItem};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ticker {
-    pub id: Option<usize>,
-    pub asset: usize,
+    pub id: Option<i32>,
+    pub asset: i32,
     pub name: String,
     pub currency: Currency,
     pub source: String,
@@ -22,8 +22,8 @@ pub struct Ticker {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Quote {
-    pub id: Option<usize>,
-    pub ticker: usize,
+    pub id: Option<i32>,
+    pub ticker: i32,
     pub price: f64,
     pub time: DateTime<Local>,
     pub volume: Option<f64>,
@@ -52,7 +52,7 @@ impl Eq for Quote { }
 
 impl DataItem for Quote {
     // get id or return error if id hasn't been set yet
-    fn get_id(&self) -> Result<usize, DataError> {
+    fn get_id(&self) -> Result<i32, DataError> {
         match self.id {
             Some(id) => Ok(id),
             None => Err(DataError::DataAccessFailure(
@@ -61,7 +61,7 @@ impl DataItem for Quote {
         }
     }
     // set id or return error if id has already been set
-    fn set_id(&mut self, id: usize) -> Result<(), DataError> {
+    fn set_id(&mut self, id: i32) -> Result<(), DataError> {
         match self.id {
             Some(_) => Err(DataError::DataAccessFailure(
                 "tried to change valid quote id".to_string(),
@@ -76,7 +76,7 @@ impl DataItem for Quote {
 
 impl DataItem for Ticker {
     // get id or return error if id hasn't been set yet
-    fn get_id(&self) -> Result<usize, DataError> {
+    fn get_id(&self) -> Result<i32, DataError> {
         match self.id {
             Some(id) => Ok(id),
             None => Err(DataError::DataAccessFailure(
@@ -85,7 +85,7 @@ impl DataItem for Ticker {
         }
     }
     // set id or return error if id has already been set
-    fn set_id(&mut self, id: usize) -> Result<(), DataError> {
+    fn set_id(&mut self, id: i32) -> Result<(), DataError> {
         match self.id {
             Some(_) => Err(DataError::DataAccessFailure(
                 "tried to change valid ticker id".to_string(),

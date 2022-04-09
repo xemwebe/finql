@@ -20,7 +20,7 @@ impl Asset {
 
 impl DataItem for Asset {
     // get id or return error if id hasn't been set yet
-    fn get_id(&self) -> Result<usize, DataError> {
+    fn get_id(&self) -> Result<i32, DataError> {
         match self {
             Asset::Currency(c) => c.get_id(),
             Asset::Stock(s) => s.get_id(),
@@ -28,7 +28,7 @@ impl DataItem for Asset {
     }
 
     // set id or return error if id has already been set
-    fn set_id(&mut self, id: usize) -> Result<(), DataError> {
+    fn set_id(&mut self, id: i32) -> Result<(), DataError> {
         *self = match &*self {
             Asset::Currency(c) => {
                 let mut c = c.clone();

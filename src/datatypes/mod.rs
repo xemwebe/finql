@@ -47,7 +47,7 @@ pub enum DataError {
 
 pub trait DataItem {
     // get id or return error if id hasn't been set yet
-    fn get_id(&self) -> Result<usize, DataError>;
+    fn get_id(&self) -> Result<i32, DataError>;
     // set id or return error if id has already been set
-    fn set_id(&mut self, id: usize) -> Result<(), DataError>;
+    fn set_id(&mut self, id: i32) -> Result<(), DataError>;
 }
