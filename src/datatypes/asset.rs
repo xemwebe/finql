@@ -16,6 +16,13 @@ impl Asset {
             Self::Stock(_) => "stock".into(),
         }
     }
+
+    pub fn name(&self) -> String {
+        match self {
+            Self::Currency(c) => c.iso_code.to_string(),
+            Self::Stock(s) => s.name.clone(),
+        }
+    }
 }
 
 impl DataItem for Asset {

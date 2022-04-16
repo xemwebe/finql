@@ -45,7 +45,7 @@ pub struct Position {
 }
 
 /// Calculate the total position as of a given date by applying a specified set of filters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PositionTotals {
     pub value: f64,
     trading_pnl: f64,
