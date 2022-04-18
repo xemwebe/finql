@@ -15,7 +15,7 @@ use crate::day_count_conv::{DayCountConv, DayCountConvError};
 use crate::fixed_income::FixedIncome;
 use crate::rates::DiscountError;
 use crate::time_period::TimePeriod;
-use crate::calendar::{CalendarProvider,CalendarNotFound};
+use cal_calc::{CalendarProvider,CalendarNotFound};
 
 /// Error related to bonds
 #[derive(Debug)]
@@ -225,7 +225,7 @@ impl FixedIncome for Bond {
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
-    use crate::calendar::SimpleCalendar;
+    use cal_calc::SimpleCalendar;
     use crate::market::generate_calendars;
     use super::*;
 

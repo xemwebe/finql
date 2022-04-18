@@ -1,4 +1,4 @@
-use crate::calendar::Calendar;
+use cal_calc::Calendar;
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 
@@ -56,7 +56,7 @@ impl DayAdjust {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::calendar::Holiday;
+    use cal_calc::Holiday;
 
     #[test]
     fn day_adjust() {

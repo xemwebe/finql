@@ -64,7 +64,7 @@ impl CouponDate {
         }
         // Any year that is not a leap year will do.
         // We exclude explicitly February 29th, which is not a proper chosen coupon date
-        let last = crate::calendar::last_day_of_month(2019, month);
+        let last = cal_calc::last_day_of_month(2019, month);
         if day > 0 && month > 0 && month <= 12 && day <= last {
             Ok(CouponDate {
                 day,

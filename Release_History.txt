@@ -1,4 +1,5 @@
 Version 0.xx
+  * Module calendar is now a crate of its own: cal-calc
   * Breaking change: change `id` members of assets to `i32` to align with postgresql 
     datatype `SERIAL`
 Version 0.11

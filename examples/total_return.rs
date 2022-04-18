@@ -29,10 +29,10 @@ use finql::{
         StockTransactionCosts,
         StockTransactionFee,
     },
-    calendar::last_day_of_month,
     time_series::{TimeSeries, TimeValue, TimeSeriesError},
 };
 use finql::postgres::PostgresDB;
+use cal_calc::last_day_of_month;
 
 
 async fn calc_strategy(currency: Currency, start_transactions: &Vec<Transaction>, strategy: &dyn Strategy, start: NaiveDate, end: NaiveDate, market: &Market) -> Vec<TimeValue> {

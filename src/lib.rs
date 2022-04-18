@@ -41,7 +41,6 @@ pub mod macros;
 pub mod datatypes;
 pub mod postgres;
 pub mod bond;
-pub mod calendar;
 pub mod coupon_date;
 pub mod day_adjust;
 pub mod day_count_conv;

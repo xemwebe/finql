@@ -15,7 +15,7 @@ use thiserror::Error;
 use crate::datatypes::{Currency, CurrencyISOCode, CurrencyConverter, CurrencyError, QuoteHandler, date_time_helper::naive_date_to_date_time};
 use crate::time_period::TimePeriod;
 
-use crate::calendar::{Calendar, Holiday, NthWeek};
+use cal_calc::{Calendar, Holiday, NthWeek};
 use crate::market_quotes;
 use crate::market_quotes::{MarketQuoteProvider, MarketDataSourceError};
 

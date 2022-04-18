@@ -10,7 +10,7 @@ use crate::datatypes::CashFlow;
 
 use crate::day_count_conv::DayCountConv;
 use crate::rates::{Compounding, DiscountError, Discounter, FlatRate};
-use crate::calendar::CalendarProvider;
+use cal_calc::CalendarProvider;
 
 /// Get all future cash flows with respect to a given date
 pub fn get_cash_flows_after(cash_flows: &[CashFlow], date: NaiveDate) -> Vec<CashFlow> {

@@ -86,18 +86,6 @@ A couple of examples shall demonstrate different usages of the library.
 A simple demo program that lets you add a time period, e.g `3M` for three months
 or `-5Y` for 5 years before.
 
-### uk_settlement_calendar
-
-For any financial library, it is essential to be able to determine whether a 
-specific date is a bank holiday, if the exchange is open interest could be paid.
-A common approach is to just store a set of bank holidays. `finql` is different in 
-that respect, as it defines a calendar as a set of rules how to calculate bank 
-holidays. This examples demonstrates this by implementing the UK settlement 
-calendar, which is particular interesting with its complex holiday rules, e.g. 
-last Monday of August (Summer bank holiday), fixed day holidays that are moved
-to the next working day if the holiday falls on a weekend, or singular holidays
-which are not repeated every year, but celebrate unique events like a royal wedding.
-
 ### bond_comparison
 
 This example demonstrate roll out of cash flows for fixed-rate investments by 

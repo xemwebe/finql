@@ -3,7 +3,7 @@
 
 use chrono::Weekday;
 
-use finql::calendar::Holiday;
+use cal_calc::Holiday;
 use finql::datatypes::ObjectHandler;
 use finql::postgres::PostgresDB;
 

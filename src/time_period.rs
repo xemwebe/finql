@@ -6,7 +6,7 @@ use std::error;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::calendar::{last_day_of_month, Calendar};
+use cal_calc::{last_day_of_month, Calendar};
 use chrono::{Datelike, Duration, NaiveDate};
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -311,7 +311,7 @@ impl Neg for TimePeriod {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::calendar::{Calendar, Holiday};
+    use cal_calc::{Calendar, Holiday};
     use chrono::Weekday;
 
     #[test]

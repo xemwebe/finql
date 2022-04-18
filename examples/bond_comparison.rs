@@ -5,7 +5,7 @@ use serde_json;
 use chrono::NaiveDate;
 use finql::datatypes::{Currency, CashFlow};
 use finql::{fixed_income::{get_cash_flows_after, FixedIncome}, bond::Bond};
-use finql::calendar::SimpleCalendar;
+use cal_calc::SimpleCalendar;
 
 #[tokio::main]
 async fn main() {

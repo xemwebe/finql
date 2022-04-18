@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt;
 use chrono::{DateTime, NaiveDate, Local};
-use crate::calendar::Calendar;
+use cal_calc::Calendar;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -99,7 +99,7 @@ impl TimeSeries {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::calendar::Holiday;
+    use cal_calc::Holiday;
     use chrono::{Datelike, Weekday};
     use crate::datatypes::date_time_helper::make_time;
 
