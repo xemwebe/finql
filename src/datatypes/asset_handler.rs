@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use super::{DataError, Asset, Currency, CurrencyISOCode};
+use super::{DataError, Asset, AssetSelector, Currency, CurrencyISOCode};
 
 /// Handler for globally available data of transactions and related data
 #[async_trait]
@@ -12,10 +12,14 @@ pub trait AssetHandler {
     async fn get_asset_by_isin(&self, id: &str) -> Result<Asset, DataError>;
     /// Return a list of all assets ordered by name
     async fn get_all_assets(&self) -> Result<Vec<Asset>, DataError>;
+    /// Return AssetSelector for all assets
+    async fn get_asset_list(&self) -> Result<Vec<AssetSelector>, DataError>;
     async fn update_asset(&self, asset: &Asset) -> Result<(), DataError>;
     async fn delete_asset(&self, id: i32) -> Result<(), DataError>;
     /// We assume here that a currency is an Asset with a three letter name and no ISIN nor WKN
     async fn get_all_currencies(&self) -> Result<Vec<Currency>, DataError>;
+    /// Get a list of currencies as list of AssetSelectors
+    async fn get_currency_list(&self) -> Result<Vec<AssetSelector>, DataError>;
     /// Either read currency from database or create new currency and store it in database with default rounding digits
     async fn get_or_new_currency(&self, iso_code: CurrencyISOCode) -> Result<Currency, DataError>;
     /// Either read currency from database or create new currency and store it in database.

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::datatypes::{Asset, Currency, CurrencyISOCode, Stock, AssetHandler, DataError, DataItem};
+use crate::datatypes::{Asset, AssetSelector, Currency, CurrencyISOCode, Stock, AssetHandler, DataError, DataItem};
 
 use super::PostgresDB;
 
@@ -147,6 +147,32 @@ impl AssetHandler for PostgresDB {
         Ok(assets)
     }
 
+    /// Return AssetSelector for all assets
+    async fn get_asset_list(&self) -> Result<Vec<AssetSelector>, DataError> {
+        let mut assets = Vec::new();
+        for row in sqlx::query!(
+            r#"SELECT
+                a.id as "id!",
+                a.asset_class as "asset_class!",
+                CASE 
+                    WHEN a.asset_class='currency' THEN c.iso_code 
+                    ELSE s.name
+                END as "name!"
+            FROM 
+                assets a
+                LEFT JOIN stocks s ON a.id = s.id
+                LEFT JOIN currencies c ON a.id = c.id"#
+        ).fetch_all(&self.pool).await?
+        {
+            assets.push(AssetSelector{
+                id: row.id,
+                name: row.name,
+                class: row.asset_class, 
+            });
+        }
+        Ok(assets)
+    }
+
     async fn update_asset(&self, asset: &Asset) -> Result<(), DataError> {
         match asset {
             Asset::Currency(c) => {
@@ -230,6 +256,25 @@ impl AssetHandler for PostgresDB {
                 CurrencyISOCode::new(&row.iso_code)?,
                 Some(row.rounding_digits)
             ));
+        }
+        Ok(currencies)
+    }
+
+    async fn get_currency_list(&self) -> Result<Vec<AssetSelector>, DataError> {
+        let mut currencies = Vec::new();
+        for row in sqlx::query!(
+            r#"SELECT
+                id as "id!",
+                iso_code
+            FROM 
+                currencies"#)
+             .fetch_all(&self.pool).await?
+        {
+            currencies.push(AssetSelector{
+                id: row.id,
+                name: row.iso_code,
+                class: "currency".to_string(),
+            });
         }
         Ok(currencies)
     }

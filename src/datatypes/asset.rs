@@ -3,10 +3,19 @@ use serde::{Deserialize, Serialize};
 
 use super::{Currency, Stock, DataItem, DataError};
 
+///! Asset enum could contain any supported asset
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Asset {
     Currency(Currency),
     Stock(Stock),
+}
+
+///! AssetSelector is useful for creation of choice list to choose an asset from
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssetSelector{
+    pub id: i32,
+    pub name: String,
+    pub class: String,
 }
 
 impl Asset {

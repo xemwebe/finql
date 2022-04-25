@@ -137,7 +137,7 @@ impl TransactionHandler for PostgresDB {
                 transaction.trans_type,
                 transaction.asset,
                 transaction.cash_amount,
-                transaction.cash_currency.id.unwrap(),
+                transaction.cash_currency.id,
                 transaction.cash_date,
                 transaction.related_trans,
                 transaction.position,

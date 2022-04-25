@@ -15,7 +15,7 @@ pub mod transaction_handler;
 pub mod transaction;
 pub mod object_handler;
 
-pub use asset::Asset;
+pub use asset::{Asset, AssetSelector};
 pub use asset_handler::AssetHandler;
 pub use quote::{Quote, Ticker};
 pub use quote_handler::QuoteHandler;

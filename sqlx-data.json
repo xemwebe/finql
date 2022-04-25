@@ -54,6 +54,30 @@
       "nullable": []
     }
   },
+  "0e5a52757b8a3c61ae2d747cca299804ece31c21ee016aebb602825cb30949d5": {
+    "query": "SELECT\n                id as \"id!\",\n                iso_code\n            FROM \n                currencies",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "iso_code",
+          "type_info": "Bpchar"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "1487b837dd4ba264205a1d341659eca93055783ff2c395ab4831268a8f8e9f14": {
     "query": "SELECT id, price, time, volume FROM quotes \n                WHERE ticker_id=$1 ORDER BY time ASC;",
     "describe": {
@@ -920,6 +944,36 @@
         true,
         true,
         true
+      ]
+    }
+  },
+  "b17067063d609646637eb1536d0a197667fc262df28486279260b6d3633304ef": {
+    "query": "SELECT\n                a.id as \"id!\",\n                a.asset_class as \"asset_class!\",\n                CASE \n                    WHEN a.asset_class='currency' THEN c.iso_code \n                    ELSE s.name\n                END as \"name!\"\n            FROM \n                assets a\n                LEFT JOIN stocks s ON a.id = s.id\n                LEFT JOIN currencies c ON a.id = c.id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "asset_class!",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "name!",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        true,
+        true,
+        null
       ]
     }
   },
