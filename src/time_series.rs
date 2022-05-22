@@ -3,6 +3,7 @@ use std::fmt;
 use chrono::{DateTime, NaiveDate, Local};
 use cal_calc::Calendar;
 use std::collections::HashSet;
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug)]
 pub enum TimeSeriesError {
@@ -24,19 +25,22 @@ impl Error for TimeSeriesError {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TimeValue {
     pub time: DateTime<Local>,
     pub value: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TimeSeries {
     pub series: Vec<TimeValue>,
     pub title: String,
 }
 
 impl TimeSeries {
+    pub fn new(title: &str) -> Self {
+        TimeSeries { series: vec![], title: title.to_owned() }
+    }
     pub fn min_max(&self) -> Result<(NaiveDate, NaiveDate, f64, f64), TimeSeriesError> {
         if self.series.is_empty() {
             return Err(TimeSeriesError::IsEmpty)
