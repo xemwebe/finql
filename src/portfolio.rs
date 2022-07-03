@@ -730,7 +730,7 @@ mod tests {
             .await
             .unwrap();
         let time = make_time(2019, 12, 30, 12, 0, 0).unwrap();
-        let market = Market::new(qh.clone());
+        let market = Market::new(qh.clone()).await;
 
         eur_position.add_quote(time, &market).await;
         assert_fuzzy_eq!(eur_position.last_quote.unwrap(), 12.34, tol);
@@ -740,7 +740,7 @@ mod tests {
                 .unwrap()
                 .format("%F %H:%M:%S")
                 .to_string(),
-            "2019-12-30 10:00:00"
+            "2019-12-30 12:00:00"
         );
 
         usd_position.add_quote(time, &market).await;

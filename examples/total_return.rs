@@ -118,7 +118,7 @@ async fn main() {
     let asset_id = db.insert_asset(&asset).await.unwrap();
 
     println!("Get price history and dividends for AVGO");
-    let mut market = Market::new(db.clone());
+    let mut market = Market::new(db.clone()).await;
     let yahoo = MarketDataSource::Yahoo;
     let quote_provider = yahoo.get_provider(String::new()).unwrap();
     market.add_provider(yahoo.to_string(), quote_provider.clone());
@@ -159,7 +159,7 @@ async fn main() {
         cash_flow,
         note: Some("start capital".to_string()),
     });
-    let asset_price = market.get_asset_price(asset_id, usd, start).await.unwrap();
+    let asset_price = market.get_asset_price(asset_id, usd, start_time).await.unwrap();
 
     println!("Buy transaction for initial stock position");
     transactions.push(Transaction {
@@ -177,6 +177,7 @@ async fn main() {
 
     let mut all_time_series = Vec::new();
 
+    let market = Arc::new(market);
     let reinvest_strategy_no_tax_no_fee = ReInvestInSingleStock::new(
         asset_id,
         ticker_id,

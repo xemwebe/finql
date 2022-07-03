@@ -9,7 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
 /// Error type related to the Currency
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum CurrencyError {
     #[error("currency codes must consist of exactly three characters")]
     InvalidLength,

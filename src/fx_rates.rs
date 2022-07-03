@@ -177,7 +177,7 @@ mod tests {
         let qh: Arc<dyn QuoteHandler + Send + Sync> = Arc::new(db);
         prepare_db(qh.clone()).await;
         let tol = 1.0e-6_f64;
-        let market = Market::new(qh);
+        let market = Market::new(qh).await;
         let eur = market.get_currency("EUR").await.unwrap();
         let usd = market.get_currency("USD").await.unwrap();
         let time = Local::now();

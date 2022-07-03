@@ -26,7 +26,7 @@ impl CashAmount {
         &mut self,
         cash_amount: CashAmount,
         time: DateTime<Local>,
-        currency_converter: &mut (dyn CurrencyConverter + Send + Sync),
+        currency_converter: &(dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
         if self.currency == cash_amount.currency {
@@ -48,7 +48,7 @@ impl CashAmount {
         &mut self,
         cash_amount: Option<CashAmount>,
         time: DateTime<Local>,
-        currency_converter: &mut (dyn CurrencyConverter + Send + Sync),
+        currency_converter: &(dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
         match cash_amount {
@@ -64,7 +64,7 @@ impl CashAmount {
         &mut self,
         cash_amount: CashAmount,
         time: DateTime<Local>,
-        currency_converter: &mut (dyn CurrencyConverter + Send + Sync),
+        currency_converter: &(dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
         if self.currency == cash_amount.currency {
@@ -86,7 +86,7 @@ impl CashAmount {
         &mut self,
         cash_amount: Option<CashAmount>,
         time: DateTime<Local>,
-        currency_converter: &mut (dyn CurrencyConverter + Send + Sync),
+        currency_converter: &(dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
         match cash_amount {

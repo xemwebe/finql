@@ -269,7 +269,7 @@ async fn main() {
     db.clean().await.unwrap();
 
     let qh: Arc<dyn QuoteHandler + Sync + Send> = Arc::new(db);
-    let mut market = Market::new(qh);
+    let mut market = Market::new(qh).await;
     quote_tests(&mut market).await;
     println!("You may have a look at the database for further inspection.");
 }
