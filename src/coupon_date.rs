@@ -66,10 +66,7 @@ impl CouponDate {
         // We exclude explicitly February 29th, which is not a proper chosen coupon date
         let last = cal_calc::last_day_of_month(2019, month);
         if day > 0 && month > 0 && month <= 12 && day <= last {
-            Ok(CouponDate {
-                day,
-                month,
-            })
+            Ok(CouponDate { day, month })
         } else {
             Err(CouponDateError::DayToBig)
         }

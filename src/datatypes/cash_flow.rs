@@ -1,9 +1,12 @@
-use std::{fmt,fmt::{Display, Formatter}};
 use std::collections::BTreeMap;
 use std::ops::Neg;
+use std::{
+    fmt,
+    fmt::{Display, Formatter},
+};
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Local, NaiveDate};
+use serde::{Deserialize, Serialize};
 
 use super::{Currency, CurrencyConverter, CurrencyError};
 
@@ -23,13 +26,15 @@ impl CashAmount {
         &mut self,
         cash_amount: CashAmount,
         time: DateTime<Local>,
-        currency_converter: &(dyn CurrencyConverter+Send+Sync),
+        currency_converter: &mut (dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
         if self.currency == cash_amount.currency {
             self.amount += cash_amount.amount;
         } else {
-            let fx_rate = currency_converter.fx_rate(cash_amount.currency, self.currency, time).await?;
+            let fx_rate = currency_converter
+                .fx_rate(cash_amount.currency, self.currency, time)
+                .await?;
             self.amount += fx_rate * cash_amount.amount;
             if with_rounding {
                 let digits = self.currency.rounding_digits();
@@ -43,12 +48,15 @@ impl CashAmount {
         &mut self,
         cash_amount: Option<CashAmount>,
         time: DateTime<Local>,
-        currency_converter: &(dyn CurrencyConverter+Send+Sync),
+        currency_converter: &mut (dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
         match cash_amount {
             None => Ok(self),
-            Some(cash_amount) => self.add(cash_amount, time, currency_converter, with_rounding).await,
+            Some(cash_amount) => {
+                self.add(cash_amount, time, currency_converter, with_rounding)
+                    .await
+            }
         }
     }
 
@@ -56,13 +64,15 @@ impl CashAmount {
         &mut self,
         cash_amount: CashAmount,
         time: DateTime<Local>,
-        currency_converter: &(dyn CurrencyConverter+Send+Sync),
+        currency_converter: &mut (dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
         if self.currency == cash_amount.currency {
             self.amount -= cash_amount.amount;
         } else {
-            let fx_rate = currency_converter.fx_rate(cash_amount.currency, self.currency, time).await?;
+            let fx_rate = currency_converter
+                .fx_rate(cash_amount.currency, self.currency, time)
+                .await?;
             self.amount -= fx_rate * cash_amount.amount;
             if with_rounding {
                 let digits = self.currency.rounding_digits();
@@ -76,12 +86,15 @@ impl CashAmount {
         &mut self,
         cash_amount: Option<CashAmount>,
         time: DateTime<Local>,
-        currency_converter: &(dyn CurrencyConverter+Send+Sync),
+        currency_converter: &mut (dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
         match cash_amount {
             None => Ok(self),
-            Some(cash_amount) => self.sub(cash_amount, time, currency_converter, with_rounding).await,
+            Some(cash_amount) => {
+                self.sub(cash_amount, time, currency_converter, with_rounding)
+                    .await
+            }
         }
     }
 
@@ -143,7 +156,7 @@ impl CashFlow {
 
     /// Compare to cash flows for equality within a given absolute tolerance
     pub fn fuzzy_cash_flows_cmp_eq(&self, cf: &CashFlow, tol: f64) -> bool {
-        self.aggregatable(cf) 
+        self.aggregatable(cf)
             && !self.amount.amount.is_nan()
             && !cf.amount.amount.is_nan()
             && (self.amount.amount - cf.amount.amount).abs() <= tol

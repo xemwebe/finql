@@ -8,7 +8,7 @@ pub struct Stock {
     pub name: String,
     pub isin: Option<String>,
     pub wkn: Option<String>,
-    pub note: Option<String>
+    pub note: Option<String>,
 }
 
 impl Stock {

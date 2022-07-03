@@ -1,8 +1,7 @@
-///! Implementation of basic transaction types
-
-use serde::{Deserialize, Serialize};
-use super::{DataError, DataItem};
 use super::CashFlow;
+use super::{DataError, DataItem};
+///! Implementation of basic transaction types
+use serde::{Deserialize, Serialize};
 
 /// Type of transaction
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]

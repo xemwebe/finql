@@ -2,9 +2,9 @@
 use sqlx::postgres::{PgPoolOptions, Postgres};
 
 pub mod asset_handler;
+pub mod object_handler;
 pub mod quote_handler;
 pub mod transaction_handler;
-pub mod object_handler;
 
 /// Struct to handle connections to postgres databases
 pub struct PostgresDB {
@@ -58,17 +58,17 @@ impl PostgresDB {
         .execute(&self.pool)
         .await?;
         sqlx::query!(
-                "CREATE TABLE IF NOT EXISTS currencies (
+            "CREATE TABLE IF NOT EXISTS currencies (
                     id INTEGER PRIMARY KEY,
                     iso_code CHAR(3) NOT NULL UNIQUE,
                     rounding_digits INT NOT NULL,
                     FOREIGN KEY(id) REFERENCES assets(id)
                 )"
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         sqlx::query!(
-                "CREATE TABLE IF NOT EXISTS stocks (
+            "CREATE TABLE IF NOT EXISTS stocks (
                   id INTEGER PRIMARY KEY,
                   name TEXT NOT NULL UNIQUE,
                   wkn CHAR(6) UNIQUE,
@@ -77,8 +77,8 @@ impl PostgresDB {
                   FOREIGN KEY(id) REFERENCES assets(id)
                 )"
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         sqlx::query!(
             "CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY,

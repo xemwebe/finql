@@ -1,19 +1,12 @@
+use async_trait::async_trait;
+use chrono::{DateTime, Local};
 ///! Implementation for quote handler with Sqlite3 database as backend
 use std::str::FromStr;
-use chrono::{DateTime, Local};
-use async_trait::async_trait;
 use std::sync::Arc;
 
 use crate::datatypes::{
-    Asset,
-    Currency,
-    DataError, 
-    Quote, 
-    Ticker, 
-    QuoteHandler, 
-    AssetHandler, 
-    CurrencyISOCode};
-
+    Asset, AssetHandler, Currency, CurrencyISOCode, DataError, Quote, QuoteHandler, Ticker,
+};
 
 use super::PostgresDB;
 
@@ -26,26 +19,29 @@ impl QuoteHandler for PostgresDB {
 
     // insert, get, update and delete for market data sources
     async fn insert_ticker(&self, ticker: &Ticker) -> Result<i32, DataError> {
-        let cid = ticker.currency.id.and_then(|id| Some(id as i32));
+        let cid = ticker.currency.id;
         let row = sqlx::query!(
-                "INSERT INTO ticker (name, asset_id, source, priority, currency_id, factor, tz, cal)
+            "INSERT INTO ticker (name, asset_id, source, priority, currency_id, factor, tz, cal)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
-                ticker.name,
-                (ticker.asset as i32),
-                (ticker.source.to_string()),
-                ticker.priority,
-                cid,
-                ticker.factor,
-                ticker.tz,
-                ticker.cal
-            ).fetch_one(&self.pool).await?;
-        let id:i32 = row.id;
+            ticker.name,
+            (ticker.asset as i32),
+            (ticker.source.to_string()),
+            ticker.priority,
+            cid,
+            ticker.factor,
+            ticker.tz,
+            ticker.cal
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        let id: i32 = row.id;
         Ok(id)
     }
 
     async fn get_ticker_id(&self, ticker: &str) -> Option<i32> {
         let row = sqlx::query!("SELECT id FROM ticker WHERE name=$1", ticker)
-            .fetch_one(&self.pool).await;
+            .fetch_one(&self.pool)
+            .await;
         match row {
             Ok(row) => {
                 let id: i32 = row.id;
@@ -64,7 +60,7 @@ impl QuoteHandler for PostgresDB {
 
     async fn get_ticker_by_id(&self, id: i32) -> Result<Ticker, DataError> {
         let row = sqlx::query!(
-                "SELECT
+            "SELECT
                     t.name,
                     t.asset_id,
                     t.source,
@@ -78,8 +74,10 @@ impl QuoteHandler for PostgresDB {
                  FROM ticker t
                  JOIN currencies c ON c.id = t.currency_id
                  WHERE t.id = $1",
-                (id as i32),
-            ).fetch_one(&self.pool).await?;
+            (id as i32),
+        )
+        .fetch_one(&self.pool)
+        .await?;
         let name = row.name;
         let asset = row.asset_id;
         let source = row.source;
@@ -92,7 +90,7 @@ impl QuoteHandler for PostgresDB {
         Ok(Ticker {
             id: Some(id),
             name,
-            asset: asset,
+            asset,
             source,
             priority: row.priority,
             currency,
@@ -105,7 +103,7 @@ impl QuoteHandler for PostgresDB {
     async fn get_all_ticker(&self) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                r#"SELECT
+            r#"SELECT
                    t.id AS "id!",
                    t.name AS "name!",
                    t.asset_id AS "asset_id!",
@@ -119,7 +117,9 @@ impl QuoteHandler for PostgresDB {
                    c.rounding_digits AS "currency_rounding_digits!"
                  FROM ticker t
                  JOIN currencies c ON c.id = t.currency_id"#
-            ).fetch_all(&self.pool).await?
+        )
+        .fetch_all(&self.pool)
+        .await?
         {
             let id = row.id;
             let source = row.source;
@@ -144,13 +144,10 @@ impl QuoteHandler for PostgresDB {
         Ok(all_ticker)
     }
 
-    async fn get_all_ticker_for_source(
-        &self,
-        source: &str,
-    ) -> Result<Vec<Ticker>, DataError> {
+    async fn get_all_ticker_for_source(&self, source: &str) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT
+            "SELECT
                    t.id,
                    t.name,
                    t.asset_id,
@@ -165,8 +162,10 @@ impl QuoteHandler for PostgresDB {
                  FROM ticker t
                  JOIN currencies c ON c.id = t.currency_id
                  WHERE t.source = $1",
-                (source.to_string()),
-            ).fetch_all(&self.pool).await?
+            (source.to_string()),
+        )
+        .fetch_all(&self.pool)
+        .await?
         {
             let id = row.id;
             let asset = row.asset_id;
@@ -179,7 +178,7 @@ impl QuoteHandler for PostgresDB {
             all_ticker.push(Ticker {
                 id: Some(id),
                 name: row.name,
-                asset: asset,
+                asset,
                 source: source.to_string(),
                 priority: row.priority,
                 currency,
@@ -191,13 +190,10 @@ impl QuoteHandler for PostgresDB {
         Ok(all_ticker)
     }
 
-    async fn get_all_ticker_for_asset(
-        &self,
-        asset_id: i32,
-    ) -> Result<Vec<Ticker>, DataError> {
+    async fn get_all_ticker_for_asset(&self, asset_id: i32) -> Result<Vec<Ticker>, DataError> {
         let mut all_ticker = Vec::new();
         for row in sqlx::query!(
-                "SELECT
+            "SELECT
                    t.id,
                    t.name,
                    t.asset_id,
@@ -212,8 +208,10 @@ impl QuoteHandler for PostgresDB {
                  FROM ticker t
                  JOIN currencies c ON c.id = t.currency_id
                  WHERE t.asset_id = $1",
-                (asset_id as i32),
-            ).fetch_all(&self.pool).await?
+            (asset_id as i32),
+        )
+        .fetch_all(&self.pool)
+        .await?
         {
             let id = row.id;
             let source = row.source;
@@ -237,7 +235,6 @@ impl QuoteHandler for PostgresDB {
         }
         Ok(all_ticker)
     }
-
 
     async fn update_ticker(&self, ticker: &Ticker) -> Result<(), DataError> {
         if ticker.id.is_none() {
@@ -266,20 +263,23 @@ impl QuoteHandler for PostgresDB {
 
     async fn delete_ticker(&self, id: i32) -> Result<(), DataError> {
         sqlx::query!("DELETE FROM ticker WHERE id=$1;", (id as i32))
-            .execute(&self.pool).await?;
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 
     // insert, get, update and delete for market data sources
     async fn insert_quote(&self, quote: &Quote) -> Result<i32, DataError> {
         let row = sqlx::query!(
-                "INSERT INTO quotes (ticker_id, price, time, volume) 
+            "INSERT INTO quotes (ticker_id, price, time, volume) 
                 VALUES ($1, $2, $3, $4) RETURNING id",
-                (quote.ticker as i32),
-                quote.price,
-                quote.time,
-                quote.volume,
-            ).fetch_one(&self.pool).await?;
+            (quote.ticker as i32),
+            quote.price,
+            quote.time,
+            quote.volume,
+        )
+        .fetch_one(&self.pool)
+        .await?;
         let id = row.id;
         Ok(id)
     }
@@ -290,7 +290,7 @@ impl QuoteHandler for PostgresDB {
         time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError> {
         let row = sqlx::query!(
-                "SELECT
+            "SELECT
                    q.id,
                    q.ticker_id,
                    q.price,
@@ -309,8 +309,11 @@ impl QuoteHandler for PostgresDB {
                     AND q.time <= $2
                 ORDER BY q.time DESC, t.priority ASC
                 LIMIT 1",
-                curr.to_string(), time,
-            ).fetch_one(&self.pool).await?;
+            curr.to_string(),
+            time,
+        )
+        .fetch_one(&self.pool)
+        .await?;
         let id = row.id;
         let c = Currency::new(
             Some(row.currency_id),
@@ -324,7 +327,7 @@ impl QuoteHandler for PostgresDB {
         Ok((
             Quote {
                 id: Some(id),
-                ticker: ticker,
+                ticker,
                 price,
                 time,
                 volume,
@@ -339,14 +342,17 @@ impl QuoteHandler for PostgresDB {
         time: DateTime<Local>,
     ) -> Result<(Quote, Currency), DataError> {
         let row = sqlx::query!(
-                "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency_id, t.priority
+            "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency_id, t.priority
                 FROM quotes q
                 JOIN ticker t ON t.id = q.ticker_id
                 WHERE t.asset_id = $1 AND q.time <= $2
                 ORDER BY q.time DESC, t.priority ASC
                 LIMIT 1",
-                (asset_id as i32), time,
-            ).fetch_one(&self.pool).await?;
+            asset_id,
+            time,
+        )
+        .fetch_one(&self.pool)
+        .await?;
 
         let id = row.id;
         let ticker = row.ticker_id;
@@ -354,12 +360,12 @@ impl QuoteHandler for PostgresDB {
         let time: DateTime<Local> = row.time.into();
         let volume = row.volume;
         let currency_id = row.currency_id;
-        
+
         if let Ok(Asset::Currency(ca)) = self.get_asset_by_id(currency_id).await {
             Ok((
                 Quote {
                     id: Some(id),
-                    ticker: ticker,
+                    ticker,
                     price,
                     time,
                     volume,
@@ -367,17 +373,56 @@ impl QuoteHandler for PostgresDB {
                 ca,
             ))
         } else {
-            Err(DataError::InvalidAsset(format!("Couldn't find currency with id={}", currency_id)))
+            Err(DataError::InvalidAsset(format!(
+                "Couldn't find currency with id={}",
+                currency_id
+            )))
         }
+    }
+
+    async fn get_quotes_in_range_by_id(
+        &self,
+        asset_id: i32,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
+    ) -> Result<Vec<(Quote, i32)>, DataError> {
+        let mut quotes = Vec::new();
+        for row in sqlx::query!(
+            "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency_id, t.priority
+                FROM quotes q
+                JOIN ticker t ON t.id = q.ticker_id
+                WHERE t.asset_id = $1 AND q.time>= $2 AND q.time <= $3
+                ORDER BY q.time DESC, t.priority ASC",
+            asset_id,
+            start,
+            end
+        )
+        .fetch_all(&self.pool)
+        .await?
+        {
+            quotes.push((
+                Quote {
+                    id: Some(row.id),
+                    ticker: row.ticker_id,
+                    price: row.price,
+                    time: row.time.into(),
+                    volume: row.volume,
+                },
+                row.currency_id,
+            ));
+        }
+        Ok(quotes)
     }
 
     async fn get_all_quotes_for_ticker(&self, ticker_id: i32) -> Result<Vec<Quote>, DataError> {
         let mut quotes = Vec::new();
         for row in sqlx::query!(
-                "SELECT id, price, time, volume FROM quotes 
+            "SELECT id, price, time, volume FROM quotes 
                 WHERE ticker_id=$1 ORDER BY time ASC;",
-                (ticker_id as i32),
-            ).fetch_all(&self.pool).await?
+            (ticker_id as i32),
+        )
+        .fetch_all(&self.pool)
+        .await?
         {
             let id = row.id;
             let time = row.time.into();
@@ -400,26 +445,29 @@ impl QuoteHandler for PostgresDB {
         }
         let id = quote.id.unwrap() as i32;
         sqlx::query!(
-                "UPDATE quotes SET ticker_id=$2, price=$3, time=$4, volume=$5
+            "UPDATE quotes SET ticker_id=$2, price=$3, time=$4, volume=$5
                 WHERE id=$1",
-                id,
-                (quote.ticker as i32),
-                quote.price,
-                quote.time,
-                quote.volume,
-            )
-            .execute(&self.pool).await?;
+            id,
+            (quote.ticker as i32),
+            quote.price,
+            quote.time,
+            quote.volume,
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
     async fn delete_quote(&self, id: i32) -> Result<(), DataError> {
         sqlx::query!("DELETE FROM quotes WHERE id=$1;", (id as i32))
-            .execute(&self.pool).await?;
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 
     async fn remove_duplicates(&self) -> Result<(), DataError> {
-        sqlx::query!("
+        sqlx::query!(
+            "
             delete from quotes q 
             where q.id in
             (select q2.id
@@ -431,8 +479,10 @@ impl QuoteHandler for PostgresDB {
             and q1.ticker_id = q2.ticker_id 
             and q1.time = q2.time
             and q1.price = q2.price) 
-            ")
-            .execute(&self.pool).await?;
+            "
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 }

@@ -1,16 +1,14 @@
 use std::str::FromStr;
 
+use crate::datatypes::{
+    date_time_helper::{
+        date_from_str, date_time_from_str_standard, naive_date_to_date_time, unix_to_date_time,
+    },
+    CashFlow, Currency, Quote, Ticker,
+};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use eodhistoricaldata_api as eod_api;
-use crate::datatypes::{CashFlow, Currency, Quote, Ticker, 
-        date_time_helper::{
-            date_time_from_str_standard, 
-            date_from_str, 
-            unix_to_date_time,
-            naive_date_to_date_time,
-        }
-    };
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
@@ -30,9 +28,7 @@ impl EODHistData {
 impl MarketQuoteProvider for EODHistData {
     /// Fetch latest quote
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
-        let eod_quote = self
-            .connector
-            .get_latest_quote(&ticker.name).await?;
+        let eod_quote = self.connector.get_latest_quote(&ticker.name).await?;
 
         let time = unix_to_date_time(eod_quote.timestamp as u64);
         Ok(Quote {
@@ -57,7 +53,8 @@ impl MarketQuoteProvider for EODHistData {
                 &ticker.name,
                 start.naive_local().date(),
                 end.naive_local().date(),
-            ).await?;
+            )
+            .await?;
 
         let mut quotes = Vec::new();
         for quote in &eod_quotes {
@@ -85,19 +82,17 @@ impl MarketQuoteProvider for EODHistData {
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let dividends_since_start = self
             .connector
-            .get_dividend_history(
-                &ticker.name,
-                start.naive_local().date()
-            ).await?;
+            .get_dividend_history(&ticker.name, start.naive_local().date())
+            .await?;
         let mut div_cash_flows = Vec::new();
         for div in dividends_since_start {
-            let pay_date = date_from_str(&div.payment_date,"%Y-%m-%d")?;
+            let pay_date = date_from_str(&div.payment_date, "%Y-%m-%d")?;
             if naive_date_to_date_time(&pay_date, 18, ticker.tz.clone())? <= end {
                 let currency = Currency::from_str(&div.currency)?;
                 div_cash_flows.push(CashFlow::new(div.value, currency, pay_date));
             }
         }
-        Ok(div_cash_flows)        
+        Ok(div_cash_flows)
     }
 }
 

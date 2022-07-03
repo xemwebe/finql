@@ -1,7 +1,7 @@
 ///! Implementation of a container for basic asset data
 use serde::{Deserialize, Serialize};
 
-use super::{Currency, Stock, DataItem, DataError};
+use super::{Currency, DataError, DataItem, Stock};
 
 ///! Asset enum could contain any supported asset
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12,7 +12,7 @@ pub enum Asset {
 
 ///! AssetSelector is useful for creation of choice list to choose an asset from
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AssetSelector{
+pub struct AssetSelector {
     pub id: i32,
     pub name: String,
     pub class: String,
@@ -47,7 +47,7 @@ impl DataItem for Asset {
     fn set_id(&mut self, id: i32) -> Result<(), DataError> {
         *self = match &*self {
             Asset::Currency(c) => {
-                let mut c = c.clone();
+                let mut c = *c;
                 c.set_id(id)?;
                 Asset::Currency(c)
             }
@@ -61,8 +61,6 @@ impl DataItem for Asset {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,10 +68,13 @@ mod tests {
 
     #[test]
     fn set_asset_id() {
-        let mut asset = Asset::Currency(Currency::new(None, CurrencyISOCode::new("EUR").unwrap(), Some(4)));
+        let mut asset = Asset::Currency(Currency::new(
+            None,
+            CurrencyISOCode::new("EUR").unwrap(),
+            Some(4),
+        ));
         asset.set_id(1).unwrap();
         assert_eq!(asset.get_id().unwrap(), 1);
-
 
         let aus = Currency::new(None, CurrencyISOCode::new("AUS").unwrap(), Some(2));
         let mut aus_asset = Asset::Currency(aus);

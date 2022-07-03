@@ -1,10 +1,10 @@
-use chrono::{DateTime, Local};
 use async_trait::async_trait;
+use chrono::{DateTime, Local};
 use reqwest;
 
 use alpha_vantage as alpha;
 
-use crate::datatypes::{CashFlow, Quote, Ticker, date_time_helper::date_time_from_str_standard};
+use crate::datatypes::{date_time_helper::date_time_from_str_standard, CashFlow, Quote, Ticker};
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
@@ -14,9 +14,7 @@ pub struct AlphaVantage {
 
 impl AlphaVantage {
     pub fn new(token: String) -> AlphaVantage {
-        AlphaVantage {
-            token
-        }
+        AlphaVantage { token }
     }
 }
 
@@ -44,10 +42,9 @@ impl MarketQuoteProvider for AlphaVantage {
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let api_key = alpha::set_api(&self.token, reqwest::Client::new());
         let alpha_quotes = api_key
-            .stock_time(
-                alpha::stock_time::StockFunction::Daily,
-                &ticker.name,
-            ).json().await?;
+            .stock_time(alpha::stock_time::StockFunction::Daily, &ticker.name)
+            .json()
+            .await?;
 
         let mut quotes = Vec::new();
         for quote in alpha_quotes.entry() {
@@ -72,14 +69,16 @@ impl MarketQuoteProvider for AlphaVantage {
         _start: DateTime<Local>,
         _end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
-        Err(MarketQuoteError::UnexpectedError("The Alpha Vantage API does not support fetching dividends".to_string()))
+        Err(MarketQuoteError::UnexpectedError(
+            "The Alpha Vantage API does not support fetching dividends".to_string(),
+        ))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
     use chrono::offset::TimeZone;
+    use std::str::FromStr;
 
     use crate::datatypes::Currency;
 
@@ -122,7 +121,10 @@ mod tests {
         };
         let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Local.ymd(3000, 1, 31).and_hms_milli(23, 59, 59, 999);
-        let quotes = alpha.fetch_quote_history(&ticker, start, end).await.unwrap();
+        let quotes = alpha
+            .fetch_quote_history(&ticker, start, end)
+            .await
+            .unwrap();
         assert!(quotes.len() != 0);
         assert!(quotes[0].price != 0.0);
     }

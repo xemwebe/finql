@@ -4,20 +4,19 @@
 /// Market data consist of non-static data, like interest rates,
 /// asset prices, or foreign exchange rates.
 use std::ops::Deref;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use chrono::{DateTime, NaiveDate, Local, Weekday};
+use chrono::{DateTime, Local};
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
 use thiserror::Error;
 
-use crate::datatypes::{Currency, CurrencyISOCode, CurrencyConverter, CurrencyError, QuoteHandler, date_time_helper::naive_date_to_date_time};
-use crate::time_period::TimePeriod;
+use crate::datatypes::{Currency, CurrencyConverter, CurrencyError, CurrencyISOCode, QuoteHandler};
 
-use cal_calc::{Calendar, Holiday, NthWeek};
 use crate::market_quotes;
-use crate::market_quotes::{MarketQuoteProvider, MarketDataSourceError};
+use crate::market_quotes::{MarketDataSourceError, MarketQuoteProvider};
+use cal_calc::Calendar;
 
 /// Error related to market data object
 #[derive(Error, Debug)]
@@ -31,36 +30,76 @@ pub enum MarketError {
     #[error("Missing market data provider token")]
     MissingProviderToken,
     #[error("Currency conversion failure")]
-    CurrencyError,
+    CurrencyConversionError,
     #[error("date/time conversion error")]
     DateTimeError(#[from] crate::datatypes::date_time_helper::DateTimeError),
     #[error("Invalid market data source")]
     MarketDataSourceError(#[from] MarketDataSourceError),
     #[error("Invalid currency")]
     InvalidCurrency(#[from] CurrencyError),
+    #[error("Cache access failed")]
+    CacheFailure,
+    #[error("Currency not found")]
+    CurrencyNotFound,
+}
+
+pub struct TimeRange {
+    start: DateTime<Local>,
+    end: DateTime<Local>,
+}
+
+/// Caching policy for Market
+pub enum CachePolicy {
+    /// Do not cache any values
+    None,
+    /// If quote of not yet cached quote exists, fetch quotes for at least the given time range
+    PredefinedPeriod(TimeRange),
+}
+
+async fn currency_map(db: Arc<dyn QuoteHandler + Sync + Send>) -> BTreeMap<i32, Currency> {
+    let mut currency_map = BTreeMap::new();
+    if let Ok(currency_vec) = db.get_all_currencies().await {
+        for curr in currency_vec {
+            currency_map.insert(curr.id.unwrap(), curr);
+        }
+    }
+    currency_map
 }
 
 /// Container or adaptor to market data
-#[derive(Clone)]
 pub struct Market {
+    /// Stored calendars
     calendars: BTreeMap<String, Calendar>,
+    /// Pre-fetched asset prices
+    prices: Arc<Mutex<BTreeMap<i32, BTreeMap<DateTime<Local>, (f64, i32)>>>>,
     /// collection of market data quotes provider
-    provider: BTreeMap<String, Arc<dyn MarketQuoteProvider+Sync+Send>>,
+    provider: BTreeMap<String, Arc<dyn MarketQuoteProvider + Sync + Send>>,
     /// Quotes database
-    db: Arc<dyn QuoteHandler+Sync+Send>,
+    db: Arc<dyn QuoteHandler + Sync + Send>,
+    /// Caching policy
+    cache_policy: CachePolicy,
+    /// List of currency for fast access
+    currencies: BTreeMap<i32, Currency>,
 }
 
 impl Market {
-    pub fn new(db: Arc<dyn QuoteHandler+Sync+Send>) -> Market {
+    pub async fn new(db: Arc<dyn QuoteHandler + Sync + Send>) -> Market {
         Market {
             // Set of default calendars
             calendars: generate_calendars(),
             provider: BTreeMap::new(),
-            db,
+            prices: Arc::new(Mutex::new(BTreeMap::new())),
+            db: db.clone(),
+            cache_policy: CachePolicy::None,
+            currencies: currency_map(db).await,
         }
     }
 
-    pub fn db(&self) -> Arc<dyn QuoteHandler+Sync+Send> {
+    pub fn set_cache_policy(&mut self, cache_policy: CachePolicy) {
+        self.cache_policy = cache_policy;
+    }
+
+    pub fn db(&self) -> Arc<dyn QuoteHandler + Sync + Send> {
         self.db.clone()
     }
 
@@ -80,8 +119,21 @@ impl Market {
         Ok(currency)
     }
 
+    /// Get currency from market
+    pub async fn get_currency_by_id(&self, currency_id: i32) -> Result<Currency, MarketError> {
+        if let Some(currency) = self.currencies.get(&currency_id) {
+            Ok(*currency)
+        } else {
+            Err(MarketError::CurrencyNotFound)
+        }
+    }
+
     /// Add market data provider
-    pub fn add_provider(&mut self, name: String, provider: Arc<dyn MarketQuoteProvider+Sync+Send>) {
+    pub fn add_provider(
+        &mut self,
+        name: String,
+        provider: Arc<dyn MarketQuoteProvider + Sync + Send>,
+    ) {
         self.provider.insert(name, provider);
     }
 
@@ -93,13 +145,9 @@ impl Market {
         for ticker in tickers {
             let provider = self.provider.get(&ticker.source);
             if provider.is_some()
-                && market_quotes::update_ticker(
-                    provider.unwrap().deref(),
-                    &ticker,
-                    self.db.clone(),
-                )
-                .await
-                .is_err()
+                && market_quotes::update_ticker(provider.unwrap().deref(), &ticker, self.db.clone())
+                    .await
+                    .is_err()
             {
                 failed_ticker.push(ticker.id.unwrap());
             }
@@ -153,27 +201,61 @@ impl Market {
         Ok(())
     }
 
-    pub async fn get_asset_price(&self, asset_id: i32, currency: Currency, date: NaiveDate) -> Result<f64, MarketError> {
-        let quote_curr = self.db.get_last_quote_before_by_id(asset_id, naive_date_to_date_time(&date, 18, None)?).await;
-        let (price, quote_currency) = if let Ok((quote, currency)) = quote_curr {
-            (quote.price, currency)            
-        } else {
-            // if no valid quote could be found in database, try to fetch quotes for previous week and try again
-            let one_week_before = "-7D".parse::<TimePeriod>().unwrap();
-            let date_one_week_before = one_week_before.add_to(date, None);
-            self.update_quote_history_for_asset(asset_id, naive_date_to_date_time(&date_one_week_before, 0, None)?, 
-                naive_date_to_date_time(&date, 20, None)?).await?;
-            let (quote, currency) = self.db.get_last_quote_before_by_id(asset_id, naive_date_to_date_time(&date, 20, None)?).await?;
-            (quote.price, currency)
-        };
+    pub fn try_from_cache(&self, asset_id: i32, time: DateTime<Local>) -> Option<(f64, i32)> {
+        if let Some(series) = self.prices.lock().unwrap().get(&asset_id) {
+            series.range(..time).next_back();
+        }
+        None
+    }
+
+    pub async fn get_asset_price(
+        &self,
+        asset_id: i32,
+        currency: Currency,
+        time: DateTime<Local>,
+    ) -> Result<f64, MarketError> {
+        let (price, quote_currency_id) =
+            if let Some((quote, curr)) = self.try_from_cache(asset_id, time) {
+                (quote, curr)
+            } else {
+                match &self.cache_policy {
+                    CachePolicy::None => {
+                        let (quote, currency) =
+                            self.db.get_last_quote_before_by_id(asset_id, time).await?;
+                        (quote.price, currency.id.unwrap())
+                    }
+                    CachePolicy::PredefinedPeriod(time_range) => {
+                        let date_start = time.date().and_hms(0, 0, 0);
+                        let date_end = time.date().and_hms_milli(23, 59, 59, 999);
+                        let start = std::cmp::min(time_range.start, date_start);
+                        let end = std::cmp::max(time_range.end, date_end);
+                        let quotes = self
+                            .db
+                            .get_quotes_in_range_by_id(asset_id, start, end)
+                            .await?;
+                        {
+                            // add quotes to cache in this
+                            let mut prices = self.prices.lock().unwrap();
+                            let asset_prices = prices.entry(asset_id).or_insert_with(BTreeMap::new);
+                            for quote in quotes {
+                                asset_prices.insert(quote.0.time, (quote.0.price, quote.1));
+                            }
+                        }
+                        self.try_from_cache(asset_id, time)
+                            .ok_or(MarketError::CacheFailure)?
+                    }
+                }
+            };
+        let quote_currency = self.get_currency_by_id(quote_currency_id).await?;
         if currency == quote_currency {
             Ok(price)
-        } else  {
-            let fx_rate = self.fx_rate(currency, quote_currency, naive_date_to_date_time(&date, 20, None)?).await
-                .map_err(|_| MarketError::CurrencyError)?;
-            Ok(price*fx_rate)
+        } else {
+            let fx_rate = self
+                .fx_rate(currency, quote_currency, time)
+                .await
+                .map_err(|_| MarketError::CurrencyConversionError)?;
+            Ok(price * fx_rate)
         }
-
     }
 }
 
@@ -188,12 +270,24 @@ impl CurrencyConverter for Market {
         if foreign == base {
             return Ok(1.0);
         } else {
-            let (fx_quote, quote_currency) = self.db.deref().deref()
-                .get_last_fx_quote_before(&foreign.iso_code, time)
+            let (fx_quote, quote_currency_id) = if let Some((fx_quote, curr)) =
+                self.try_from_cache(foreign.id.ok_or(CurrencyError::ConversionFailed)?, time)
+            {
+                (fx_quote, curr)
+            } else {
+                let quote = self
+                    .db
+                    .get_last_fx_quote_before(&foreign.iso_code, time)
+                    .await
+                    .map_err(|_| CurrencyError::ConversionFailed)?;
+                (quote.0.price, quote.1.id.unwrap())
+            };
+            let quote_currency = self
+                .get_currency_by_id(quote_currency_id)
                 .await
                 .map_err(|_| CurrencyError::ConversionFailed)?;
             if quote_currency == base {
-                return Ok(fx_quote.price);
+                return Ok(fx_quote);
             }
         }
         Err(CurrencyError::ConversionFailed)
@@ -202,163 +296,14 @@ impl CurrencyConverter for Market {
 
 /// Generate fixed set of some calendars for testing purposes only
 pub fn generate_calendars() -> BTreeMap<String, Calendar> {
+    use cal_calc::{target_holidays, uk_settlement_holidays};
+
     let mut calendars = BTreeMap::new();
-    let uk_settlement_holidays = vec![
-        // Saturdays
-        Holiday::WeekDay(Weekday::Sat),
-        // Sundays
-        Holiday::WeekDay(Weekday::Sun),
-        // New Year's day
-        Holiday::MovableYearlyDay {
-            month: 1,
-            day: 1,
-            first: None,
-            last: None,
-        },
-        // Good Friday
-        Holiday::EasterOffset {
-            offset: -2,
-            first: None,
-            last: None,
-        },
-        // Easter Monday
-        Holiday::EasterOffset {
-            offset: 1,
-            first: None,
-            last: None,
-        },
-        // first Monday of May, moved two times in history to 8th of May
-        Holiday::MonthWeekday {
-            month: 5,
-            weekday: Weekday::Mon,
-            nth: NthWeek::First,
-            first: None,
-            last: Some(1994),
-        },
-        Holiday::SingularDay(NaiveDate::from_ymd(1995, 5, 8)),
-        Holiday::MonthWeekday {
-            month: 5,
-            weekday: Weekday::Mon,
-            nth: NthWeek::First,
-            first: Some(1996),
-            last: Some(2019),
-        },
-        Holiday::SingularDay(NaiveDate::from_ymd(2020, 5, 8)),
-        Holiday::MonthWeekday {
-            month: 5,
-            weekday: Weekday::Mon,
-            nth: NthWeek::First,
-            first: Some(2021),
-            last: None,
-        },
-        // last Monday of May (Spring Bank Holiday), has been skipped two times
-        Holiday::MonthWeekday {
-            month: 5,
-            weekday: Weekday::Mon,
-            nth: NthWeek::Last,
-            first: None,
-            last: Some(2001),
-        },
-        Holiday::MonthWeekday {
-            month: 5,
-            weekday: Weekday::Mon,
-            nth: NthWeek::Last,
-            first: Some(2003),
-            last: Some(2011),
-        },
-        Holiday::MonthWeekday {
-            month: 5,
-            weekday: Weekday::Mon,
-            nth: NthWeek::Last,
-            first: Some(2013),
-            last: None,
-        },
-        // last Monday of August (Summer Bank Holiday)
-        Holiday::MonthWeekday {
-            month: 8,
-            weekday: Weekday::Mon,
-            nth: NthWeek::Last,
-            first: None,
-            last: None,
-        },
-        // Christmas
-        Holiday::MovableYearlyDay {
-            month: 12,
-            day: 25,
-            first: None,
-            last: None,
-        },
-        // Boxing Day
-        Holiday::MovableYearlyDay {
-            month: 12,
-            day: 26,
-            first: None,
-            last: None,
-        },
-        // Golden Jubilee
-        Holiday::SingularDay(NaiveDate::from_ymd(2002, 6, 3)),
-        // Special Spring Holiday
-        Holiday::SingularDay(NaiveDate::from_ymd(2002, 6, 4)),
-        // Royal Wedding
-        Holiday::SingularDay(NaiveDate::from_ymd(2011, 4, 29)),
-        // Diamond Jubilee
-        Holiday::SingularDay(NaiveDate::from_ymd(2012, 6, 4)),
-        // Special Spring Holiday
-        Holiday::SingularDay(NaiveDate::from_ymd(2012, 6, 5)),
-        // Introduction of EUR
-        Holiday::SingularDay(NaiveDate::from_ymd(1999, 12, 31)),
-    ];
-    let uk_cal = Calendar::calc_calendar(&uk_settlement_holidays, 1990, 2050);
+
+    let uk_cal = Calendar::calc_calendar(&uk_settlement_holidays(), 1990, 2050);
     calendars.insert("uk".to_string(), uk_cal);
 
-    let target_holidays = vec![
-        // Saturdays
-        Holiday::WeekDay(Weekday::Sat),
-        // Sundays
-        Holiday::WeekDay(Weekday::Sun),
-        // New Year's day
-        Holiday::YearlyDay {
-            month: 1,
-            day: 1,
-            first: None,
-            last: None,
-        },
-        // Good Friday
-        Holiday::EasterOffset {
-            offset: -2,
-            first: Some(2000),
-            last: None,
-        },
-        // Easter Monday
-        Holiday::EasterOffset {
-            offset: 1,
-            first: Some(2000),
-            last: None,
-        },
-        // Labour Day
-        Holiday::YearlyDay {
-            month: 5,
-            day: 1,
-            first: Some(2000),
-            last: None,
-        },
-        // Labour Day
-        Holiday::YearlyDay {
-            month: 5,
-            day: 1,
-            first: Some(2000),
-            last: None,
-        },
-        // Labour Day
-        Holiday::YearlyDay {
-            month: 5,
-            day: 1,
-            first: Some(2000),
-            last: None,
-        },
-        Holiday::SingularDay(NaiveDate::from_ymd(1995, 5, 8)),
-    ];
-    let target_cal = Calendar::calc_calendar(&target_holidays, 1990, 2050);
+    let target_cal = Calendar::calc_calendar(&target_holidays(), 1990, 2050);
     calendars.insert("TARGET".to_string(), target_cal);
 
     calendars

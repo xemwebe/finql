@@ -10,27 +10,32 @@ pub enum DateTimeError {
     #[error("Conversion of date-time failed")]
     DateTimeConversionFailed,
     #[error("Failed to parse (date-)time from string")]
-    StringParseError
+    StringParseError,
 }
 
-
 /// Convert NaiveDate to DateTime at the given hour and convert to local time zone
-/// Assuming local time zone if zone is not given 
+/// Assuming local time zone if zone is not given
 pub fn naive_date_to_date_time(
     date: &NaiveDate,
     hour: u32,
-    zone: Option<String>
+    zone: Option<String>,
 ) -> Result<DateTime<Local>, DateTimeError> {
     let time = date.and_hms_milli(hour, 0, 0, 0);
     let time = match zone {
-        None => Local.from_local_datetime(&time).single().ok_or(DateTimeError::DateTimeConversionFailed)?,
+        None => Local
+            .from_local_datetime(&time)
+            .single()
+            .ok_or(DateTimeError::DateTimeConversionFailed)?,
         Some(zone) => {
             let tz: Tz = zone.parse().map_err(|_| DateTimeError::StringParseError)?;
-            let date_time = tz.from_local_datetime(&time).single().ok_or(DateTimeError::DateTimeConversionFailed)?;
+            let date_time = tz
+                .from_local_datetime(&time)
+                .single()
+                .ok_or(DateTimeError::DateTimeConversionFailed)?;
             date_time.with_timezone(&Local)
         }
     };
-    Ok(DateTime::from(time))
+    Ok(time)
 }
 
 /// Create Local time set is given as UNIX epoch timestamp (i.e seconds since 1st Jan 1970)
@@ -50,7 +55,7 @@ pub fn unix_to_date_time(seconds: u64) -> DateTime<Local> {
 pub fn date_time_from_str_american(
     date_str: &str,
     hour: u32,
-    zone: Option<String>
+    zone: Option<String>,
 ) -> Result<DateTime<Local>, DateTimeError> {
     date_time_from_str(date_str, "%m-%d-%Y", hour, zone)
 }
@@ -91,19 +96,15 @@ pub fn date_time_from_str(
 /// 1. Date is the date in local time zone if zone is non, otherwise zone is the time zone
 /// 2. Hour is set the given hour parameter
 /// 3. Minutes, seconds and milliseconds are set to zero
-pub fn date_from_str(
-    date_str: &str,
-    format: &str
-) -> Result<NaiveDate, DateTimeError> {
-   Ok(NaiveDate::parse_from_str(date_str, format)?)
+pub fn date_from_str(date_str: &str, format: &str) -> Result<NaiveDate, DateTimeError> {
+    Ok(NaiveDate::parse_from_str(date_str, format)?)
 }
 
 /// Convert string with added time zone (by default 0) to DateTime<Local>
 pub fn to_time(time: &str, zone: i32) -> Result<DateTime<Local>, DateTimeError> {
     // sqlx strips time zone, just add it here again
-    let time = format!("{}{:+05}",time, zone);
-    let time =
-        DateTime::parse_from_str(&time,"%Y-%m-%d %H:%M:%S%.3f%z")?;
+    let time = format!("{}{:+05}", time, zone);
+    let time = DateTime::parse_from_str(&time, "%Y-%m-%d %H:%M:%S%.3f%z")?;
     let time: DateTime<Local> = DateTime::from(time);
     Ok(time)
 }
@@ -121,7 +122,6 @@ pub fn make_time(
     let time: NaiveDateTime = NaiveDate::from_ymd(year, month, day).and_hms(hour, minute, second);
     Local.from_local_datetime(&time).single()
 }
-
 
 #[cfg(test)]
 mod tests {

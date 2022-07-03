@@ -7,4 +7,3 @@ pub fn some_equal(opt: &Option<String>, s: &str) -> bool {
         Some(opt_s) => opt_s == s,
     }
 }
-

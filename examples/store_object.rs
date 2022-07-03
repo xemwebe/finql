@@ -1,6 +1,5 @@
 ///! Example storing general calendars as JSON object in PostgreSQL
 ///! Please note: All existing content of the database will be deleted!
-
 use chrono::Weekday;
 
 use cal_calc::Holiday;
@@ -35,12 +34,13 @@ async fn main() {
             offset: -2,
             first: None,
             last: None,
-        }    
+        },
     ];
 
-    db.store_object("test", "calendar", &holidays).await.unwrap();
-    
+    db.store_object("test", "calendar", &holidays)
+        .await
+        .unwrap();
+
     let new_holiday: Vec<Holiday> = db.get_object("test").await.unwrap();
     println!("New holiday struct: {:?}", new_holiday);
-
 }

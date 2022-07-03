@@ -1,17 +1,15 @@
-use std::str::FromStr;
-use chrono::{DateTime, Local};
 use async_trait::async_trait;
+use chrono::{DateTime, Local};
 use gurufocus_api as gfapi;
+use std::str::FromStr;
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
-use crate::datatypes::{CashFlow, Currency, Quote, Ticker, 
+use crate::datatypes::{
     date_time_helper::{
-        date_time_from_str_american, 
-        date_from_str, 
-        unix_to_date_time,
-        naive_date_to_date_time,
-    }
+        date_from_str, date_time_from_str_american, naive_date_to_date_time, unix_to_date_time,
+    },
+    CashFlow, Currency, Quote, Ticker,
 };
 
 type DividendHistory = Vec<gfapi::Dividend>;
@@ -52,9 +50,7 @@ impl MarketQuoteProvider for GuruFocus {
         start: DateTime<Local>,
         end: DateTime<Local>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
-        let gf_quotes = self
-            .connector
-            .get_price_hist(&ticker.name).await?;
+        let gf_quotes = self.connector.get_price_hist(&ticker.name).await?;
 
         let gf_quotes: Vec<(String, f64)> = serde_json::from_value(gf_quotes)?;
 
@@ -82,16 +78,15 @@ impl MarketQuoteProvider for GuruFocus {
         start: DateTime<Local>,
         end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
-        let gf_dividends = self
-            .connector
-            .get_dividend_history(&ticker.name).await?;
+        let gf_dividends = self.connector.get_dividend_history(&ticker.name).await?;
         let dividends: DividendHistory = serde_json::from_value(gf_dividends)?;
         let mut div_cash_flows = Vec::new();
         for div in dividends {
-            let pay_date = date_from_str(&div.pay_date,"%Y-%m-%d")?;
+            let pay_date = date_from_str(&div.pay_date, "%Y-%m-%d")?;
             let pay_date_time = naive_date_to_date_time(&pay_date, 18, ticker.tz.clone())?;
             if pay_date_time >= start && pay_date_time <= end {
-                let currency = Currency::from_str(&div.currency)?;                div_cash_flows.push(CashFlow::new(div.amount.into(), currency, pay_date));
+                let currency = Currency::from_str(&div.currency)?;
+                div_cash_flows.push(CashFlow::new(div.amount.into(), currency, pay_date));
             }
         }
         Ok(div_cash_flows)
@@ -102,8 +97,8 @@ impl MarketQuoteProvider for GuruFocus {
 mod tests {
     use super::*;
     use crate::datatypes::Currency;
-    use chrono::offset::TimeZone;
     use crate::market_quotes::MarketDataSource;
+    use chrono::offset::TimeZone;
     use std::env;
     use std::str::FromStr;
 

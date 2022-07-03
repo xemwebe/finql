@@ -1,8 +1,8 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use crate::datatypes::currency::Currency;
 use crate::datatypes::cash_flow::{CashAmount, CashFlow};
+use crate::datatypes::currency::Currency;
 
 use crate::day_count_conv::DayCountConv;
 

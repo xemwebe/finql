@@ -1,20 +1,12 @@
-use chrono::naive::NaiveDate;
 use async_trait::async_trait;
+use chrono::naive::NaiveDate;
 use log::{debug, trace};
 use thiserror::Error;
 
 use crate::datatypes::{
-    Transaction, 
-    TransactionType, 
-    CashFlow,
-    date_time_helper::naive_date_to_date_time
+    date_time_helper::naive_date_to_date_time, CashFlow, Transaction, TransactionType,
 };
-use crate::{
-    portfolio::PortfolioPosition,
-    Market,
-    time_period::TimePeriod, 
-};
-
+use crate::{portfolio::PortfolioPosition, time_period::TimePeriod, Market};
 
 #[derive(Error, Debug)]
 pub enum StrategyError {
@@ -33,11 +25,15 @@ pub struct StockTransactionFee {
 
 impl StockTransactionFee {
     pub fn new(min_fee: f64, max_fee: Option<f64>, proportional_fee: f64) -> Self {
-        StockTransactionFee{min_fee, max_fee, proportional_fee}
+        StockTransactionFee {
+            min_fee,
+            max_fee,
+            proportional_fee,
+        }
     }
 
     pub fn calc_fee(&self, total_price: f64) -> f64 {
-        let fee = (total_price*self.proportional_fee).max(self.min_fee);
+        let fee = (total_price * self.proportional_fee).max(self.min_fee);
         if let Some(max_fee) = self.max_fee {
             fee.min(max_fee)
         } else {
@@ -46,7 +42,7 @@ impl StockTransactionFee {
     }
 }
 
-#[derive(Default,Debug,Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct StockTransactionCosts {
     pub fee: StockTransactionFee,
     pub tax_rate: f64,
@@ -54,10 +50,13 @@ pub struct StockTransactionCosts {
 
 #[async_trait]
 pub trait Strategy {
-    async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>,  StrategyError>;
+    async fn apply(
+        &self,
+        position: &PortfolioPosition,
+        date: NaiveDate,
+    ) -> Result<Vec<Transaction>, StrategyError>;
     fn next_day(&self, date: NaiveDate) -> NaiveDate;
 }
-
 
 fn cash_flow_idx(date: NaiveDate, cash_flows: &[CashFlow]) -> Option<usize> {
     for (i, cf) in cash_flows.iter().enumerate() {
@@ -75,8 +74,12 @@ pub struct StaticInSingleStock {
 }
 
 impl StaticInSingleStock {
-    pub fn new(asset_id: i32, dividends: Vec<CashFlow>, costs: StockTransactionCosts) -> StaticInSingleStock {
-        StaticInSingleStock{
+    pub fn new(
+        asset_id: i32,
+        dividends: Vec<CashFlow>,
+        costs: StockTransactionCosts,
+    ) -> StaticInSingleStock {
+        StaticInSingleStock {
             asset_id,
             dividends,
             costs,
@@ -86,7 +89,11 @@ impl StaticInSingleStock {
 
 #[async_trait]
 impl Strategy for StaticInSingleStock {
-    async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>, StrategyError> {
+    async fn apply(
+        &self,
+        position: &PortfolioPosition,
+        date: NaiveDate,
+    ) -> Result<Vec<Transaction>, StrategyError> {
         let mut transactions = Vec::new();
         if let Some(idx) = cash_flow_idx(date, &self.dividends) {
             let mut dividend = self.dividends[idx];
@@ -101,24 +108,32 @@ impl Strategy for StaticInSingleStock {
                 cash_flow: dividend,
                 note: None,
             };
-            trace!("ReinvestInSingleStock: added transaction {:?}", dividend_transaction);
+            trace!(
+                "ReinvestInSingleStock: added transaction {:?}",
+                dividend_transaction
+            );
             transactions.push(dividend_transaction);
 
             if tax.amount.amount != 0.0 {
-            let tax_transaction = Transaction {
-                id: None,
-                transaction_type: TransactionType::Tax {
-                    transaction_ref: None,
-                },
-                cash_flow: tax,
-                note: None,
-            };
-            trace!("ReinvestInSingleStock: added transaction {:?}", tax_transaction);
-            transactions.push(tax_transaction);
-
+                let tax_transaction = Transaction {
+                    id: None,
+                    transaction_type: TransactionType::Tax {
+                        transaction_ref: None,
+                    },
+                    cash_flow: tax,
+                    note: None,
+                };
+                trace!(
+                    "ReinvestInSingleStock: added transaction {:?}",
+                    tax_transaction
+                );
+                transactions.push(tax_transaction);
+            }
+            debug!(
+                "StaticInSingleStock: added dividend without amount {} and tax {} at date {}.",
+                dividend.amount.amount, -tax.amount.amount, date
+            );
         }
-            debug!("StaticInSingleStock: added dividend without amount {} and tax {} at date {}.", dividend.amount.amount, -tax.amount.amount, date);
-        } 
         Ok(transactions)
     }
 
@@ -127,7 +142,6 @@ impl Strategy for StaticInSingleStock {
         one_day.add_to(date, None)
     }
 }
-
 
 pub struct ReInvestInSingleStock {
     asset_id: i32,
@@ -138,7 +152,13 @@ pub struct ReInvestInSingleStock {
 }
 
 impl ReInvestInSingleStock {
-    pub fn new(asset_id: i32, ticker_id: i32, market: Market, dividends: Vec<CashFlow>, costs: StockTransactionCosts) -> ReInvestInSingleStock {
+    pub fn new(
+        asset_id: i32,
+        ticker_id: i32,
+        market: Market,
+        dividends: Vec<CashFlow>,
+        costs: StockTransactionCosts,
+    ) -> ReInvestInSingleStock {
         ReInvestInSingleStock {
             asset_id,
             ticker_id,
@@ -151,14 +171,19 @@ impl ReInvestInSingleStock {
 
 #[async_trait]
 impl Strategy for ReInvestInSingleStock {
-    async fn apply(&self, position: &PortfolioPosition, date: NaiveDate) -> Result<Vec<Transaction>, StrategyError> {
+    async fn apply(
+        &self,
+        position: &PortfolioPosition,
+        date: NaiveDate,
+    ) -> Result<Vec<Transaction>, StrategyError> {
         let mut transactions = Vec::new();
         if let Some(idx) = cash_flow_idx(date, &self.dividends) {
             let mut dividend = self.dividends[idx];
             dividend.amount.amount *= position.assets[&self.asset_id].position;
             let mut tax = dividend;
             tax.amount.amount = -self.costs.tax_rate * dividend.amount.amount;
-            let available_cash = dividend.amount.amount + tax.amount.amount + position.cash.position;
+            let available_cash =
+                dividend.amount.amount + tax.amount.amount + position.cash.position;
             let dividend_transaction = Transaction {
                 id: None,
                 transaction_type: TransactionType::Dividend {
@@ -167,7 +192,10 @@ impl Strategy for ReInvestInSingleStock {
                 cash_flow: dividend,
                 note: None,
             };
-            trace!("ReinvestInSingleStock: added transaction {:?}", dividend_transaction);
+            trace!(
+                "ReinvestInSingleStock: added transaction {:?}",
+                dividend_transaction
+            );
             transactions.push(dividend_transaction);
             if tax.amount.amount != 0.0 {
                 let tax_transaction = Transaction {
@@ -178,40 +206,61 @@ impl Strategy for ReInvestInSingleStock {
                     cash_flow: tax,
                     note: None,
                 };
-                trace!("ReinvestInSingleStock: added transaction {:?}", tax_transaction);
+                trace!(
+                    "ReinvestInSingleStock: added transaction {:?}",
+                    tax_transaction
+                );
                 transactions.push(tax_transaction);
             }
             // reinvest in stock
-            let (asset_quote, _quote_currency) = self.market.db().get_last_quote_before_by_id(self.ticker_id, naive_date_to_date_time(&date, 20, None)?).await?;
-            let (additional_position, fee) = self.calc_position_and_fee(available_cash, asset_quote.price);
-            if additional_position>0.0 {
-                let buy_transaction = Transaction{
+            let (asset_quote, _quote_currency) = self
+                .market
+                .db()
+                .get_last_quote_before_by_id(
+                    self.ticker_id,
+                    naive_date_to_date_time(&date, 20, None)?,
+                )
+                .await?;
+            let (additional_position, fee) =
+                self.calc_position_and_fee(available_cash, asset_quote.price);
+            if additional_position > 0.0 {
+                let buy_transaction = Transaction {
                     id: None,
-                    transaction_type: TransactionType::Asset{
+                    transaction_type: TransactionType::Asset {
                         asset_id: self.asset_id,
                         position: additional_position,
                     },
-                    cash_flow: CashFlow::new(-additional_position*asset_quote.price, position.cash.currency, date),
+                    cash_flow: CashFlow::new(
+                        -additional_position * asset_quote.price,
+                        position.cash.currency,
+                        date,
+                    ),
                     note: None,
                 };
-                trace!("ReinvestInSingleStock: added transaction {:?}", buy_transaction);
+                trace!(
+                    "ReinvestInSingleStock: added transaction {:?}",
+                    buy_transaction
+                );
                 transactions.push(buy_transaction);
-                if fee!=0.0 {
-                    let fee_transaction = Transaction{
+                if fee != 0.0 {
+                    let fee_transaction = Transaction {
                         id: None,
-                        transaction_type: TransactionType::Fee{
+                        transaction_type: TransactionType::Fee {
                             transaction_ref: None,
                         },
                         cash_flow: CashFlow::new(-fee, position.cash.currency, date),
                         note: None,
                     };
-                    trace!("ReinvestInSingleStock: added transaction {:?}", fee_transaction);
+                    trace!(
+                        "ReinvestInSingleStock: added transaction {:?}",
+                        fee_transaction
+                    );
                     transactions.push(fee_transaction);
                 }
             }
             debug!("ReInvestInSingleStock: added dividend with amount {} and tax {} and buying {} shares with fee {} from available cash {} with price {} at date {}.", 
                 dividend.amount.amount, -tax.amount.amount, additional_position, fee, available_cash, asset_quote.price, date);
-        } 
+        }
 
         Ok(transactions)
     }
@@ -223,13 +272,12 @@ impl Strategy for ReInvestInSingleStock {
 }
 
 impl ReInvestInSingleStock {
-
     fn calc_position_and_fee(&self, cash: f64, price: f64) -> (f64, f64) {
-        let mut max_position = (cash/price).floor();
-        let mut fee = self.costs.fee.calc_fee(max_position*price);
-        while max_position>0.0 && (max_position*price-fee)<0.0 {
+        let mut max_position = (cash / price).floor();
+        let mut fee = self.costs.fee.calc_fee(max_position * price);
+        while max_position > 0.0 && (max_position * price - fee) < 0.0 {
             max_position -= 1.0;
-            fee = self.costs.fee.calc_fee(max_position*price);
+            fee = self.costs.fee.calc_fee(max_position * price);
         }
         (max_position, fee)
     }

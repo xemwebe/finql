@@ -7,15 +7,15 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt;
 
-use crate::datatypes::currency::Currency;
 use crate::datatypes::cash_flow::CashFlow;
+use crate::datatypes::currency::Currency;
 
 use crate::day_adjust::DayAdjust;
 use crate::day_count_conv::{DayCountConv, DayCountConvError};
 use crate::fixed_income::FixedIncome;
 use crate::rates::DiscountError;
 use crate::time_period::TimePeriod;
-use cal_calc::{CalendarProvider,CalendarNotFound};
+use cal_calc::{CalendarNotFound, CalendarProvider};
 
 /// Error related to bonds
 #[derive(Debug)]
@@ -64,7 +64,6 @@ impl From<crate::rates::DiscountError> for BondError {
         BondError::DiscountingFailure(error)
     }
 }
-
 
 /// Container for bonds and similar fixed income assets
 #[derive(Deserialize, Serialize, Debug)]
@@ -224,10 +223,10 @@ impl FixedIncome for Bond {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-    use cal_calc::SimpleCalendar;
-    use crate::market::generate_calendars;
     use super::*;
+    use crate::market::generate_calendars;
+    use cal_calc::SimpleCalendar;
+    use std::str::FromStr;
 
     #[test]
     fn cash_flow_rollout_unadjusted() {

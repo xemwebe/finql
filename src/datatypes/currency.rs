@@ -1,49 +1,24 @@
-use std::error;
 use std::fmt;
 use std::str::FromStr;
 
+use super::{DataError, DataItem};
 use async_trait::async_trait;
+use chrono::{DateTime, Local};
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use chrono::{DateTime, Local};
-use super::{DataError, DataItem};
+use thiserror::Error;
 
 /// Error type related to the Currency
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Error, Debug)]
 pub enum CurrencyError {
+    #[error("currency codes must consist of exactly three characters")]
     InvalidLength,
+    #[error("urrency codes must contain only alphabetic ASCII characters")]
     InvalidCharacter,
+    #[error("currency deserialization failed")]
     DeserializationFailed,
+    #[error("currency conversion failed")]
     ConversionFailed,
-}
-
-impl fmt::Display for CurrencyError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            CurrencyError::InvalidLength => {
-                write!(f, "currency codes must consist of exactly three characters")
-            }
-            CurrencyError::InvalidCharacter => write!(
-                f,
-                "currency codes must contain only alphabetic ASCII characters"
-            ),
-            CurrencyError::DeserializationFailed => write!(f, "currency deserialization failed"),
-            CurrencyError::ConversionFailed => write!(f, "currency conversion failed"),
-        }
-    }
-}
-
-/// This is important for other errors to wrap this one.
-impl error::Error for CurrencyError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        None
-    }
-}
-
-impl de::Error for CurrencyError {
-    fn custom<T: fmt::Display>(_: T) -> Self {
-        CurrencyError::DeserializationFailed
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]
@@ -71,11 +46,7 @@ impl CurrencyISOCode {
         if idx != 3 {
             Err(CurrencyError::InvalidLength)
         } else {
-            Ok(
-                Self {
-                    iso_code
-                }
-            )
+            Ok(Self { iso_code })
         }
     }
 }
@@ -94,7 +65,7 @@ impl FromStr for CurrencyISOCode {
     type Err = CurrencyError;
 
     fn from_str(c: &str) -> Result<CurrencyISOCode, CurrencyError> {
-        Ok(Self::new(c)?)
+        Self::new(c)
     }
 }
 
@@ -111,18 +82,15 @@ impl Currency {
         Self {
             id,
             iso_code,
-            rounding_digits: rounding_digits.unwrap_or(default_rounding_digits(&iso_code.to_string())),
+            rounding_digits: rounding_digits
+                .unwrap_or_else(|| default_rounding_digits(&iso_code.to_string())),
         }
     }
 }
 
 impl fmt::Display for Currency {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.iso_code.to_string(),
-        )
+        write!(f, "{}", self.iso_code,)
     }
 }
 
@@ -131,15 +99,17 @@ impl DataItem for Currency {
         match self.id {
             Some(id) => Ok(id),
             None => Err(DataError::DataAccessFailure(
-                "Can't get id of temporary currency".to_string()))
+                "Can't get id of temporary currency".to_string(),
+            )),
         }
     }
 
     fn set_id(&mut self, id: i32) -> Result<(), DataError> {
         match self.id {
             Some(_) => Err(DataError::DataAccessFailure(
-                "Can't change id of persistent currency".to_string())),
-            None => { 
+                "Can't change id of persistent currency".to_string(),
+            )),
+            None => {
                 self.id = Some(id);
                 Ok(())
             }
@@ -150,7 +120,7 @@ impl DataItem for Currency {
 fn default_rounding_digits(curr: &str) -> i32 {
     match curr {
         "JPY" | "TRL" => 0,
-        _ => 2
+        _ => 2,
     }
 }
 
@@ -211,7 +181,12 @@ impl Currency {
 #[async_trait]
 pub trait CurrencyConverter {
     /// returns the price of 1 unit of foreign currency in terms of domestic currency
-    async fn fx_rate(&self, foreign_currency: Currency, domestic_currency: Currency, time: DateTime<Local>) -> Result<f64, CurrencyError>;
+    async fn fx_rate(
+        &self,
+        foreign_currency: Currency,
+        domestic_currency: Currency,
+        time: DateTime<Local>,
+    ) -> Result<f64, CurrencyError>;
 }
 
 #[cfg(test)]
@@ -257,7 +232,7 @@ mod tests {
         let curr = Currency {
             id: None,
             iso_code: CurrencyISOCode::from_str("EUR").unwrap(),
-            rounding_digits: 2
+            rounding_digits: 2,
         };
         let json = serde_json::to_string(&curr).unwrap();
         assert_eq!(json, r#""EUR""#);

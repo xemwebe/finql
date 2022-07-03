@@ -2,15 +2,14 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use chrono::{DateTime, Local};
+use crate::datatypes::{CashFlow, Quote, QuoteHandler, Ticker};
+use alpha_vantage;
 use async_trait::async_trait;
+use chrono::{DateTime, Local};
+use gurufocus_api;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use thiserror::Error;
-use alpha_vantage;
-use gurufocus_api;
-use crate::datatypes::{QuoteHandler, CashFlow, Quote, Ticker};
-
 
 pub mod alpha_vantage_wrapper;
 pub mod comdirect;
@@ -46,10 +45,9 @@ pub enum MarketQuoteError {
     UnexpectedError(String),
 }
 
-
 /// General interface for market data quotes provider
 #[async_trait]
-pub trait MarketQuoteProvider: Send+Sync {
+pub trait MarketQuoteProvider: Send + Sync {
     /// Fetch latest quote
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError>;
     /// Fetch historic quotes between start and end date
@@ -72,7 +70,7 @@ pub trait MarketQuoteProvider: Send+Sync {
 pub async fn update_ticker<'a>(
     provider: &(dyn MarketQuoteProvider + Send + Sync),
     ticker: &Ticker,
-    db: Arc<dyn QuoteHandler+Send+Sync+'a>,
+    db: Arc<dyn QuoteHandler + Send + Sync + 'a>,
 ) -> Result<(), MarketQuoteError> {
     let mut quote = provider.fetch_latest_quote(ticker).await?;
     quote.price *= ticker.factor;
@@ -80,11 +78,10 @@ pub async fn update_ticker<'a>(
     Ok(())
 }
 
-
 pub async fn update_ticker_history<'a>(
     provider: &(dyn MarketQuoteProvider + Send + Sync),
     ticker: &Ticker,
-    db: Arc<dyn QuoteHandler+Send+Sync+'a>,
+    db: Arc<dyn QuoteHandler + Send + Sync + 'a>,
     start: DateTime<Local>,
     end: DateTime<Local>,
 ) -> Result<(), MarketQuoteError> {
@@ -95,7 +92,6 @@ pub async fn update_ticker_history<'a>(
     }
     Ok(())
 }
-
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum MarketDataSource {
@@ -110,7 +106,7 @@ pub enum MarketDataSource {
 #[derive(Error, Debug, Clone)]
 pub enum MarketDataSourceError {
     #[error("Parsing market data source failed")]
-    ParseError
+    ParseError,
 }
 
 impl FromStr for MarketDataSource {
@@ -146,26 +142,31 @@ impl MarketDataSource {
     pub fn get_provider(
         &self,
         token: String,
-    ) -> Option<Arc<dyn MarketQuoteProvider+Send+Sync>> {
+    ) -> Option<Arc<dyn MarketQuoteProvider + Send + Sync>> {
         match self {
             Self::Yahoo => Some(Arc::new(yahoo::Yahoo {})),
             Self::GuruFocus => Some(Arc::new(guru_focus::GuruFocus::new(token))),
-            Self::EodHistData => Some(Arc::new(
-                eod_historical_data::EODHistData::new(token))),
-            Self::AlphaVantage => Some(Arc::new(
-                alpha_vantage_wrapper::AlphaVantage::new(token))),
+            Self::EodHistData => Some(Arc::new(eod_historical_data::EODHistData::new(token))),
+            Self::AlphaVantage => Some(Arc::new(alpha_vantage_wrapper::AlphaVantage::new(token))),
             Self::Comdirect => Some(Arc::new(comdirect::Comdirect::new())),
             _ => None,
         }
     }
 
     pub fn extern_sources() -> Vec<String> {
-        let v: Vec<String> = vec!["yahoo", "gurufocus", "eodhistdata", "alpha_vantage", "comdirect"]
-            .into_iter().map(|x| x.to_string()).collect();
+        let v: Vec<String> = vec![
+            "yahoo",
+            "gurufocus",
+            "eodhistdata",
+            "alpha_vantage",
+            "comdirect",
+        ]
+        .into_iter()
+        .map(|x| x.to_string())
+        .collect();
         v
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -175,7 +176,7 @@ mod tests {
     use chrono::{Duration, Local};
     use rand::Rng;
 
-    use crate::datatypes::{Stock, Asset, CurrencyISOCode, QuoteHandler};
+    use crate::datatypes::{Asset, CurrencyISOCode, QuoteHandler, Stock};
     use crate::postgres::PostgresDB;
 
     struct DummyProvider {}
@@ -216,13 +217,17 @@ mod tests {
             Ok(quotes)
         }
 
-        async fn fetch_dividend_history(&self, _ticker: &Ticker, _start: DateTime<Local>, _end: DateTime<Local>) 
-            -> Result<Vec<CashFlow>, MarketQuoteError> {
+        async fn fetch_dividend_history(
+            &self,
+            _ticker: &Ticker,
+            _start: DateTime<Local>,
+            _end: DateTime<Local>,
+        ) -> Result<Vec<CashFlow>, MarketQuoteError> {
             Ok(Vec::new())
         }
     }
 
-    async fn prepare_db(db: Arc<dyn QuoteHandler+Send+Sync>) -> Ticker {
+    async fn prepare_db(db: Arc<dyn QuoteHandler + Send + Sync>) -> Ticker {
         let asset_id = db
             .insert_asset(&Asset::Stock(Stock::new(
                 None,
@@ -231,9 +236,13 @@ mod tests {
                 None,
                 None,
             )))
-            .await.unwrap();
+            .await
+            .unwrap();
 
-        let eur = db.get_or_new_currency(CurrencyISOCode::new("EUR").unwrap()).await.unwrap();
+        let eur = db
+            .get_or_new_currency(CurrencyISOCode::new("EUR").unwrap())
+            .await
+            .unwrap();
         let mut ticker = Ticker {
             id: None,
             asset: asset_id,
@@ -254,9 +263,11 @@ mod tests {
     async fn test_fetch_latest_quote() {
         let tol = 1.0e-6;
 
-        let db_url  = std::env::var("FINQL_TEST_DATABASE_URL");
-        assert!(db_url.is_ok(), 
-            "environment variable $FINQL_TEST_DATABASE_URL is not set");
+        let db_url = std::env::var("FINQL_TEST_DATABASE_URL");
+        assert!(
+            db_url.is_ok(),
+            "environment variable $FINQL_TEST_DATABASE_URL is not set"
+        );
         let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
         db.clean().await.unwrap();
 
@@ -264,7 +275,10 @@ mod tests {
         let ticker = prepare_db(db.clone()).await;
         let provider = DummyProvider {};
         update_ticker(&provider, &ticker, db.clone()).await.unwrap();
-        let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
+        let quotes = db
+            .get_all_quotes_for_ticker(ticker.id.unwrap())
+            .await
+            .unwrap();
         assert_eq!(quotes.len(), 1);
         assert_fuzzy_eq!(quotes[0].price, 1.23, tol);
     }
@@ -272,10 +286,12 @@ mod tests {
     #[tokio::test]
     async fn test_fetch_quote_history() {
         let tol = 1.0e-6;
-        
-        let db_url  = std::env::var("FINQL_TEST_DATABASE_URL");
-        assert!(db_url.is_ok(), 
-            "environment variable $FINQL_TEST_DATABASE_URL is not set");
+
+        let db_url = std::env::var("FINQL_TEST_DATABASE_URL");
+        assert!(
+            db_url.is_ok(),
+            "environment variable $FINQL_TEST_DATABASE_URL is not set"
+        );
         let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
         db.clean().await.unwrap();
 
@@ -284,8 +300,13 @@ mod tests {
         let provider = DummyProvider {};
         let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
         let end = Local.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        update_ticker_history(&provider, &ticker, db.clone(), start, end).await.unwrap();
-        let quotes = db.get_all_quotes_for_ticker(ticker.id.unwrap()).await.unwrap();
+        update_ticker_history(&provider, &ticker, db.clone(), start, end)
+            .await
+            .unwrap();
+        let quotes = db
+            .get_all_quotes_for_ticker(ticker.id.unwrap())
+            .await
+            .unwrap();
         assert_eq!(quotes.len(), 31);
         assert_fuzzy_eq!(quotes[0].price, 1.23, tol);
     }

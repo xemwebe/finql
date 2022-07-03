@@ -1,9 +1,9 @@
 /// A tool to fetch prices by parsing comdirect web page
 use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::datatypes::{CashFlow, Quote, Ticker, date_time_helper::date_time_from_str};
+use crate::datatypes::{date_time_helper::date_time_from_str, CashFlow, Quote, Ticker};
+use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use scraper::{Html, Selector};
-use async_trait::async_trait;
 use tokio_compat_02::FutureExt;
 
 #[derive(Debug)]
@@ -31,7 +31,9 @@ impl Comdirect {
     }
 
     pub async fn get_latest_quote(&self, id: &str) -> Result<f64, MarketQuoteError> {
-        let resp = reqwest::get(&format!("{}{}", self.url, id)).compat().await?;        
+        let resp = reqwest::get(&format!("{}{}", self.url, id))
+            .compat()
+            .await?;
         if !resp.status().is_success() {
             return Err(MarketQuoteError::UnexpectedError(
                 "unexpected server response".to_string(),
@@ -47,7 +49,7 @@ impl Comdirect {
         match fragment.select(&quote_selector).next() {
             Some(first_quote) => {
                 let quote = first_quote.text().collect::<Vec<_>>();
-                Ok(quote[0].replace(".", "").replace(",", ".").parse()?)
+                Ok(quote[0].replace('.', "").replace(',', ".").parse()?)
             }
             None => Err(MarketQuoteError::UnexpectedError(
                 "couldn't found quote".to_string(),
@@ -107,7 +109,8 @@ impl Comdirect {
             if close.is_none() {
                 continue;
             }
-            let date_time_str = record.get(0)
+            let date_time_str = record
+                .get(0)
                 .ok_or_else(|| MarketQuoteError::UnexpectedError("empty field".to_string()))?;
             let date = date_time_from_str(date_time_str, "%d.%m.%Y", 18, None);
             if date.is_err() {
@@ -125,7 +128,7 @@ impl Comdirect {
     fn num_opt(num_str: Option<&str>) -> Option<f64> {
         match num_str {
             None => None,
-            Some(num_str) => num_str.replace(".", "").replace(",", ".").parse().ok(),
+            Some(num_str) => num_str.replace('.', "").replace(',', ".").parse().ok(),
         }
     }
 }
@@ -181,18 +184,20 @@ impl MarketQuoteProvider for Comdirect {
         _start: DateTime<Local>,
         _end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
-        Err(MarketQuoteError::UnexpectedError("The comdirect interface does not support fetching dividends".to_string()))
+        Err(MarketQuoteError::UnexpectedError(
+            "The comdirect interface does not support fetching dividends".to_string(),
+        ))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-    use chrono::offset::TimeZone;
-    use crate::datatypes::Currency;
     use super::*;
+    use crate::datatypes::Currency;
     use crate::market_quotes::MarketDataSource;
-    
+    use chrono::offset::TimeZone;
+    use std::str::FromStr;
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_comdirect_fetch_quote() {
         let codi = Comdirect::new();

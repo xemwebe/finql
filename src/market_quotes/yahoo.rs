@@ -1,8 +1,8 @@
 use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::datatypes::{CashFlow, Quote, Ticker, date_time_helper::unix_to_date_time};
+use crate::datatypes::{date_time_helper::unix_to_date_time, CashFlow, Quote, Ticker};
+use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use yahoo_finance_api as yahoo;
-use async_trait::async_trait;
 
 pub struct Yahoo {}
 
@@ -11,8 +11,7 @@ impl MarketQuoteProvider for Yahoo {
     /// Fetch latest quote
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new();
-        let response = yahoo
-            .get_latest_quotes(&ticker.name, "1m").await?;
+        let response = yahoo.get_latest_quotes(&ticker.name, "1m").await?;
         let quote = response.last_quote()?;
         Ok(Quote {
             id: None,
@@ -31,7 +30,8 @@ impl MarketQuoteProvider for Yahoo {
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new();
         let response = yahoo
-            .get_quote_history(&ticker.name, start.into(), end.into()).await?;
+            .get_quote_history(&ticker.name, start.into(), end.into())
+            .await?;
         let yahoo_quotes = response.quotes()?;
         let mut quotes = Vec::new();
         for quote in &yahoo_quotes {
@@ -56,13 +56,19 @@ impl MarketQuoteProvider for Yahoo {
         end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new();
-        let response = yahoo.get_quote_history(&ticker.name, start.into(), end.into()).await?;
+        let response = yahoo
+            .get_quote_history(&ticker.name, start.into(), end.into())
+            .await?;
         let yahoo_dividends = response.dividends()?;
         let mut dividends = Vec::new();
         for dividend in &yahoo_dividends {
             let amount = dividend.amount;
             let time = unix_to_date_time(dividend.date);
-            dividends.push(CashFlow::new(amount, ticker.currency, time.naive_local().date()));
+            dividends.push(CashFlow::new(
+                amount,
+                ticker.currency,
+                time.naive_local().date(),
+            ));
         }
         Ok(dividends)
     }
@@ -70,15 +76,15 @@ impl MarketQuoteProvider for Yahoo {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-    use chrono::offset::{TimeZone};
+    use chrono::offset::TimeZone;
     use chrono_tz::America::New_York;
+    use std::str::FromStr;
 
     use crate::datatypes::Currency;
-    
-    use crate::market_quotes::MarketDataSource;
+
     use super::*;
- 
+    use crate::market_quotes::MarketDataSource;
+
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_yahoo_fetch_quote() {
         let yahoo = Yahoo {};
@@ -111,9 +117,18 @@ mod tests {
             tz: None,
             cal: None,
         };
-        let start = New_York.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0).with_timezone(&Local);
-        let end = New_York.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999).with_timezone(&Local);
-        let quotes = yahoo.fetch_quote_history(&ticker, start, end).await.unwrap();
+        let start = New_York
+            .ymd(2020, 1, 1)
+            .and_hms_milli(0, 0, 0, 0)
+            .with_timezone(&Local);
+        let end = New_York
+            .ymd(2020, 1, 31)
+            .and_hms_milli(23, 59, 59, 999)
+            .with_timezone(&Local);
+        let quotes = yahoo
+            .fetch_quote_history(&ticker, start, end)
+            .await
+            .unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);
     }

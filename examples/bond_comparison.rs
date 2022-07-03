@@ -1,11 +1,14 @@
+use cal_calc::SimpleCalendar;
+use chrono::NaiveDate;
+use finql::datatypes::{CashFlow, Currency};
+use finql::{
+    bond::Bond,
+    fixed_income::{get_cash_flows_after, FixedIncome},
+};
+use serde_json;
 use std::fs::File;
 use std::io::Read;
 use std::str::FromStr;
-use serde_json;
-use chrono::NaiveDate;
-use finql::datatypes::{Currency, CashFlow};
-use finql::{fixed_income::{get_cash_flows_after, FixedIncome}, bond::Bond};
-use cal_calc::SimpleCalendar;
 
 #[tokio::main]
 async fn main() {
@@ -56,8 +59,12 @@ async fn main() {
     let purchase2_cash_flow = CashFlow::new(-dirty_price2 * price_quote_factor2, eur_curr, today);
     println!(
         "Yield-to-Maturity: {:16.4}%|{:16.4}%",
-        100. * bond1.calculate_ytm(&purchase1_cash_flow, &calendar).unwrap(),
-        100. * bond2.calculate_ytm(&purchase2_cash_flow, &calendar).unwrap()
+        100. * bond1
+            .calculate_ytm(&purchase1_cash_flow, &calendar)
+            .unwrap(),
+        100. * bond2
+            .calculate_ytm(&purchase2_cash_flow, &calendar)
+            .unwrap()
     );
     println!("\n    Future cash flows bond1      |    Future cash flows bond2");
     println!("===================================================================");

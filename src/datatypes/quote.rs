@@ -17,7 +17,7 @@ pub struct Ticker {
     pub priority: i32,
     pub factor: f64,
     pub tz: Option<String>,
-    pub cal: Option<String>
+    pub cal: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,8 +47,7 @@ impl PartialEq for Quote {
     }
 }
 
-impl Eq for Quote { }
-
+impl Eq for Quote {}
 
 impl DataItem for Quote {
     // get id or return error if id hasn't been set yet

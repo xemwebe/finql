@@ -1,83 +1,90 @@
+use std::cmp::min;
+use std::error::Error;
 ///! Demonstrate total return calculation by single investment in dividend stock
 ///! Example storing general calendars as JSON object in PostgreSQL
 ///! Please note: All existing content of the database will be deleted!
-
 use std::sync::Arc;
-use std::cmp::min;
-use std::error::Error;
 
-use pretty_env_logger;
+use chrono::{Datelike, Local, NaiveDate};
 use log::debug;
-use chrono::{Local, NaiveDate, Datelike};
 use plotters::prelude::*;
+use pretty_env_logger;
 
-use finql::datatypes::{Asset, CashFlow, Currency, Ticker, Stock, QuoteHandler, 
-    Transaction, TransactionType, date_time_helper::{make_time, naive_date_to_date_time}};
-use finql::{
-    Market,
-    time_period::TimePeriod, 
-    market_quotes::{
-        MarketDataSource},
-    portfolio::{
-        PortfolioPosition,
-        calc_delta_position,
-    },
-    strategy::{
-        Strategy, 
-        ReInvestInSingleStock,
-        StaticInSingleStock,
-        StockTransactionCosts,
-        StockTransactionFee,
-    },
-    time_series::{TimeSeries, TimeValue, TimeSeriesError},
+use cal_calc::last_day_of_month;
+use finql::datatypes::{
+    date_time_helper::{make_time, naive_date_to_date_time},
+    Asset, CashFlow, Currency, QuoteHandler, Stock, Ticker, Transaction, TransactionType,
 };
 use finql::postgres::PostgresDB;
-use cal_calc::last_day_of_month;
+use finql::{
+    market_quotes::MarketDataSource,
+    portfolio::{calc_delta_position, PortfolioPosition},
+    strategy::{
+        ReInvestInSingleStock, StaticInSingleStock, StockTransactionCosts, StockTransactionFee,
+        Strategy,
+    },
+    time_period::TimePeriod,
+    time_series::{TimeSeries, TimeSeriesError, TimeValue},
+    Market,
+};
 
-
-async fn calc_strategy(currency: Currency, start_transactions: &Vec<Transaction>, strategy: &dyn Strategy, start: NaiveDate, end: NaiveDate, market: &Market) -> Vec<TimeValue> {
-
+async fn calc_strategy(
+    currency: Currency,
+    start_transactions: &Vec<Transaction>,
+    strategy: &dyn Strategy,
+    start: NaiveDate,
+    end: NaiveDate,
+    market: &Market,
+) -> Vec<TimeValue> {
     let mut current_date = start;
     let mut total_return = Vec::new();
     let mut transactions = start_transactions.clone();
 
     let mut position = PortfolioPosition::new(currency);
-    calc_delta_position(
-        &mut position,
-        &transactions,
-        Some(start),
-        Some(start)).unwrap();
+    calc_delta_position(&mut position, &transactions, Some(start), Some(start)).unwrap();
 
-    position.add_quote(naive_date_to_date_time(&start, 20, None).unwrap(), &market).await;
+    position
+        .add_quote(naive_date_to_date_time(&start, 20, None).unwrap(), &market)
+        .await;
     //let totals = position.calc_totals();
     //total_return.push(TimeValue{ value: totals.value, date: current_date});
-    
+
     while current_date < end {
         // Update list of transactions with new strategic transactions for the current day
         let mut new_transactions = strategy.apply(&position, current_date).await.unwrap();
         transactions.append(&mut new_transactions);
-        
+
         // roll position forward to next day
         let next_date = min(end, strategy.next_day(current_date));
-        
+
         // Calculate new position including new transactions
-        debug!("CalcStrategy: cash position before applying new transactions: {}", position.cash.position);
+        debug!(
+            "CalcStrategy: cash position before applying new transactions: {}",
+            position.cash.position
+        );
         calc_delta_position(
             &mut position,
             &transactions,
             Some(current_date),
-            Some(next_date)).unwrap();
-        debug!("CalcStrategy: cash position after applying new transactions: {}", position.cash.position);
+            Some(next_date),
+        )
+        .unwrap();
+        debug!(
+            "CalcStrategy: cash position after applying new transactions: {}",
+            position.cash.position
+        );
 
         current_date = next_date;
         let current_time = naive_date_to_date_time(&current_date, 20, None).unwrap();
         position.add_quote(current_time, &market).await;
         let totals = position.calc_totals();
-        total_return.push(TimeValue{ value: totals.value, time: current_time});
+        total_return.push(TimeValue {
+            value: totals.value,
+            time: current_time,
+        });
     }
     total_return
 }
-
 
 #[tokio::main]
 async fn main() {
@@ -98,7 +105,7 @@ async fn main() {
     println!("The simulation will run from {} until {}.", start, today);
 
     db.clean().await.unwrap();
-    let db: Arc<dyn QuoteHandler+Send+Sync> = Arc::new(db);
+    let db: Arc<dyn QuoteHandler + Send + Sync> = Arc::new(db);
 
     // Define the asset
     let asset = Asset::Stock(Stock::new(
@@ -114,10 +121,7 @@ async fn main() {
     let mut market = Market::new(db.clone());
     let yahoo = MarketDataSource::Yahoo;
     let quote_provider = yahoo.get_provider(String::new()).unwrap();
-    market.add_provider(
-        yahoo.to_string(),
-        quote_provider.clone(),
-    );
+    market.add_provider(yahoo.to_string(), quote_provider.clone());
     let usd = market.get_currency("USD").await.unwrap();
     let ticker = Ticker {
         id: None,
@@ -129,14 +133,19 @@ async fn main() {
         factor: 1.0,
         tz: None,
         cal: None,
-};
+    };
     let ticker_id = db.insert_ticker(&ticker).await.unwrap();
     let start_time = naive_date_to_date_time(&start, 0, None).unwrap();
     let end_time = naive_date_to_date_time(&today, 20, None).unwrap();
-    market.update_quote_history(ticker_id, start_time, end_time).await.unwrap();
-    
-    let dividends = quote_provider.fetch_dividend_history(&ticker, 
-        start_time, end_time).await.unwrap();
+    market
+        .update_quote_history(ticker_id, start_time, end_time)
+        .await
+        .unwrap();
+
+    let dividends = quote_provider
+        .fetch_dividend_history(&ticker, start_time, end_time)
+        .await
+        .unwrap();
     println!("Found {} dividends", dividends.len());
 
     let mut transactions = Vec::new();
@@ -155,46 +164,120 @@ async fn main() {
     println!("Buy transaction for initial stock position");
     transactions.push(Transaction {
         id: None,
-        transaction_type: TransactionType::Asset{
+        transaction_type: TransactionType::Asset {
             asset_id,
-            position: cash_flow.amount.amount/asset_price,
+            position: cash_flow.amount.amount / asset_price,
         },
-        cash_flow: CashFlow{amount: -cash_flow.amount, date: start},
+        cash_flow: CashFlow {
+            amount: -cash_flow.amount,
+            date: start,
+        },
         note: Some("Initial asset buy transaction".to_string()),
     });
 
     let mut all_time_series = Vec::new();
 
-    let reinvest_strategy_no_tax_no_fee = ReInvestInSingleStock::new(asset_id, ticker_id, market.clone(), dividends.clone(), Default::default());
-    let reinvest_returns_no_tax_no_fee =  calc_strategy(usd, &transactions, &reinvest_strategy_no_tax_no_fee, start, today, &market).await;
-    all_time_series.push(TimeSeries{series: reinvest_returns_no_tax_no_fee, title: "AVGO re-invest return, no fees and tax".to_string()});
+    let reinvest_strategy_no_tax_no_fee = ReInvestInSingleStock::new(
+        asset_id,
+        ticker_id,
+        market.clone(),
+        dividends.clone(),
+        Default::default(),
+    );
+    let reinvest_returns_no_tax_no_fee = calc_strategy(
+        usd,
+        &transactions,
+        &reinvest_strategy_no_tax_no_fee,
+        start,
+        today,
+        &market,
+    )
+    .await;
+    all_time_series.push(TimeSeries {
+        series: reinvest_returns_no_tax_no_fee,
+        title: "AVGO re-invest return, no fees and tax".to_string(),
+    });
 
     let costs = StockTransactionCosts {
         fee: StockTransactionFee::new(5.0, Some(30.0), 0.0025),
-        tax_rate: 0.25*1.07,
+        tax_rate: 0.25 * 1.07,
     };
-    let reinvest_strategy = ReInvestInSingleStock::new(asset_id, ticker_id, market.clone(), dividends.clone(), costs.clone());
-    let reinvest_returns =  calc_strategy(usd, &transactions, &reinvest_strategy, start, today, &market).await;
-    all_time_series.push(TimeSeries{series: reinvest_returns, title: "AVGO re-invest return".to_string()});
+    let reinvest_strategy = ReInvestInSingleStock::new(
+        asset_id,
+        ticker_id,
+        market.clone(),
+        dividends.clone(),
+        costs.clone(),
+    );
+    let reinvest_returns = calc_strategy(
+        usd,
+        &transactions,
+        &reinvest_strategy,
+        start,
+        today,
+        &market,
+    )
+    .await;
+    all_time_series.push(TimeSeries {
+        series: reinvest_returns,
+        title: "AVGO re-invest return".to_string(),
+    });
 
-    let static_invest_strategy_no_tax = StaticInSingleStock::new(asset_id, dividends.clone(), Default::default());
-    let static_invest_returns_no_tax =  calc_strategy(usd, &transactions, &static_invest_strategy_no_tax, start, today, &market).await;
-    all_time_series.push(TimeSeries{series: static_invest_returns_no_tax, title: "AVGO static return, no tax".to_string()});
+    let static_invest_strategy_no_tax =
+        StaticInSingleStock::new(asset_id, dividends.clone(), Default::default());
+    let static_invest_returns_no_tax = calc_strategy(
+        usd,
+        &transactions,
+        &static_invest_strategy_no_tax,
+        start,
+        today,
+        &market,
+    )
+    .await;
+    all_time_series.push(TimeSeries {
+        series: static_invest_returns_no_tax,
+        title: "AVGO static return, no tax".to_string(),
+    });
 
     let static_invest_strategy = StaticInSingleStock::new(asset_id, dividends, costs);
-    let static_invest_returns =  calc_strategy(usd, &transactions, &static_invest_strategy, start, today, &market).await;
-    all_time_series.push(TimeSeries{series: static_invest_returns, title: "AVGO static return".to_string()});
+    let static_invest_returns = calc_strategy(
+        usd,
+        &transactions,
+        &static_invest_strategy,
+        start,
+        today,
+        &market,
+    )
+    .await;
+    all_time_series.push(TimeSeries {
+        series: static_invest_returns,
+        title: "AVGO static return".to_string(),
+    });
 
     let no_dividends_strategy = StaticInSingleStock::new(asset_id, Vec::new(), Default::default());
-    let no_dividends_returns =  calc_strategy(usd, &transactions, &no_dividends_strategy, start, today, &market).await;
-    all_time_series.push(TimeSeries{series: no_dividends_returns, title: "AVGO without dividends".to_string()});
+    let no_dividends_returns = calc_strategy(
+        usd,
+        &transactions,
+        &no_dividends_strategy,
+        start,
+        today,
+        &market,
+    )
+    .await;
+    all_time_series.push(TimeSeries {
+        series: no_dividends_returns,
+        title: "AVGO without dividends".to_string(),
+    });
 
     // plot the graph
     make_plot("strategies.png", "Strategies Performance", &all_time_series).unwrap();
 }
 
-fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Result<(), Box<dyn Error>> {
-    
+fn make_plot(
+    file_name: &str,
+    title: &str,
+    all_time_series: &[TimeSeries],
+) -> Result<(), Box<dyn Error>> {
     //let root = SVGBackend::new(file_name, (2048, 1024)).into_drawing_area();
     let root = BitMapBackend::new(file_name, (2048, 1024)).into_drawing_area();
 
@@ -226,7 +309,15 @@ fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Re
     let min_time = make_time(min_date.year(), min_date.month(), 1, 0, 0, 0).unwrap();
     let max_year = max_date.year();
     let max_month = max_date.month();
-    let max_time = make_time(max_year, max_month, last_day_of_month(max_year, max_month), 23, 59, 59).unwrap();
+    let max_time = make_time(
+        max_year,
+        max_month,
+        last_day_of_month(max_year, max_month),
+        23,
+        59,
+        59,
+    )
+    .unwrap();
     let x_range = (min_time..max_time).monthly();
 
     let mut chart = ChartBuilder::on(&root)
@@ -247,20 +338,21 @@ fn make_plot(file_name: &str, title: &str, all_time_series: &[TimeSeries]) -> Re
         .axis_desc_style(("sans-serif", 20))
         .draw()?;
 
-    static COLORS: [&'static RGBColor; 5] = [&BLUE, &GREEN, &RED, &CYAN, &MAGENTA];	
+    static COLORS: [&'static RGBColor; 5] = [&BLUE, &GREEN, &RED, &CYAN, &MAGENTA];
     let mut color_index: usize = 0;
     for ts in all_time_series {
-        chart.draw_series(LineSeries::new(
-            ts.series.iter().map(|v| (v.time, v.value) ),
-            COLORS[color_index],
-        ))?
-        .label(&ts.title)
-        .legend( move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], COLORS[color_index]));
+        chart
+            .draw_series(LineSeries::new(
+                ts.series.iter().map(|v| (v.time, v.value)),
+                COLORS[color_index],
+            ))?
+            .label(&ts.title)
+            .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], COLORS[color_index]));
         color_index = (color_index + 1) % COLORS.len();
-
     }
-    
-    chart.configure_series_labels()
+
+    chart
+        .configure_series_labels()
         .border_style(&BLACK)
         .position(SeriesLabelPosition::UpperLeft)
         .label_font(("sans-serif", 20))

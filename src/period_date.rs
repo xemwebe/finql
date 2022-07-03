@@ -1,9 +1,9 @@
+use crate::datatypes::Transaction;
+use chrono::{Datelike, Local, NaiveDate};
+use serde::{Deserialize, Serialize};
 use std::default::Default;
 use std::fmt::Display;
-use serde::{Serialize,Deserialize};
-use chrono::{NaiveDate,Local,Datelike};
 use thiserror::Error;
-use crate::datatypes::Transaction;
 
 #[derive(Error, Debug)]
 pub enum PeriodDateError {
@@ -16,7 +16,7 @@ pub enum PeriodDateError {
 }
 
 /// Period start or end date
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum PeriodDate {
     Inception,
     Today,
@@ -28,11 +28,11 @@ pub enum PeriodDate {
 impl Display for PeriodDate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PeriodDate::Inception => write!(f,"Inception"),
-            PeriodDate::Today => write!(f,"Today"),
-            PeriodDate::FirstOfMonth => write!(f,"FirstOfMonth"),
-            PeriodDate::FirstOfYear => write!(f,"FirstOfYear"),
-            PeriodDate::FixedDate(_) => write!(f,"FixedDate"),
+            PeriodDate::Inception => write!(f, "Inception"),
+            PeriodDate::Today => write!(f, "Today"),
+            PeriodDate::FirstOfMonth => write!(f, "FirstOfMonth"),
+            PeriodDate::FirstOfYear => write!(f, "FirstOfYear"),
+            PeriodDate::FixedDate(_) => write!(f, "FixedDate"),
         }
     }
 }
@@ -57,7 +57,7 @@ impl PeriodDate {
                     Err(PeriodDateError::MissingFixedDate)
                 }
             }
-            _ => Err(PeriodDateError::UnknownPeriodDateType)
+            _ => Err(PeriodDateError::UnknownPeriodDateType),
         }
     }
 
@@ -67,15 +67,13 @@ impl PeriodDate {
             PeriodDate::FirstOfMonth => {
                 let today = Local::today().naive_local();
                 Ok(NaiveDate::from_ymd(today.year(), today.month(), 1))
-            },
+            }
             PeriodDate::FirstOfYear => {
                 let today = Local::today().naive_local();
                 Ok(NaiveDate::from_ymd(today.year(), 1, 1))
-            },
-            PeriodDate::FixedDate(date) => Ok(*date),
-            PeriodDate::Inception => {
-                inception.ok_or(PeriodDateError::MissingInceptionDate)
             }
+            PeriodDate::FixedDate(date) => Ok(*date),
+            PeriodDate::Inception => inception.ok_or(PeriodDateError::MissingInceptionDate),
         }
     }
 

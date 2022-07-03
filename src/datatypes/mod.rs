@@ -1,31 +1,30 @@
+use serde_json;
+use sqlx;
 ///! Implementation of a data handler trait to deal with global data
 use thiserror::Error;
-use sqlx;
-use serde_json;
 
 pub mod asset;
 pub mod asset_handler;
 pub mod cash_flow;
 pub mod currency;
 pub mod date_time_helper;
+pub mod object_handler;
 pub mod quote;
 pub mod quote_handler;
 pub mod stock;
-pub mod transaction_handler;
 pub mod transaction;
-pub mod object_handler;
+pub mod transaction_handler;
 
 pub use asset::{Asset, AssetSelector};
 pub use asset_handler::AssetHandler;
+pub use cash_flow::{CashAmount, CashFlow};
+pub use currency::{Currency, CurrencyConverter, CurrencyError, CurrencyISOCode};
+pub use object_handler::ObjectHandler;
 pub use quote::{Quote, Ticker};
 pub use quote_handler::QuoteHandler;
 pub use stock::Stock;
 pub use transaction::{Transaction, TransactionType};
 pub use transaction_handler::TransactionHandler;
-pub use currency::{Currency, CurrencyConverter, CurrencyError, CurrencyISOCode};
-pub use cash_flow::{CashAmount, CashFlow};
-pub use object_handler::ObjectHandler;
-
 
 #[derive(Error, Debug)]
 pub enum DataError {

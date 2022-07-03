@@ -38,10 +38,9 @@
 pub mod macros;
 
 // module exports
-pub mod datatypes;
-pub mod postgres;
 pub mod bond;
 pub mod coupon_date;
+pub mod datatypes;
 pub mod day_adjust;
 pub mod day_count_conv;
 pub mod fixed_income;
@@ -49,11 +48,12 @@ pub mod fx_rates;
 pub mod helpers;
 pub mod market;
 pub mod market_quotes;
-pub mod portfolio;
-pub mod rates;
-pub mod time_period;
-pub mod strategy;
-pub mod time_series;
 pub mod period_date;
+pub mod portfolio;
+pub mod postgres;
+pub mod rates;
+pub mod strategy;
+pub mod time_period;
+pub mod time_series;
 
 pub use market::Market;

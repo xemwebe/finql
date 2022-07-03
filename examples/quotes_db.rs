@@ -1,13 +1,12 @@
 ///! Demonstration of storing quotes and related data in PostgreSQL
 ///! Please note: All existing content of the database will be deleted!
-
 use std::io::{stdout, Write};
 use std::sync::Arc;
 
-use finql::datatypes::{Asset, DataItem,
-    Currency, CurrencyConverter, CurrencyISOCode,
-    Stock, Quote, Ticker, QuoteHandler, 
-    date_time_helper::make_time, };
+use finql::datatypes::{
+    date_time_helper::make_time, Asset, Currency, CurrencyConverter, CurrencyISOCode, DataItem,
+    Quote, QuoteHandler, Stock, Ticker,
+};
 use finql::fx_rates::insert_fx_quote;
 use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
@@ -29,7 +28,8 @@ async fn quote_tests(market: &mut Market) {
             None,
             None,
         )))
-        .await.unwrap();
+        .await
+        .unwrap();
     let siemens_id = market
         .db()
         .insert_asset(&Asset::Stock(Stock::new(
@@ -39,7 +39,8 @@ async fn quote_tests(market: &mut Market) {
             None,
             None,
         )))
-        .await.unwrap();
+        .await
+        .unwrap();
     let bhp_id = market
         .db()
         .insert_asset(&Asset::Stock(Stock::new(
@@ -47,9 +48,10 @@ async fn quote_tests(market: &mut Market) {
             "BHP Inc.".to_string(),
             None,
             None,
-            None
+            None,
         )))
-        .await.unwrap();
+        .await
+        .unwrap();
 
     // Create some market data sources
     let yahoo = MarketDataSource::Yahoo;
@@ -120,7 +122,11 @@ async fn quote_tests(market: &mut Market) {
     market.db().update_ticker(&bhp).await.unwrap();
     println!("ok");
     log("Get all ticker by source...");
-    let tickers = market.db().get_all_ticker_for_source(&yahoo.to_string()).await.unwrap();
+    let tickers = market
+        .db()
+        .get_all_ticker_for_source(&yahoo.to_string())
+        .await
+        .unwrap();
     if tickers.len() == 2 {
         println!("ok");
     } else {
@@ -191,21 +197,29 @@ async fn quote_tests(market: &mut Market) {
     println!("ok");
     let time = make_time(2020, 1, 4, 0, 0, 0).unwrap();
     log("get last quote...");
-    let (quote, currency) = market.db().get_last_quote_before_by_id(basf_id, time).await.unwrap();
+    let (quote, currency) = market
+        .db()
+        .get_last_quote_before_by_id(basf_id, time)
+        .await
+        .unwrap();
     if currency == eur && (quote.price - 67.27) < 1e-10 {
         println!("ok");
     } else {
         println!("failed");
     }
     log("get all quotes for ticker...");
-    let quotes = market.db().get_all_quotes_for_ticker(basf_ticker_id).await.unwrap();
+    let quotes = market
+        .db()
+        .get_all_quotes_for_ticker(basf_ticker_id)
+        .await
+        .unwrap();
     if quotes.len() == 5 {
         println!("ok");
     } else {
         println!("failed");
     }
     println!("List of quotes in db: {:?}", quotes);
-    
+
     // correct wrong quote
     log("update quote...");
     wrong_quote.id = Some(wrong_quote_id);
@@ -217,7 +231,9 @@ async fn quote_tests(market: &mut Market) {
     market.db().delete_quote(wrong_quote_id).await.unwrap();
     println!("ok");
     log("insert fx quote...");
-    insert_fx_quote(0.9, aus, eur, time, market.db()).await.unwrap();
+    insert_fx_quote(0.9, aus, eur, time, market.db())
+        .await
+        .unwrap();
     println!("ok");
     log("read fx quote...");
     let fx1 = market.fx_rate(aus, eur, time).await.unwrap();
@@ -242,7 +258,6 @@ async fn quote_tests(market: &mut Market) {
     println!("\nDone.");
 }
 
-
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -253,9 +268,8 @@ async fn main() {
     let db = PostgresDB::new(args[1].as_str()).await.unwrap();
     db.clean().await.unwrap();
 
-    let qh: Arc<dyn QuoteHandler+Sync+Send> = Arc::new(db);
-    let mut market = Market::new(qh);            
+    let qh: Arc<dyn QuoteHandler + Sync + Send> = Arc::new(db);
+    let mut market = Market::new(qh);
     quote_tests(&mut market).await;
     println!("You may have a look at the database for further inspection.");
-
 }

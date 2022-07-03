@@ -1,14 +1,13 @@
-use std::str::FromStr;
-use chrono::NaiveDate;
 use async_trait::async_trait;
+use chrono::NaiveDate;
+use std::str::FromStr;
 
-use crate::datatypes::currency::Currency;
-use crate::datatypes::{CurrencyISOCode, DataError, TransactionHandler};
 use crate::datatypes::cash_flow::{CashAmount, CashFlow};
+use crate::datatypes::currency::Currency;
 use crate::datatypes::transaction::{Transaction, TransactionType};
+use crate::datatypes::{CurrencyISOCode, DataError, TransactionHandler};
 
 use super::PostgresDB;
-
 
 pub struct RawTransaction {
     pub id: Option<i32>,
@@ -45,28 +44,28 @@ impl RawTransaction {
         let transaction_type = match self.trans_type.as_str() {
             CASH => TransactionType::Cash,
             ASSET => TransactionType::Asset {
-                asset_id: self.asset.ok_or_else(|| DataError::InvalidTransaction(
-                    "missing asset id".to_string(),
-                ))?,
-                position: self.position.ok_or_else(|| DataError::InvalidTransaction(
-                    "missing position value".to_string(),
-                ))?,
+                asset_id: self
+                    .asset
+                    .ok_or_else(|| DataError::InvalidTransaction("missing asset id".to_string()))?,
+                position: self.position.ok_or_else(|| {
+                    DataError::InvalidTransaction("missing position value".to_string())
+                })?,
             },
             DIVIDEND => TransactionType::Dividend {
-                asset_id: self.asset.ok_or_else(|| DataError::InvalidTransaction(
-                    "missing asset id".to_string(),
-                ))?,
+                asset_id: self
+                    .asset
+                    .ok_or_else(|| DataError::InvalidTransaction("missing asset id".to_string()))?,
             },
             INTEREST => TransactionType::Interest {
-                asset_id: self.asset.ok_or_else(|| DataError::InvalidTransaction(
-                    "missing asset id".to_string(),
-                ))?,
+                asset_id: self
+                    .asset
+                    .ok_or_else(|| DataError::InvalidTransaction("missing asset id".to_string()))?,
             },
             TAX => TransactionType::Tax {
-                transaction_ref: self.related_trans.map(|x| x),
+                transaction_ref: self.related_trans,
             },
             FEE => TransactionType::Fee {
-                transaction_ref: self.related_trans.map(|x| x),
+                transaction_ref: self.related_trans,
             },
             unknown => {
                 return Err(DataError::InvalidTransaction(unknown.to_string()));
@@ -130,25 +129,27 @@ impl TransactionHandler for PostgresDB {
     async fn insert_transaction(&self, transaction: &Transaction) -> Result<i32, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
         let row = sqlx::query!(
-                "INSERT INTO transactions (trans_type, asset_id, cash_amount,
+            "INSERT INTO transactions (trans_type, asset_id, cash_amount,
                 cash_currency_id, cash_date, related_trans, position,
                 note) 
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
-                transaction.trans_type,
-                transaction.asset,
-                transaction.cash_amount,
-                transaction.cash_currency.id,
-                transaction.cash_date,
-                transaction.related_trans,
-                transaction.position,
-                transaction.note,
-            ).fetch_one(&self.pool).await?;
+            transaction.trans_type,
+            transaction.asset,
+            transaction.cash_amount,
+            transaction.cash_currency.id,
+            transaction.cash_date,
+            transaction.related_trans,
+            transaction.position,
+            transaction.note,
+        )
+        .fetch_one(&self.pool)
+        .await?;
         Ok(row.id)
     }
 
     async fn get_transaction_by_id(&self, id: i32) -> Result<Transaction, DataError> {
         let row = sqlx::query!(
-                "SELECT
+            "SELECT
                 t.id,
                 t.trans_type,
                 t.asset_id,
@@ -163,8 +164,10 @@ impl TransactionHandler for PostgresDB {
                 FROM transactions t
                 JOIN currencies c ON c.id = t.cash_currency_id
                 WHERE t.id = $1",
-                id,
-            ).fetch_one(&self.pool).await?;
+            id,
+        )
+        .fetch_one(&self.pool)
+        .await?;
         let transaction = RawTransaction {
             id: Some(id),
             trans_type: row.trans_type,
@@ -172,7 +175,8 @@ impl TransactionHandler for PostgresDB {
             cash_amount: row.cash_amount,
             cash_currency: Currency::new(
                 Some(row.cash_currency_id),
-                CurrencyISOCode::from_str(&row.cash_iso_code).expect("Expected a good currency code from db"),
+                CurrencyISOCode::from_str(&row.cash_iso_code)
+                    .expect("Expected a good currency code from db"),
                 Some(row.cash_rounding_digits),
             ),
             cash_date: row.cash_date,
@@ -186,7 +190,7 @@ impl TransactionHandler for PostgresDB {
     async fn get_all_transactions(&self) -> Result<Vec<Transaction>, DataError> {
         let mut transactions = Vec::new();
         for row in sqlx::query!(
-                r#"SELECT
+            r#"SELECT
                 t.id AS "id!",
                 t.trans_type AS "trans_type!",
                 t.asset_id,
@@ -200,7 +204,9 @@ impl TransactionHandler for PostgresDB {
                 t.note
                 FROM transactions t
                 JOIN currencies c ON c.id = t.cash_currency_id"#
-            ).fetch_all(&self.pool).await?
+        )
+        .fetch_all(&self.pool)
+        .await?
         {
             let transaction = RawTransaction {
                 id: Some(row.id),
@@ -209,8 +215,9 @@ impl TransactionHandler for PostgresDB {
                 cash_amount: row.cash_amount,
                 cash_currency: Currency::new(
                     Some(row.cash_currency_id),
-                CurrencyISOCode::from_str(&row.cash_iso_code).expect("unknown currency asset referenced in db"),
-                Some(row.cash_rounding_digits),
+                    CurrencyISOCode::from_str(&row.cash_iso_code)
+                        .expect("unknown currency asset referenced in db"),
+                    Some(row.cash_rounding_digits),
                 ),
                 cash_date: row.cash_date,
                 related_trans: row.related_trans,
@@ -230,7 +237,7 @@ impl TransactionHandler for PostgresDB {
         }
         let transaction = RawTransaction::from_transaction(transaction);
         sqlx::query!(
-                "UPDATE transactions SET 
+            "UPDATE transactions SET 
                 trans_type=$2, 
                 asset_id=$3, 
                 cash_amount=$4, 
@@ -240,22 +247,25 @@ impl TransactionHandler for PostgresDB {
                 position=$8,
                 note=$9
             WHERE id=$1",
-                transaction.id,
-                transaction.trans_type,
-                transaction.asset,
-                transaction.cash_amount,
-                transaction.cash_currency.id,
-                transaction.cash_date,
-                transaction.related_trans,
-                transaction.position,
-                transaction.note,
-            ).execute(&self.pool).await?;
+            transaction.id,
+            transaction.trans_type,
+            transaction.asset,
+            transaction.cash_amount,
+            transaction.cash_currency.id,
+            transaction.cash_date,
+            transaction.related_trans,
+            transaction.position,
+            transaction.note,
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
     async fn delete_transaction(&self, id: i32) -> Result<(), DataError> {
         sqlx::query!("DELETE FROM transactions WHERE id=$1;", id)
-            .execute(&self.pool).await?;
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 }
