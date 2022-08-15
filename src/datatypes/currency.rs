@@ -180,11 +180,11 @@ impl Currency {
 /// Trait for calculating FX rates for currency conversion
 #[async_trait]
 pub trait CurrencyConverter {
-    /// returns the price of 1 unit of foreign currency in terms of domestic currency
+    /// returns the price of 1 unit of base currency in terms of quote currency
     async fn fx_rate(
         &self,
-        foreign_currency: Currency,
-        domestic_currency: Currency,
+        base_currency: Currency,
+        quote_currency: Currency,
         time: DateTime<Local>,
     ) -> Result<f64, CurrencyError>;
 }

@@ -12,27 +12,28 @@ use crate::datatypes::{
 };
 
 /// Insert fx rate quote in database including the inverse quote
+/// fx_rate is the price of one unit of base currency in terms of the quote currency.
 pub async fn insert_fx_quote(
     fx_rate: f64,
-    foreign: Currency,
-    base: Currency,
+    base_currency: Currency,
+    quote_currency: Currency,
     time: DateTime<Local>,
     quotes: Arc<dyn QuoteHandler + Send + Sync>,
 ) -> Result<(), DataError> {
-    let foreign_id = if let Ok(id) = foreign.get_id() {
+    let base_id = if let Ok(id) = base_currency.get_id() {
         id
     } else {
-        quotes.insert_asset(&Asset::Currency(foreign)).await?
+        quotes.insert_asset(&Asset::Currency(base_currency)).await?
     };
-    let currency_pair = format!("{}/{}", foreign, base);
+    let currency_pair = format!("{base_currency}/{quote_currency}");
     let ticker_id = quotes
         .insert_ticker(&Ticker {
             id: None,
             name: currency_pair,
-            asset: foreign_id,
+            asset: base_id,
             source: "manual".to_string(),
             priority: 10,
-            currency: base,
+            currency: quote_currency,
             factor: 1.0,
             tz: None,
             cal: None,
@@ -48,20 +49,20 @@ pub async fn insert_fx_quote(
         })
         .await?;
     // Insert inverse fx quote
-    let base_id = if let Ok(id) = base.get_id() {
+    let quote_id = if let Ok(id) = quote_currency.get_id() {
         id
     } else {
-        quotes.insert_asset(&Asset::Currency(base)).await?
+        quotes.insert_asset(&Asset::Currency(quote_currency)).await?
     };
-    let currency_pair = format!("{}/{}", base, foreign);
+    let currency_pair = format!("{quote_currency}/{base_currency}");
     let ticker_id = quotes
         .insert_ticker(&Ticker {
             id: None,
             name: currency_pair,
-            asset: base_id,
+            asset: quote_id,
             source: "manual".to_string(),
             priority: 10,
-            currency: foreign,
+            currency: base_currency,
             factor: 1.0,
             tz: None,
             cal: None,
@@ -88,14 +89,14 @@ pub struct SimpleCurrencyConverter {
 impl CurrencyConverter for SimpleCurrencyConverter {
     async fn fx_rate(
         &self,
-        foreign_currency: Currency,
-        domestic_currency: Currency,
+        base_currency: Currency,
+        quote_currency: Currency,
         _time: DateTime<Local>,
     ) -> Result<f64, CurrencyError> {
         let currency_string = format!(
             "{}/{}",
-            &foreign_currency.to_string(),
-            &domestic_currency.to_string()
+            &base_currency.to_string(),
+            &quote_currency.to_string()
         );
         if let Ok(fx_store) = self.fx_rates.read() {
             if fx_store.contains_key(&currency_string) {
@@ -120,15 +121,15 @@ impl SimpleCurrencyConverter {
     /// Insert or update the price of 1 unit of foreign currency in terms of domestic currency and its inverse rate
     pub fn insert_fx_rate(
         &mut self,
-        foreign_currency: Currency,
-        domestic_currency: Currency,
+        base_currency: Currency,
+        quote_currency: Currency,
         fx_rate: f64,
     ) {
-        let for_key = foreign_currency.to_string();
-        let dom_key = domestic_currency.to_string();
+        let base_key = base_currency.to_string();
+        let quote_key = quote_currency.to_string();
         if let Ok(mut fx_store) = self.fx_rates.write() {
-            fx_store.insert(format!("{}/{}", for_key, dom_key), fx_rate);
-            fx_store.insert(format!("{}/{}", dom_key, for_key), 1. / fx_rate);
+            fx_store.insert(format!("{base_key}/{quote_key}"), fx_rate);
+            fx_store.insert(format!("{quote_key}/{base_key}"), 1. / fx_rate);
         }
     }
 }

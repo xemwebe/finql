@@ -726,10 +726,10 @@ mod tests {
         usd_position.position = 1000.0;
 
         let qh: Arc<dyn QuoteHandler + Sync + Send> = Arc::new(db);
-        crate::fx_rates::insert_fx_quote(2.0, usd, eur, time, qh.clone())
+        crate::fx_rates::insert_fx_quote(1.2, eur, usd, time, qh.clone())
             .await
             .unwrap();
-        let time = make_time(2019, 12, 30, 12, 0, 0).unwrap();
+        let time = make_time(2019, 12, 30, 10, 0, 0).unwrap();
         let market = Market::new(qh.clone()).await;
 
         eur_position.add_quote(time, &market).await;
@@ -740,11 +740,11 @@ mod tests {
                 .unwrap()
                 .format("%F %H:%M:%S")
                 .to_string(),
-            "2019-12-30 12:00:00"
+            "2019-12-30 10:00:00"
         );
 
         usd_position.add_quote(time, &market).await;
-        assert_fuzzy_eq!(usd_position.last_quote.unwrap(), 86.42, tol);
+        assert_fuzzy_eq!(usd_position.last_quote.unwrap(), 36.01, tol);
         assert_eq!(
             usd_position
                 .last_quote_time

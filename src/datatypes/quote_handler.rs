@@ -29,7 +29,7 @@ pub trait QuoteHandler: AssetHandler {
     /// Insert, get, update and delete for market data sources
     async fn insert_quote(&self, quote: &Quote) -> Result<i32, DataError>;
 
-    /// Get the last quote in database for a specific asset name on or before the given time
+    /// Get the last quote in database for a specific currency iso code on or before the given time
     async fn get_last_fx_quote_before(
         &self,
         curr: &CurrencyISOCode,

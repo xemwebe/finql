@@ -1,4 +1,8 @@
-Version 0.xx
+Version 0.12
+  * Breaking change Market extensions: 
+    - price cache with intrinsic mutability
+    - Market::new() is now async, since it reads currency list from database
+    - FX quote conventions consistent with market convention using
   * new struct AssetSelector type to generate asset choice lists
   * Module calendar is now a crate of its own: cal-calc
   * Breaking change: change `id` members of assets to `i32` to align with postgresql 

@@ -263,30 +263,30 @@ impl Market {
 impl CurrencyConverter for Market {
     async fn fx_rate(
         &self,
-        foreign: Currency,
-        base: Currency,
+        base_currency: Currency,
+        quote_currency: Currency,
         time: DateTime<Local>,
     ) -> Result<f64, CurrencyError> {
-        if foreign == base {
+        if base_currency == quote_currency {
             return Ok(1.0);
         } else {
-            let (fx_quote, quote_currency_id) = if let Some((fx_quote, curr)) =
-                self.try_from_cache(foreign.id.ok_or(CurrencyError::ConversionFailed)?, time)
+            let (fx_quote, quote_currency_id) = if let Some((fx_quote, quote_curr)) =
+                self.try_from_cache(base_currency.id.ok_or(CurrencyError::ConversionFailed)?, time)
             {
-                (fx_quote, curr)
+                (fx_quote, quote_curr)
             } else {
-                let quote = self
+                let fx_quote = self
                     .db
-                    .get_last_fx_quote_before(&foreign.iso_code, time)
+                    .get_last_fx_quote_before(&base_currency.iso_code, time)
                     .await
                     .map_err(|_| CurrencyError::ConversionFailed)?;
-                (quote.0.price, quote.1.id.unwrap())
+                (fx_quote.0.price, fx_quote.1.id.unwrap())
             };
             let quote_currency = self
                 .get_currency_by_id(quote_currency_id)
                 .await
                 .map_err(|_| CurrencyError::ConversionFailed)?;
-            if quote_currency == base {
+            if quote_currency == quote_currency {
                 return Ok(fx_quote);
             }
         }
