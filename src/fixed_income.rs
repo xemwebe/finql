@@ -1,9 +1,8 @@
 use std::f64;
 
-use argmin::prelude::*;
-use argmin::solver::brent::Brent;
+use argmin::core::{CostFunction, Error, Executor};
+use argmin::solver::brent::BrentRoot;
 use chrono::NaiveDate;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::datatypes::CashFlow;
 
@@ -64,22 +63,25 @@ pub fn calculate_cash_flows_ytm(
         init_cash_flow.amount.currency,
     );
     let init_param = 0.5;
-    let solver = Brent::new(0., 0.5, 1e-11);
+    let solver = BrentRoot::new(0., 0.5, 1e-11);
     let func = FlatRateDiscounter {
         init_cash_flow,
         cash_flows,
         rate,
     };
-    let res = Executor::new(func, solver, init_param).max_iters(100).run();
+    let res = Executor::new(func, solver)
+        .configure(|state| state.max_iters(100).param(init_param))
+        .run();
     match res {
-        Ok(val) => Ok(val.state.get_param()),
+        Ok(mut val) => match val.state.take_param() {
+            Some(param) => Ok(param),
+            None => Err(DiscountError),
+        },
         Err(_) => Err(DiscountError),
     }
 }
 
 /// Calculate discounted value for given flat rate
-/// Since `argmin` requires `Serialize` and `Deserialize`,
-/// we can't use reference here but must clone all data to this struct
 #[derive(Clone)]
 struct FlatRateDiscounter<'a> {
     init_cash_flow: &'a CashFlow,
@@ -87,15 +89,12 @@ struct FlatRateDiscounter<'a> {
     rate: FlatRate,
 }
 
-impl<'a> ArgminOp for FlatRateDiscounter<'a> {
+impl<'a> CostFunction for FlatRateDiscounter<'a> {
     // one dimensional problem, no vector needed
-    type Float = f64;
     type Param = f64;
     type Output = f64;
-    type Hessian = ();
-    type Jacobian = ();
 
-    fn apply(&self, p: &Self::Param) -> Result<Self::Output, Error> {
+    fn cost(&self, p: &Self::Param) -> Result<Self::Output, Error> {
         let mut discount_rate = self.rate;
         discount_rate.rate = *p;
         let mut sum = self.init_cash_flow.amount.amount;
@@ -106,30 +105,6 @@ impl<'a> ArgminOp for FlatRateDiscounter<'a> {
             }
         }
         Ok(sum)
-    }
-}
-
-/// Dummy implementation of Serialize
-impl<'a> Serialize for FlatRateDiscounter<'a> {
-    fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        Err(serde::ser::Error::custom(
-            "serialization is disabled".to_string(),
-        ))
-    }
-}
-
-/// Dummy implementation fo Deserialize
-impl<'de> Deserialize<'de> for FlatRateDiscounter<'de> {
-    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Err(serde::de::Error::custom(
-            "deserialization is disabled".to_string(),
-        ))
     }
 }
 
