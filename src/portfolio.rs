@@ -9,7 +9,10 @@ use chrono::{DateTime, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 
 use crate::datatypes::{
-    Asset, AssetHandler, Currency, DataError, QuoteHandler, Transaction, TransactionType,
+    currency::CurrencyConverter,
+    date_time_helper::{naive_date_to_date_time, DateTimeError},
+    Asset, AssetHandler, Currency, CurrencyError, DataError, Transaction,
+    TransactionType,
 };
 
 use crate::period_date::PeriodDateError;
@@ -20,10 +23,12 @@ use crate::Market;
 pub enum PositionError {
     #[error("Failed to fetch position data")]
     PositionDataError(#[from] DataError),
-    #[error("Failed to parse foreign currency")]
-    ForeignCurrency,
     #[error("Invalid start or end date")]
     DateError(#[from] PeriodDateError),
+    #[error("Invalid date or time")]
+    DateTimeError(#[from] DateTimeError),
+    #[error("Failed to convert currency")]
+    CurrencyError(#[from] CurrencyError),
 }
 
 /// Calculate the total position as of a given date by applying a specified set of filters
@@ -218,22 +223,24 @@ fn get_asset_id(transactions: &[Transaction], trans_ref: Option<i32>) -> Option<
 }
 
 /// Calculate the total position since inception caused by a given set of transactions.
-pub fn calc_position(
+pub async fn calc_position(
     base_currency: Currency,
     transactions: &[Transaction],
     date: Option<NaiveDate>,
+    market: Arc<Market>,
 ) -> Result<PortfolioPosition, PositionError> {
     let mut positions = PortfolioPosition::new(base_currency);
-    calc_delta_position(&mut positions, transactions, None, date)?;
+    calc_delta_position(&mut positions, transactions, None, date, market).await?;
     Ok(positions)
 }
 
 /// Given a PortfolioPosition, calculate changes to position by a given set of transactions.
-pub fn calc_delta_position(
+pub async fn calc_delta_position(
     positions: &mut PortfolioPosition,
     transactions: &[Transaction],
     start: Option<NaiveDate>,
     end: Option<NaiveDate>,
+    market: Arc<Market>,
 ) -> Result<(), PositionError> {
     let base_currency = positions.cash.currency;
     for trans in transactions {
@@ -243,12 +250,19 @@ pub fn calc_delta_position(
         if end.is_some() && trans.cash_flow.date >= end.unwrap() {
             continue;
         }
-        // currently, we assume that all cash flows are in the same currency
-        if trans.cash_flow.amount.currency != base_currency {
-            return Err(PositionError::ForeignCurrency);
-        }
+        let curr_factor = if trans.cash_flow.amount.currency != base_currency {
+            market
+                .fx_rate(
+                    trans.cash_flow.amount.currency,
+                    base_currency,
+                    naive_date_to_date_time(&trans.cash_flow.date, 20, None)?,
+                )
+                .await?
+        } else {
+            1.0
+        };
         // adjust cash balance
-        positions.cash.position += trans.cash_flow.amount.amount;
+        positions.cash.position += trans.cash_flow.amount.amount * curr_factor;
 
         match trans.transaction_type {
             TransactionType::Cash => {
@@ -350,18 +364,17 @@ pub async fn calculate_position_and_pnl(
     currency: Currency,
     transactions: &[Transaction],
     date: Option<NaiveDate>,
-    db: Arc<dyn QuoteHandler + Send + Sync>,
+    market: Arc<Market>,
 ) -> Result<(PortfolioPosition, PositionTotals), PositionError> {
-    let mut position = calc_position(currency, transactions, date)?;
+    let mut position = calc_position(currency, transactions, date, market.clone()).await?;
     position
-        .get_asset_names(db.clone().into_arc_dispatch())
+        .get_asset_names(market.db().into_arc_dispatch())
         .await?;
     let date_time: DateTime<Local> = if let Some(date) = date {
         Local.from_local_datetime(&date.and_hms(0, 0, 0)).unwrap()
     } else {
         Local::now()
     };
-    let market = Market::new(db).await;
     position.add_quote(date_time, &market).await;
     let totals = position.calc_totals();
     Ok((position, totals))
@@ -378,20 +391,18 @@ pub async fn calculate_position_for_period(
     transactions: &[Transaction],
     start: NaiveDate,
     end: NaiveDate,
-    db: Arc<dyn QuoteHandler + Send + Sync>,
+    market: Arc<Market>,
 ) -> Result<(PortfolioPosition, PositionTotals), PositionError> {
     let (mut position, _) =
-        calculate_position_and_pnl(currency, transactions, Some(start), db.clone()).await?;
+        calculate_position_and_pnl(currency, transactions, Some(start), market.clone()).await?;
     position.reset_pnl();
-    calc_delta_position(&mut position, transactions, Some(start), Some(end))?;
+    calc_delta_position(&mut position, transactions, Some(start), Some(end), market.clone()).await?;
     position
-        .get_asset_names(db.clone().into_arc_dispatch())
+        .get_asset_names(market.db().into_arc_dispatch())
         .await?;
     let end_date_time: DateTime<Local> = Local
         .from_local_datetime(&end.succ().and_hms(0, 0, 0))
         .unwrap();
-    let quote_handler = db as Arc<dyn QuoteHandler + Send + Sync>;
-    let market = Market::new(quote_handler).await;
     position.add_quote(end_date_time, &market).await;
     let totals = position.calc_totals();
     Ok((position, totals))
