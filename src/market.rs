@@ -270,10 +270,10 @@ impl CurrencyConverter for Market {
         if base_currency == quote_currency {
             return Ok(1.0);
         } else {
-            let (fx_quote, quote_currency_id) = if let Some((fx_quote, quote_curr)) =
+            let (fx_quote, quote_curr_id) = if let Some((fx_quote, quote_curr_id)) =
                 self.try_from_cache(base_currency.id.ok_or(CurrencyError::ConversionFailed)?, time)
             {
-                (fx_quote, quote_curr)
+                (fx_quote, quote_curr_id)
             } else {
                 let fx_quote = self
                     .db
@@ -282,11 +282,7 @@ impl CurrencyConverter for Market {
                     .map_err(|_| CurrencyError::ConversionFailed)?;
                 (fx_quote.0.price, fx_quote.1.id.unwrap())
             };
-            let quote_currency = self
-                .get_currency_by_id(quote_currency_id)
-                .await
-                .map_err(|_| CurrencyError::ConversionFailed)?;
-            if quote_currency == quote_currency {
+            if quote_currency.id == Some(quote_curr_id) {
                 return Ok(fx_quote);
             }
         }
