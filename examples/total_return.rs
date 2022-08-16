@@ -34,14 +34,14 @@ async fn calc_strategy(
     strategy: &dyn Strategy,
     start: NaiveDate,
     end: NaiveDate,
-    market: &Market,
+    market: Arc<Market>,
 ) -> Vec<TimeValue> {
     let mut current_date = start;
     let mut total_return = Vec::new();
     let mut transactions = start_transactions.clone();
 
     let mut position = PortfolioPosition::new(currency);
-    calc_delta_position(&mut position, &transactions, Some(start), Some(start)).unwrap();
+    calc_delta_position(&mut position, &transactions, Some(start), Some(start), market.clone()).await.unwrap();
 
     position
         .add_quote(naive_date_to_date_time(&start, 20, None).unwrap(), &market)
@@ -67,7 +67,9 @@ async fn calc_strategy(
             &transactions,
             Some(current_date),
             Some(next_date),
+            market.clone()
         )
+        .await
         .unwrap();
         debug!(
             "CalcStrategy: cash position after applying new transactions: {}",
@@ -191,7 +193,7 @@ async fn main() {
         &reinvest_strategy_no_tax_no_fee,
         start,
         today,
-        &market,
+        market.clone(),
     )
     .await;
     all_time_series.push(TimeSeries {
@@ -216,7 +218,7 @@ async fn main() {
         &reinvest_strategy,
         start,
         today,
-        &market,
+        market.clone(),
     )
     .await;
     all_time_series.push(TimeSeries {
@@ -232,7 +234,7 @@ async fn main() {
         &static_invest_strategy_no_tax,
         start,
         today,
-        &market,
+        market.clone(),
     )
     .await;
     all_time_series.push(TimeSeries {
@@ -247,7 +249,7 @@ async fn main() {
         &static_invest_strategy,
         start,
         today,
-        &market,
+        market.clone(),
     )
     .await;
     all_time_series.push(TimeSeries {
@@ -262,7 +264,7 @@ async fn main() {
         &no_dividends_strategy,
         start,
         today,
-        &market,
+        market.clone(),
     )
     .await;
     all_time_series.push(TimeSeries {

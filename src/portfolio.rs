@@ -411,9 +411,8 @@ pub async fn calculate_position_for_period(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use std::str::FromStr;
-
+    use crate::datatypes::QuoteHandler;
+    
     use chrono::NaiveDate;
 
     use crate::assert_fuzzy_eq;
@@ -423,13 +422,23 @@ mod tests {
     };
     use crate::postgres::PostgresDB;
 
-    #[test]
-    fn test_portfolio_position() {
+    #[tokio::test]
+    async fn test_portfolio_position() {
         let tol = 1e-4;
-        let eur = Currency::from_str("EUR").unwrap();
+        // Setup database connection
+        let db_url = std::env::var("FINQL_TEST_DATABASE_URL");
+        assert!(
+            db_url.is_ok(),
+            "environment variable $FINQL_TEST_DATABASE_URL is not set"
+        );
+        let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
+        db.clean().await.unwrap();
 
+        let mut market = Market::new(Arc::new(db)).await;
+        let eur = market.get_currency("EUR").await.unwrap();
+        let market = Arc::new(market);
         let mut transactions = Vec::new();
-        let positions = calc_position(eur, &transactions, None).unwrap();
+        let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
         assert_fuzzy_eq!(positions.cash.position, 0.0, tol);
 
         transactions.push(Transaction {
@@ -444,7 +453,7 @@ mod tests {
             },
             note: None,
         });
-        let positions = calc_position(eur, &transactions, None).unwrap();
+        let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
         assert_fuzzy_eq!(positions.cash.position, 10000.0, tol);
         assert_eq!(positions.assets.len(), 0);
 
@@ -477,7 +486,7 @@ mod tests {
             },
             note: None,
         });
-        let positions = calc_position(eur, &transactions, None).unwrap();
+        let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
         assert_fuzzy_eq!(positions.cash.position, 10000.0 - 104.0 - 5.0, tol);
         assert_eq!(positions.assets.len(), 1);
         let asset_pos_1 = positions.assets.get(&1).unwrap();
@@ -529,7 +538,7 @@ mod tests {
             },
             note: None,
         });
-        let positions = calc_position(eur, &transactions, None).unwrap();
+        let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
         assert_fuzzy_eq!(
             positions.cash.position,
             10000.0 - 104.0 - 5.0 + 60.0 - 2.0 - 3.0,
@@ -610,7 +619,7 @@ mod tests {
             },
             note: None,
         });
-        let positions = calc_position(eur, &transactions, None).unwrap();
+        let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
         assert_fuzzy_eq!(
             positions.cash.position,
             10000.0 - 104.0 - 5.0 + 60.0 - 2.0 - 3.0 - 140.0 - 7.0 - 4.5 + 13.0 + 6.6,
