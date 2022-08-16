@@ -113,9 +113,12 @@ impl Market {
     }
 
     /// Get currency from market
-    pub async fn get_currency(&self, currency_string: &str) -> Result<Currency, MarketError> {
+    pub async fn get_currency(&mut self, currency_string: &str) -> Result<Currency, MarketError> {
         let iso_code = CurrencyISOCode::new(currency_string)?;
         let currency = self.db.get_or_new_currency(iso_code).await?;
+        if let Some(currency_id) = currency.id {
+            self.currencies.insert(currency_id, currency);
+        }
         Ok(currency)
     }
 
@@ -246,10 +249,10 @@ impl Market {
                     }
                 }
             };
-        let quote_currency = self.get_currency_by_id(quote_currency_id).await?;
-        if currency == quote_currency {
+        if currency.id == Some(quote_currency_id) {
             Ok(price)
         } else {
+            let quote_currency = self.get_currency_by_id(quote_currency_id).await?;
             let fx_rate = self
                 .fx_rate(quote_currency, currency, time)
                 .await
