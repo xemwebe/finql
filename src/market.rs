@@ -44,8 +44,8 @@ pub enum MarketError {
 }
 
 pub struct TimeRange {
-    start: DateTime<Local>,
-    end: DateTime<Local>,
+    pub start: DateTime<Local>,
+    pub end: DateTime<Local>,
 }
 
 /// Caching policy for Market

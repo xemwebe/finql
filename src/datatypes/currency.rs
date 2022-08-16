@@ -13,7 +13,7 @@ use thiserror::Error;
 pub enum CurrencyError {
     #[error("currency codes must consist of exactly three characters")]
     InvalidLength,
-    #[error("urrency codes must contain only alphabetic ASCII characters")]
+    #[error("currency codes must contain only alphabetic ASCII characters")]
     InvalidCharacter,
     #[error("currency deserialization failed")]
     DeserializationFailed,
