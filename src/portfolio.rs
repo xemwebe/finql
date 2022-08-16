@@ -744,7 +744,7 @@ mod tests {
         );
 
         usd_position.add_quote(time, &market).await;
-        assert_fuzzy_eq!(usd_position.last_quote.unwrap(), 36.01, tol);
+        assert_fuzzy_eq!(usd_position.last_quote.unwrap(), 36.0083, tol);
         assert_eq!(
             usd_position
                 .last_quote_time

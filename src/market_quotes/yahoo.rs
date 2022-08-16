@@ -11,7 +11,7 @@ impl MarketQuoteProvider for Yahoo {
     /// Fetch latest quote
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new();
-        let response = yahoo.get_latest_quotes(&ticker.name, "1m").await?;
+        let response = yahoo.get_latest_quotes(&ticker.name, "1d").await?;
         let quote = response.last_quote()?;
         Ok(Quote {
             id: None,

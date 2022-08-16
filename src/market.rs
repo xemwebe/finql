@@ -251,7 +251,7 @@ impl Market {
             Ok(price)
         } else {
             let fx_rate = self
-                .fx_rate(currency, quote_currency, time)
+                .fx_rate(quote_currency, currency, time)
                 .await
                 .map_err(|_| MarketError::CurrencyConversionError)?;
             Ok(price * fx_rate)
