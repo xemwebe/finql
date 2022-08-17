@@ -20,7 +20,11 @@ pub fn naive_date_to_date_time(
     hour: u32,
     zone: Option<String>,
 ) -> Result<DateTime<Local>, DateTimeError> {
-    let time = date.and_hms_milli(hour, 0, 0, 0);
+    let time = if hour>=24 {
+        date.and_hms_milli(23,59,59,999)
+    } else {
+        date.and_hms_milli(hour, 0, 0, 0)
+    };
     let time = match zone {
         None => Local
             .from_local_datetime(&time)
