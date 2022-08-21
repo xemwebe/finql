@@ -498,6 +498,16 @@
       ]
     }
   },
+  "6d9badbf9202ee1bc8f236efe0aaf58b0a921beafb9f014b6a8f3bef518a17e5": {
+    "query": "DROP TABLE IF EXISTS objects",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
   "707002a559e2eabbcbd75d70f3c9160f08c5eb80d68355f5ff4cbc7d245a362a": {
     "query": "SELECT\n                   q.id,\n                   q.ticker_id,\n                   q.price,\n                   q.time,\n                   q.volume,\n                   qc.id AS currency_id,\n                   qc.iso_code,\n                   qc.rounding_digits,\n                   t.priority\n                FROM quotes q\n                JOIN ticker t ON t.id = q.ticker_id\n                JOIN currencies c ON c.id = t.asset_id\n                JOIN currencies qc ON qc.id = t.currency_id\n                WHERE\n                    c.iso_code = $1\n                    AND q.time <= $2\n                ORDER BY q.time DESC, t.priority ASC\n                LIMIT 1",
     "describe": {
@@ -859,17 +869,17 @@
         "Left": []
       },
       "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
         true,
         true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
+        false,
+        false,
+        false
       ]
     }
   },
@@ -1029,8 +1039,8 @@
         "Left": []
       },
       "nullable": [
-        false,
-        false,
+        true,
+        true,
         null
       ]
     }
@@ -1369,14 +1379,14 @@
         "Left": []
       },
       "nullable": [
+        false,
+        false,
         true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
+        false,
+        false,
+        false,
+        false,
+        false,
         true,
         true,
         true

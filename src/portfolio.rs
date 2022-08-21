@@ -29,6 +29,8 @@ pub enum PositionError {
     DateTimeError(#[from] DateTimeError),
     #[error("Failed to convert currency")]
     CurrencyError(#[from] CurrencyError),
+    #[error("Failed to access market data")]
+    MarketDataError(#[from] crate::market::MarketError),
 }
 
 /// Calculate the total position as of a given date by applying a specified set of filters
@@ -90,7 +92,7 @@ impl Position {
     /// Add quote information to position
     /// If no quote is available (or no conversion to position currency), calculate
     /// from purchase value.
-    pub async fn add_quote(&mut self, time: DateTime<Local>, market: &Market) {
+    pub async fn add_quote(&mut self, time: DateTime<Local>, market: Market) {
         if let Some(asset_id) = self.asset_id {
             if let Ok(price) = market.get_asset_price(asset_id, self.currency, time).await {
                 self.last_quote = Some(price);
@@ -139,7 +141,7 @@ impl PortfolioPosition {
     pub async fn add_quote(&mut self, time: DateTime<Local>, market: &Market) {
         let mut get_quote_futures = Vec::new();
         for pos in self.assets.values_mut() {
-            get_quote_futures.push(pos.add_quote(time, market));
+            get_quote_futures.push(pos.add_quote(time, market.clone()));
         }
         let _ = join_all(get_quote_futures).await;
     }
@@ -227,7 +229,7 @@ pub async fn calc_position(
     base_currency: Currency,
     transactions: &[Transaction],
     date: Option<NaiveDate>,
-    market: Arc<Market>,
+    market: Market,
 ) -> Result<PortfolioPosition, PositionError> {
     let mut positions = PortfolioPosition::new(base_currency);
     calc_delta_position(&mut positions, transactions, None, date, market).await?;
@@ -240,7 +242,7 @@ pub async fn calc_delta_position(
     transactions: &[Transaction],
     start: Option<NaiveDate>,
     end: Option<NaiveDate>,
-    market: Arc<Market>,
+    market: Market,
 ) -> Result<(), PositionError> {
     let base_currency = positions.cash.currency;
     for trans in transactions {
@@ -364,7 +366,7 @@ pub async fn calculate_position_and_pnl(
     currency: Currency,
     transactions: &[Transaction],
     date: Option<NaiveDate>,
-    market: Arc<Market>,
+    market: &Market,
 ) -> Result<(PortfolioPosition, PositionTotals), PositionError> {
     let mut position = calc_position(currency, transactions, date, market.clone()).await?;
     position
@@ -375,7 +377,7 @@ pub async fn calculate_position_and_pnl(
     } else {
         Local::now()
     };
-    position.add_quote(date_time, &market).await;
+    position.add_quote(date_time, market).await;
     let totals = position.calc_totals();
     Ok((position, totals))
 }
@@ -391,10 +393,10 @@ pub async fn calculate_position_for_period(
     transactions: &[Transaction],
     start: NaiveDate,
     end: NaiveDate,
-    market: Arc<Market>,
+    market: &Market,
 ) -> Result<(PortfolioPosition, PositionTotals), PositionError> {
     let (mut position, _) =
-        calculate_position_and_pnl(currency, transactions, Some(start), market.clone()).await?;
+        calculate_position_and_pnl(currency, transactions, Some(start), market).await?;
     position.reset_pnl();
     calc_delta_position(&mut position, transactions, Some(start), Some(end), market.clone()).await?;
     position
@@ -403,7 +405,7 @@ pub async fn calculate_position_for_period(
     let end_date_time: DateTime<Local> = Local
         .from_local_datetime(&end.succ().and_hms(0, 0, 0))
         .unwrap();
-    position.add_quote(end_date_time, &market).await;
+    position.add_quote(end_date_time, market).await;
     let totals = position.calc_totals();
     Ok((position, totals))
 }
@@ -421,6 +423,7 @@ mod tests {
         CurrencyISOCode, Quote, Stock, Ticker,
     };
     use crate::postgres::PostgresDB;
+    use crate::market::CachePolicy;
 
     #[tokio::test]
     async fn test_portfolio_position() {
@@ -434,9 +437,8 @@ mod tests {
         let db = PostgresDB::new(&db_url.unwrap()).await.unwrap();
         db.clean().await.unwrap();
 
-        let mut market = Market::new(Arc::new(db)).await;
-        let eur = market.get_currency("EUR").await.unwrap();
-        let market = Arc::new(market);
+        let market = Market::new(Arc::new(db)).await;
+        let eur = market.get_currency_from_str("EUR").await.unwrap();
         let mut transactions = Vec::new();
         let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
         assert_fuzzy_eq!(positions.cash.position, 0.0, tol);
@@ -752,7 +754,7 @@ mod tests {
         let time = make_time(2019, 12, 30, 10, 0, 0).unwrap();
         let market = Market::new(qh.clone()).await;
 
-        eur_position.add_quote(time, &market).await;
+        eur_position.add_quote(time, market.clone()).await;
         assert_fuzzy_eq!(eur_position.last_quote.unwrap(), 12.34, tol);
         assert_eq!(
             eur_position
@@ -763,7 +765,7 @@ mod tests {
             "2019-12-30 10:00:00"
         );
 
-        usd_position.add_quote(time, &market).await;
+        usd_position.add_quote(time, market.clone()).await;
         assert_fuzzy_eq!(usd_position.last_quote.unwrap(), 36.0083, tol);
         assert_eq!(
             usd_position

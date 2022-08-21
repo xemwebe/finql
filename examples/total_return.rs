@@ -26,6 +26,7 @@ use finql::{
     time_period::TimePeriod,
     time_series::{TimeSeries, TimeSeriesError, TimeValue},
     Market,
+    market::CachePolicy,
 };
 
 async fn calc_strategy(
@@ -34,7 +35,7 @@ async fn calc_strategy(
     strategy: &dyn Strategy,
     start: NaiveDate,
     end: NaiveDate,
-    market: Arc<Market>,
+    market: Market,
 ) -> Vec<TimeValue> {
     let mut current_date = start;
     let mut total_return = Vec::new();
@@ -44,7 +45,7 @@ async fn calc_strategy(
     calc_delta_position(&mut position, &transactions, Some(start), Some(start), market.clone()).await.unwrap();
 
     position
-        .add_quote(naive_date_to_date_time(&start, 20, None).unwrap(), &market)
+        .add_quote(naive_date_to_date_time(&start, 20, None).unwrap(), market.clone())
         .await;
     //let totals = position.calc_totals();
     //total_return.push(TimeValue{ value: totals.value, date: current_date});
@@ -78,7 +79,7 @@ async fn calc_strategy(
 
         current_date = next_date;
         let current_time = naive_date_to_date_time(&current_date, 20, None).unwrap();
-        position.add_quote(current_time, &market).await;
+        position.add_quote(current_time, market.clone()).await;
         let totals = position.calc_totals();
         total_return.push(TimeValue {
             value: totals.value,
@@ -120,11 +121,11 @@ async fn main() {
     let asset_id = db.insert_asset(&asset).await.unwrap();
 
     println!("Get price history and dividends for AVGO");
-    let mut market = Market::new(db.clone()).await;
+    let market = Market::new_with_date_range(db.clone(), start, today).await;
     let yahoo = MarketDataSource::Yahoo;
     let quote_provider = yahoo.get_provider(String::new()).unwrap();
     market.add_provider(yahoo.to_string(), quote_provider.clone());
-    let usd = market.get_currency("USD").await.unwrap();
+    let usd = market.get_currency_from_str("USD").await.unwrap();
     let ticker = Ticker {
         id: None,
         asset: asset_id,
@@ -137,10 +138,12 @@ async fn main() {
         cal: None,
     };
     let ticker_id = db.insert_ticker(&ticker).await.unwrap();
+    let price_offset_period = "7D".parse::<TimePeriod>().unwrap();
+    let history_start_time = naive_date_to_date_time(&price_offset_period.sub_from(start, None), 0, None).unwrap();
     let start_time = naive_date_to_date_time(&start, 0, None).unwrap();
     let end_time = naive_date_to_date_time(&today, 20, None).unwrap();
     market
-        .update_quote_history(ticker_id, start_time, end_time)
+        .update_quote_history(ticker_id, history_start_time, end_time)
         .await
         .unwrap();
 
@@ -179,7 +182,6 @@ async fn main() {
 
     let mut all_time_series = Vec::new();
 
-    let market = Arc::new(market);
     let reinvest_strategy_no_tax_no_fee = ReInvestInSingleStock::new(
         asset_id,
         ticker_id,

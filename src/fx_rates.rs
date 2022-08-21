@@ -149,7 +149,7 @@ mod tests {
     use chrono::Local;
 
     use crate::datatypes::CurrencyISOCode;
-    use crate::market::Market;
+    use crate::market::{Market, CachePolicy};
     use crate::postgres::PostgresDB;
 
     async fn prepare_db(db: Arc<dyn QuoteHandler + Send + Sync>) {
@@ -178,9 +178,9 @@ mod tests {
         let qh: Arc<dyn QuoteHandler + Send + Sync> = Arc::new(db);
         prepare_db(qh.clone()).await;
         let tol = 1.0e-6_f64;
-        let mut market = Market::new(qh).await;
-        let eur = market.get_currency("EUR").await.unwrap();
-        let usd = market.get_currency("USD").await.unwrap();
+        let market = Market::new(qh).await;
+        let eur = market.get_currency_from_str("EUR").await.unwrap();
+        let usd = market.get_currency_from_str("USD").await.unwrap();
         let time = Local::now();
         let fx = market.fx_rate(usd, eur, time).await.unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);

@@ -8,7 +8,7 @@ use finql::datatypes::{
     Quote, QuoteHandler, Stock, Ticker,
 };
 use finql::fx_rates::insert_fx_quote;
-use finql::market::Market;
+use finql::market::{Market, CachePolicy};
 use finql::market_quotes::MarketDataSource;
 use finql::postgres::PostgresDB;
 
@@ -17,7 +17,7 @@ fn log(s: &str) {
     stdout().flush().unwrap();
 }
 
-async fn quote_tests(market: &mut Market) {
+async fn quote_tests(market: Market) {
     // We need some assets the quotes are related
     let basf_id = market
         .db()
@@ -269,7 +269,7 @@ async fn main() {
     db.clean().await.unwrap();
 
     let qh: Arc<dyn QuoteHandler + Sync + Send> = Arc::new(db);
-    let mut market = Market::new(qh).await;
-    quote_tests(&mut market).await;
+    let market = Market::new(qh).await;
+    quote_tests(market).await;
     println!("You may have a look at the database for further inspection.");
 }

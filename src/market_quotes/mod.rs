@@ -68,7 +68,7 @@ pub trait MarketQuoteProvider: Send + Sync {
 }
 
 pub async fn update_ticker<'a>(
-    provider: &(dyn MarketQuoteProvider + Send + Sync),
+    provider: Arc<dyn MarketQuoteProvider + Send + Sync + 'a>,
     ticker: &Ticker,
     db: Arc<dyn QuoteHandler + Send + Sync + 'a>,
 ) -> Result<(), MarketQuoteError> {
@@ -79,7 +79,7 @@ pub async fn update_ticker<'a>(
 }
 
 pub async fn update_ticker_history<'a>(
-    provider: &(dyn MarketQuoteProvider + Send + Sync),
+    provider: Arc<dyn MarketQuoteProvider + Send + Sync +'a>,
     ticker: &Ticker,
     db: Arc<dyn QuoteHandler + Send + Sync + 'a>,
     start: DateTime<Local>,

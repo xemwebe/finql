@@ -1,3 +1,8 @@
+Version 0.13
+  * Market refactoring: Using the interior mutability pattern, Market can now be used 
+    as a regular, cloneable struct. Using mut is no longer required.
+  * Extension of Market with method for fetching/creating currencies and implicit 
+    CachePolicy setting
 Version 0.12
   * Breaking change Market extensions: 
     - price cache with intrinsic mutability

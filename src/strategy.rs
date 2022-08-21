@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use log::{debug, trace};
@@ -147,7 +146,7 @@ impl Strategy for StaticInSingleStock {
 pub struct ReInvestInSingleStock {
     asset_id: i32,
     ticker_id: i32,
-    market: Arc<Market>,
+    market: Market,
     dividends: Vec<CashFlow>,
     costs: StockTransactionCosts,
 }
@@ -156,7 +155,7 @@ impl ReInvestInSingleStock {
     pub fn new(
         asset_id: i32,
         ticker_id: i32,
-        market: Arc<Market>,
+        market: Market,
         dividends: Vec<CashFlow>,
         costs: StockTransactionCosts,
     ) -> ReInvestInSingleStock {

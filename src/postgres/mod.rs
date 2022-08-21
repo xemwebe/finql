@@ -44,6 +44,9 @@ impl PostgresDB {
         sqlx::query!("DROP TABLE IF EXISTS assets")
             .execute(&self.pool)
             .await?;
+        sqlx::query!("DROP TABLE IF EXISTS objects")
+            .execute(&self.pool)
+            .await?;
         self.init().await
     }
 
