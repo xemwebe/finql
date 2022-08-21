@@ -296,7 +296,7 @@ impl Market {
     pub fn try_from_cache(&self, asset_id: i32, time: DateTime<Local>) -> Option<(f64, i32)> {
         if let Ok(prices) = self.inner.prices.read() {
             if let Some(series) = (*prices).get(&asset_id) {
-                series.range(..time).next_back();
+                return series.range(..time).last().map(|entry| *entry.1 );
             }
         }
         None
