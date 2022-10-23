@@ -3,7 +3,6 @@
 /// source, e.g a database, files, or REST service.
 /// Market data consist of non-static data, like interest rates,
 /// asset prices, or foreign exchange rates.
-
 use std::sync::{Arc, RwLock};
 
 use chrono::{DateTime, Local, NaiveDate};
@@ -45,12 +44,14 @@ pub enum MarketError {
     CurrencyNotFound,
 }
 
+#[derive(Clone)]
 struct TimeRange {
     start: DateTime<Local>,
     end: DateTime<Local>,
 }
 
 /// Caching policy for Market
+#[derive(Clone)]
 enum CachePolicy {
     /// Do not cache any values
     None,
@@ -79,7 +80,7 @@ struct MarketImpl {
     /// Quotes database
     db: Arc<dyn QuoteHandler + Sync + Send>,
     /// Caching policy
-    cache_policy: CachePolicy,
+    cache_policy: RwLock<CachePolicy>,
     /// List of currency for fast access
     currencies: RwLock<BTreeMap<i32, Currency>>,
 }
@@ -98,7 +99,7 @@ impl Market {
                 providers: RwLock::new(BTreeMap::new()),
                 prices: RwLock::new(BTreeMap::new()),
                 db: db.clone(),
-                cache_policy: CachePolicy::None,
+                cache_policy: RwLock::new(CachePolicy::None),
                 currencies: RwLock::new(currency_map(db).await),
             }),
         }
@@ -120,7 +121,7 @@ impl Market {
                 providers: RwLock::new(BTreeMap::new()),
                 prices: RwLock::new(BTreeMap::new()),
                 db: db.clone(),
-                cache_policy,
+                cache_policy: RwLock::new(cache_policy),
                 currencies: RwLock::new(currency_map(db).await),
             }),
         })
@@ -128,6 +129,28 @@ impl Market {
 
     pub fn db(&self) -> Arc<dyn QuoteHandler + Sync + Send> {
         self.inner.db.clone()
+    }
+
+    pub fn set_cache_period(
+        &self,
+        start: DateTime<Local>,
+        end: DateTime<Local>,
+    ) -> Result<(), MarketError> {
+        if let Ok(mut policy) = self.inner.cache_policy.write() {
+            let new_policy = match &*policy {
+                CachePolicy::None => CachePolicy::PredefinedPeriod(TimeRange { start, end }),
+                CachePolicy::PredefinedPeriod(time_range) => {
+                    CachePolicy::PredefinedPeriod(TimeRange {
+                        start: start.min(time_range.start),
+                        end: end.max(time_range.end),
+                    })
+                }
+            };
+            *policy = new_policy;
+        } else {
+            return Err(MarketError::CacheFailure);
+        }
+        Ok(())
     }
 
     /// Get calendar from market
@@ -223,21 +246,16 @@ impl Market {
                 Some(provider.clone())
             } else {
                 None
-            } 
+            }
         } else {
             None
         };
         if let Some(provider) = provider {
-            market_quotes::update_ticker(
-                provider,
-                &ticker,
-                self.inner.db.clone()
-            )
-            .await?;
+            market_quotes::update_ticker(provider, &ticker, self.inner.db.clone()).await?;
         }
         Ok(())
     }
-    
+
     /// Fetch latest quotes for all active ticker
     pub async fn update_quote_history(
         &self,
@@ -296,7 +314,7 @@ impl Market {
     pub fn try_from_cache(&self, asset_id: i32, time: DateTime<Local>) -> Option<(f64, i32)> {
         if let Ok(prices) = self.inner.prices.read() {
             if let Some(series) = (*prices).get(&asset_id) {
-                return series.range(..time).last().map(|entry| *entry.1 );
+                return series.range(..time).last().map(|entry| *entry.1);
             }
         }
         None
@@ -313,7 +331,12 @@ impl Market {
         {
             (quote, curr)
         } else {
-            match &self.inner.cache_policy {
+            let cache_policy = if let Ok(cache_policy) = self.inner.cache_policy.read() {
+                (*cache_policy).clone()
+            } else {
+                CachePolicy::None
+            };
+            match &cache_policy {
                 CachePolicy::None => {
                     let (quote, currency) = self
                         .inner
