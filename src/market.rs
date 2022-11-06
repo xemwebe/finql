@@ -42,6 +42,10 @@ pub enum MarketError {
     CacheFailure,
     #[error("Currency not found")]
     CurrencyNotFound,
+    #[error("Currency not in database: {0}")]
+    CurrencyNotInDatabase(String),
+    #[error("Missing quote for currency pair {0}/{1}")]
+    MissingQuoteForCurrencyPair(String, String),
 }
 
 #[derive(Clone)]
@@ -391,26 +395,31 @@ impl CurrencyConverter for Market {
         if base_currency == quote_currency {
             return Ok(1.0);
         } else {
-            let (fx_quote, quote_curr_id) = if let Some((fx_quote, quote_curr_id)) = self
-                .try_from_cache(
-                    base_currency.id.ok_or(CurrencyError::ConversionFailed)?,
-                    time,
-                ) {
-                (fx_quote, quote_curr_id)
-            } else {
-                let fx_quote = self
-                    .inner
-                    .db
-                    .get_last_fx_quote_before(&base_currency.iso_code, time)
-                    .await
-                    .map_err(|_| CurrencyError::ConversionFailed)?;
-                (fx_quote.0.price, fx_quote.1.id.unwrap())
-            };
+            let base_curr_id = base_currency
+                .id
+                .ok_or(CurrencyError::CurrencyNotInDatabase(
+                    base_currency.to_string(),
+                ))?;
+            let (fx_quote, quote_curr_id) =
+                if let Some((fx_quote, quote_curr_id)) = self.try_from_cache(base_curr_id, time) {
+                    (fx_quote, quote_curr_id)
+                } else {
+                    let fx_quote = self
+                        .inner
+                        .db
+                        .get_last_quote_before_by_id(base_curr_id, time)
+                        .await
+                        .map_err(|e| CurrencyError::DataBaseError(e.to_string()))?;
+                    (fx_quote.0.price, fx_quote.1.id.unwrap())
+                };
             if quote_currency.id == Some(quote_curr_id) {
                 return Ok(fx_quote);
             }
         }
-        Err(CurrencyError::ConversionFailed)
+        Err(CurrencyError::MissingQuoteForCurrencyPair(
+            base_currency.to_string(),
+            quote_currency.to_string(),
+        ))
     }
 }
 

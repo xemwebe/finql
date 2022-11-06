@@ -17,8 +17,18 @@ pub enum CurrencyError {
     InvalidCharacter,
     #[error("currency deserialization failed")]
     DeserializationFailed,
-    #[error("currency conversion failed")]
+    #[error("Currency conversion failed")]
     ConversionFailed,
+    #[error("Conversion currency not found: {0}")]
+    CurrencyNotFound(String),
+    #[error("Currency not in database: {0}")]
+    CurrencyNotInDatabase(String),
+    #[error("Internal error: {0}")]
+    InternalError(String),
+    #[error("Missing quote for currency pair {0}/{1}")]
+    MissingQuoteForCurrencyPair(String, String),
+    #[error("Failed to fetch quote from databasei: {0}")]
+    DataBaseError(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]

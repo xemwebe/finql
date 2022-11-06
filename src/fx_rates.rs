@@ -52,7 +52,9 @@ pub async fn insert_fx_quote(
     let quote_id = if let Ok(id) = quote_currency.get_id() {
         id
     } else {
-        quotes.insert_asset(&Asset::Currency(quote_currency)).await?
+        quotes
+            .insert_asset(&Asset::Currency(quote_currency))
+            .await?
     };
     let currency_pair = format!("{quote_currency}/{base_currency}");
     let ticker_id = quotes
@@ -98,14 +100,14 @@ impl CurrencyConverter for SimpleCurrencyConverter {
             &base_currency.to_string(),
             &quote_currency.to_string()
         );
-        if let Ok(fx_store) = self.fx_rates.read() {
-            if fx_store.contains_key(&currency_string) {
-                Ok(fx_store[&currency_string])
-            } else {
-                Err(CurrencyError::ConversionFailed)
-            }
+        let fx_store = self
+            .fx_rates
+            .read()
+            .map_err(|e| CurrencyError::InternalError(e.to_string()))?;
+        if fx_store.contains_key(&currency_string) {
+            Ok(fx_store[&currency_string])
         } else {
-            Err(CurrencyError::ConversionFailed)
+            Err(CurrencyError::CurrencyNotFound(currency_string.clone()))
         }
     }
 }
@@ -149,7 +151,7 @@ mod tests {
     use chrono::Local;
 
     use crate::datatypes::CurrencyISOCode;
-    use crate::market::{Market, CachePolicy};
+    use crate::market::{CachePolicy, Market};
     use crate::postgres::PostgresDB;
 
     async fn prepare_db(db: Arc<dyn QuoteHandler + Send + Sync>) {
