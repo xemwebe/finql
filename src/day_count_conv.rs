@@ -3,8 +3,7 @@
 use crate::time_period::TimePeriod;
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
-use std::error::Error;
-use std::fmt::{self, Display, Formatter};
+use thiserror::Error;
 
 /// Specify a day count method
 #[derive(Deserialize, Serialize, Clone, Copy, Debug)]
@@ -30,39 +29,20 @@ pub enum DayCountConv {
 
 /// Specify a day count method error,
 /// e.g. missing parameters in calculation of year fraction
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum DayCountConvError {
+    #[error("day count convention in 30/x style are not applicable periods from 30th to 31st")]
     Impossible360,
+    #[error("missing time period required for Act/Act ICMA")]
     IcmaMissingTimePeriod,
+    #[error("missing roll date required for Act/Act ICMA")]
     IcmaMissingRollDate,
+    #[error("time period can't be converted to frequency as required by Act/Act ICMA")]
     IcmaNoFrequency,
-}
-
-impl Display for DayCountConvError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            DayCountConvError::Impossible360 => write!(
-                f,
-                "day count convention in 30/x style are not applicable periods from 30th to 31st"
-            ),
-            DayCountConvError::IcmaMissingTimePeriod => {
-                write!(f, "missing time period required for Act/Act ICMA")
-            }
-            DayCountConvError::IcmaMissingRollDate => {
-                write!(f, "missing roll date required for Act/Act ICMA")
-            }
-            DayCountConvError::IcmaNoFrequency => write!(
-                f,
-                "time period can't be converted to frequency as required by Act/Act ICMA"
-            ),
-        }
-    }
-}
-
-impl Error for DayCountConvError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
+    #[error("Invalid date")]
+    InvalidDate,
+    #[error("Failed to apply time period")]
+    TimePeriodError(#[from] crate::time_period::TimePeriodError),
 }
 
 impl DayCountConv {
@@ -79,7 +59,7 @@ impl DayCountConv {
         let since = NaiveDate::signed_duration_since;
         match self {
             DayCountConv::Act365 => Ok(since(end, start).num_days() as f64 / 365.),
-            DayCountConv::Act365l => Ok(DayCountConv::calc_act_365_leap(start, end)),
+            DayCountConv::Act365l => Ok(DayCountConv::calc_act_365_leap(start, end)?),
             DayCountConv::Act360 => Ok(since(end, start).num_days() as f64 / 360.),
             // Check that this method is not applied to scenarios where it does not yield sensible results.
             // E.g. for one-day periods from 30th to 31st of the same month, with zero result
@@ -113,12 +93,13 @@ impl DayCountConv {
     }
 
     /// Implementation of act/365leap day count method
-    fn calc_act_365_leap(start: NaiveDate, end: NaiveDate) -> f64 {
+    fn calc_act_365_leap(start: NaiveDate, end: NaiveDate) -> Result<f64, DayCountConvError> {
         let mut yf = (end.year() - start.year()) as f64;
         yf +=
-            DayCountConv::days_to_date(end) as f64 / DayCountConv::days_in_year(end.year()) as f64;
-        yf - DayCountConv::days_to_date(start) as f64
-            / DayCountConv::days_in_year(start.year()) as f64
+            DayCountConv::days_to_date(end)? as f64 / DayCountConv::days_in_year(end.year()) as f64;
+        Ok(yf
+            - DayCountConv::days_to_date(start)? as f64
+                / DayCountConv::days_in_year(start.year()) as f64)
     }
 
     /// Implementation of 30/360 day count method
@@ -154,16 +135,16 @@ impl DayCountConv {
                 let freq: f64 = frequency as f64;
                 let mut base = roll_date;
                 while base < start {
-                    base = time_period.add_to(base, None);
+                    base = time_period.add_to(base, None)?;
                 }
                 while base > end {
-                    base = time_period.sub_from(base, None);
+                    base = time_period.sub_from(base, None)?;
                 }
                 if base < start {
                     // Period between start and end is shorter than natural period
                     let days = end.signed_duration_since(start).num_days() as f64;
                     let period_days = time_period
-                        .add_to(base, None)
+                        .add_to(base, None)?
                         .signed_duration_since(base)
                         .num_days() as f64;
                     return Ok(days / (period_days * freq));
@@ -172,27 +153,27 @@ impl DayCountConv {
                 let mut b = base;
                 let mut yf = 0.;
                 while b > start {
-                    b = time_period.sub_from(b, None);
+                    b = time_period.sub_from(b, None)?;
                     if b >= start {
                         periods += 1;
                     }
                 }
                 if b < start {
                     // first period is broken, add fraction
-                    let be = time_period.add_to(b, None);
+                    let be = time_period.add_to(b, None)?;
                     let days = be.signed_duration_since(start).num_days() as f64;
                     let period_days = be.signed_duration_since(b).num_days() as f64;
                     yf += days / period_days;
                 };
                 while base < end {
-                    base = time_period.add_to(base, None);
+                    base = time_period.add_to(base, None)?;
                     if base <= end {
                         periods += 1;
                     }
                 }
                 if base > end {
                     // last period is broken, add fraction
-                    let bs = time_period.sub_from(base, None);
+                    let bs = time_period.sub_from(base, None)?;
                     let days = end.signed_duration_since(bs).num_days() as f64;
                     let period_days = base.signed_duration_since(bs).num_days() as f64;
                     yf += days / period_days;
@@ -212,9 +193,12 @@ impl DayCountConv {
     }
 
     /// Calculate the number of days since January 1st this year
-    fn days_to_date(date: NaiveDate) -> i64 {
-        date.signed_duration_since(NaiveDate::from_ymd_opt(date.year(), 1, 1))
-            .num_days()
+    fn days_to_date(date: NaiveDate) -> Result<i64, DayCountConvError> {
+        Ok(date
+            .signed_duration_since(
+                NaiveDate::from_ymd_opt(date.year(), 1, 1).ok_or(DayCountConvError::InvalidDate)?,
+            )
+            .num_days())
     }
 }
 

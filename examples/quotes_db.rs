@@ -8,7 +8,7 @@ use finql::datatypes::{
     Quote, QuoteHandler, Stock, Ticker,
 };
 use finql::fx_rates::insert_fx_quote;
-use finql::market::{Market, CachePolicy};
+use finql::market::{CachePolicy, Market};
 use finql::market_quotes::MarketDataSource;
 use finql::postgres::PostgresDB;
 

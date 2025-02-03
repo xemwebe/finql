@@ -11,8 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::datatypes::{
     currency::CurrencyConverter,
     date_time_helper::{naive_date_to_date_time, DateTimeError},
-    Asset, AssetHandler, Currency, CurrencyError, DataError, Transaction,
-    TransactionType,
+    Asset, AssetHandler, Currency, CurrencyError, DataError, Transaction, TransactionType,
 };
 
 use crate::period_date::PeriodDateError;
@@ -373,7 +372,9 @@ pub async fn calculate_position_and_pnl(
         .get_asset_names(market.db().into_arc_dispatch())
         .await?;
     let date_time: DateTime<Local> = if let Some(date) = date {
-        Local.from_local_datetime(&date.and_hms_opt(0, 0, 0).unwrap()).unwrap()
+        Local
+            .from_local_datetime(&date.and_hms_opt(0, 0, 0).unwrap())
+            .unwrap()
     } else {
         Local::now()
     };
@@ -398,7 +399,14 @@ pub async fn calculate_position_for_period(
     let (mut position, _) =
         calculate_position_and_pnl(currency, transactions, Some(start), market).await?;
     position.reset_pnl();
-    calc_delta_position(&mut position, transactions, Some(start), Some(end), market.clone()).await?;
+    calc_delta_position(
+        &mut position,
+        transactions,
+        Some(start),
+        Some(end),
+        market.clone(),
+    )
+    .await?;
     position
         .get_asset_names(market.db().into_arc_dispatch())
         .await?;
@@ -414,7 +422,7 @@ pub async fn calculate_position_for_period(
 mod tests {
     use super::*;
     use crate::datatypes::QuoteHandler;
-    
+
     use chrono::NaiveDate;
 
     use crate::assert_fuzzy_eq;
@@ -422,8 +430,8 @@ mod tests {
         date_time_helper::make_time, Asset, AssetHandler, CashAmount, CashFlow, Currency,
         CurrencyISOCode, Quote, Stock, Ticker,
     };
-    use crate::postgres::PostgresDB;
     use crate::market::CachePolicy;
+    use crate::postgres::PostgresDB;
 
     #[tokio::test]
     async fn test_portfolio_position() {
@@ -440,7 +448,9 @@ mod tests {
         let market = Market::new(Arc::new(db)).await;
         let eur = market.get_currency_from_str("EUR").await.unwrap();
         let mut transactions = Vec::new();
-        let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
+        let positions = calc_position(eur, &transactions, None, market.clone())
+            .await
+            .unwrap();
         assert_fuzzy_eq!(positions.cash.position, 0.0, tol);
 
         transactions.push(Transaction {
@@ -455,7 +465,9 @@ mod tests {
             },
             note: None,
         });
-        let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
+        let positions = calc_position(eur, &transactions, None, market.clone())
+            .await
+            .unwrap();
         assert_fuzzy_eq!(positions.cash.position, 10000.0, tol);
         assert_eq!(positions.assets.len(), 0);
 
@@ -488,7 +500,9 @@ mod tests {
             },
             note: None,
         });
-        let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
+        let positions = calc_position(eur, &transactions, None, market.clone())
+            .await
+            .unwrap();
         assert_fuzzy_eq!(positions.cash.position, 10000.0 - 104.0 - 5.0, tol);
         assert_eq!(positions.assets.len(), 1);
         let asset_pos_1 = positions.assets.get(&1).unwrap();
@@ -540,7 +554,9 @@ mod tests {
             },
             note: None,
         });
-        let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
+        let positions = calc_position(eur, &transactions, None, market.clone())
+            .await
+            .unwrap();
         assert_fuzzy_eq!(
             positions.cash.position,
             10000.0 - 104.0 - 5.0 + 60.0 - 2.0 - 3.0,
@@ -621,7 +637,9 @@ mod tests {
             },
             note: None,
         });
-        let positions = calc_position(eur, &transactions, None, market.clone()).await.unwrap();
+        let positions = calc_position(eur, &transactions, None, market.clone())
+            .await
+            .unwrap();
         assert_fuzzy_eq!(
             positions.cash.position,
             10000.0 - 104.0 - 5.0 + 60.0 - 2.0 - 3.0 - 140.0 - 7.0 - 4.5 + 13.0 + 6.6,

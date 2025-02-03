@@ -123,7 +123,11 @@ mod tests {
     fn yield_to_maturity() {
         let tol = 1e-11;
         let curr = Currency::from_str("EUR").unwrap();
-        let cash_flows = vec![CashFlow::new(1050., curr, NaiveDate::from_ymd_opt(2021, 10, 1))];
+        let cash_flows = vec![CashFlow::new(
+            1050.,
+            curr,
+            NaiveDate::from_ymd_opt(2021, 10, 1),
+        )];
         let init_cash_flow = CashFlow::new(-1000., curr, NaiveDate::from_ymd_opt(2020, 10, 1));
 
         let ytm = calculate_cash_flows_ytm(&cash_flows, &init_cash_flow).unwrap();

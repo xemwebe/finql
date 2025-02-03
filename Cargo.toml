@@ -8,34 +8,46 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/xemwebe/finql"
 readme = "README.md"
 keywords = ["finance", "bond", "period", "pricing"]
-categories = ["date-and-time","mathematics"]
+categories = ["date-and-time", "mathematics"]
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
-chrono-tz = "0.8"
+chrono-tz = "0.10"
+time = "0.3"
 text_io = "0.1"
 computus = "1.0"
 serde = { version = "1.0.*", features = ["derive"] }
 serde_json = "1.0.*"
-argmin = { version = "0.8", default-features = false }
-yahoo_finance_api = "1.4"
+argmin = { version = "0.10", default-features = false }
+yahoo_finance_api = "2.4"
 gurufocus_api = "0.6"
-rand = "0.8"
-eodhistoricaldata_api =  "0.4"
-alpha_vantage = { version="0.9", features=["reqwest-client"] } 
-reqwest = "0.11"
-scraper = "0.15"
+rand = "0.9"
+eodhistoricaldata_api = "0.4"
+alpha_vantage = { version = "0.11", features = ["reqwest-client"] }
+reqwest = "0.12"
+scraper = "0.22"
 csv = "1.2"
 async-trait = "0.1"
 tokio-compat-02 = "0.2"
 log = "0.4"
-thiserror = "1.0"
+thiserror = "2.0"
 futures = "0.3"
-sqlx = { version = "0.6", features = [ "runtime-tokio-rustls", "postgres", "macros", "chrono", "offline", "json" ] }
+sqlx = { version = "0.8", features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "macros",
+    "chrono",
+    "json",
+] }
 cal-calc = "0.2"
 
 [dev-dependencies]
-tokio = { version = "1.26", features =  ["full"] }
-sqlx = { version="0.6", default-features = false, features = [ "runtime-tokio-rustls", "migrate", "postgres", "sqlite", "offline"] }
+tokio = { version = "1.26", features = ["full"] }
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio-rustls",
+    "migrate",
+    "postgres",
+    "sqlite",
+] }
 plotters = "^0.3.1"
-pretty_env_logger = "0.4"
+pretty_env_logger = "0.5"

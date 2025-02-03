@@ -2,26 +2,18 @@ use cal_calc::Calendar;
 use chrono::{DateTime, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
-#[derive(Debug)]
+use crate::datatypes::date_time_helper::{from_date, to_date, DateTimeError};
+
+#[derive(Error, Debug)]
 pub enum TimeSeriesError {
+    #[error("Time series is empty.")]
     IsEmpty,
-}
-
-impl fmt::Display for TimeSeriesError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TimeSeriesError::IsEmpty => write!(f, "Time series is empty."),
-        }
-    }
-}
-
-impl Error for TimeSeriesError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
+    #[error("Date conversion failure")]
+    DayConversionError(#[from] DateTimeError),
+    #[error("Calendar error")]
+    CalendarError(#[from] cal_calc::CalendarError),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -95,7 +87,7 @@ impl TimeSeries {
                 Some(d) => {
                     if dates.contains(&date) {
                         if gap_size >= min_size {
-                            gaps.push((d, cal.prev_bday(date)));
+                            gaps.push((d, from_date(cal.prev_bday(to_date(date)?)?)?));
                         }
                         gap_begin = None;
                     } else {
@@ -103,7 +95,7 @@ impl TimeSeries {
                     }
                 }
             }
-            date = cal.next_bday(date);
+            date = from_date(cal.next_bday(to_date(date)?)?)?;
         }
 
         if let Some(d) = gap_begin {

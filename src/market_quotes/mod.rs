@@ -79,14 +79,14 @@ pub async fn update_ticker<'a>(
 }
 
 pub async fn update_ticker_history<'a>(
-    provider: Arc<dyn MarketQuoteProvider + Send + Sync +'a>,
+    provider: Arc<dyn MarketQuoteProvider + Send + Sync + 'a>,
     ticker: &Ticker,
     db: Arc<dyn QuoteHandler + Send + Sync + 'a>,
     start: DateTime<Local>,
     end: DateTime<Local>,
 ) -> Result<(), MarketQuoteError> {
     let mut quotes = provider.fetch_quote_history(ticker, start, end).await?;
-    for mut quote in &mut quotes {
+    for quote in &mut quotes {
         quote.price *= ticker.factor;
         db.insert_quote(quote).await?;
     }

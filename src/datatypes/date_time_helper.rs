@@ -1,5 +1,6 @@
-use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, TimeZone};
 use chrono_tz::Tz;
+use std::convert::TryInto;
 use std::time::{Duration, UNIX_EPOCH};
 use thiserror::Error;
 
@@ -11,6 +12,8 @@ pub enum DateTimeError {
     DateTimeConversionFailed,
     #[error("Failed to parse (date-)time from string")]
     StringParseError,
+    #[error("Found invalid date")]
+    InvalidDateError,
 }
 
 /// Convert NaiveDate to DateTime at the given hour and convert to local time zone
@@ -20,10 +23,10 @@ pub fn naive_date_to_date_time(
     hour: u32,
     zone: Option<String>,
 ) -> Result<DateTime<Local>, DateTimeError> {
-    let time = if hour>=24 {
-        date.and_hms_milli(23,59,59,999)
+    let time = if hour >= 24 {
+        date.and_hms_milli_opt(23, 59, 59, 999).unwrap()
     } else {
-        date.and_hms_milli(hour, 0, 0, 0)
+        date.and_hms_milli_opt(hour, 0, 0, 0).unwrap()
     };
     let time = match zone {
         None => Local
@@ -123,8 +126,33 @@ pub fn make_time(
     minute: u32,
     second: u32,
 ) -> Option<DateTime<Local>> {
-    let time: NaiveDateTime = NaiveDate::from_ymd(year, month, day).and_hms(hour, minute, second);
+    let time: NaiveDateTime =
+        NaiveDate::from_ymd_opt(year, month, day)?.and_hms_opt(hour, minute, second)?;
     Local.from_local_datetime(&time).single()
+}
+
+pub fn to_date(date: NaiveDate) -> Result<time::Date, DateTimeError> {
+    time::Date::from_calendar_date(
+        date.year(),
+        (date.month() as u8)
+            .try_into()
+            .map_err(|_| DateTimeError::InvalidDateError)?,
+        date.day() as u8,
+    )
+    .map_err(|_| DateTimeError::InvalidDateError)
+}
+
+pub fn from_date(date: time::Date) -> Result<NaiveDate, DateTimeError> {
+    NaiveDate::from_ymd_opt(date.year(), date.month() as u32, date.day().into())
+        .ok_or(DateTimeError::InvalidDateError)
+}
+
+pub fn to_offset_date_time(time: DateTime<Local>) -> Result<time::OffsetDateTime, DateTimeError> {
+    Ok(time::OffsetDateTime::from_unix_timestamp_nanos(
+        time.timestamp_nanos_opt()
+            .ok_or(DateTimeError::InvalidDateError)? as i128,
+    )
+    .map_err(|_| DateTimeError::InvalidDateError)?)
 }
 
 #[cfg(test)]

@@ -1,6 +1,17 @@
-use cal_calc::Calendar;
-use chrono::{Datelike, NaiveDate};
+use crate::datatypes::date_time_helper::{from_date, to_date, DateTimeError};
+use cal_calc::{Calendar, CalendarError};
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+/// Day adjustment error
+#[derive(Error, Debug)]
+pub enum AdjustDateError {
+    #[error("Failed to adjust date")]
+    AdjustmentFailed(#[from] CalendarError),
+    #[error("Date conversion failure")]
+    DayConversionError(#[from] DateTimeError),
+}
 
 /// Rules to adjust dates to business days
 /// The rule "Modified Preceding" commonly referred to in text books
@@ -20,19 +31,24 @@ pub enum DayAdjust {
 }
 
 impl DayAdjust {
-    pub fn adjust_date(&self, date: NaiveDate, cal: &Calendar) -> NaiveDate {
-        match self {
+    pub fn adjust_date(
+        &self,
+        date: NaiveDate,
+        cal: &Calendar,
+    ) -> Result<NaiveDate, AdjustDateError> {
+        let date = to_date(date)?;
+        let adjusted_date = match self {
             DayAdjust::None => date,
             DayAdjust::Following => {
-                if cal.is_holiday(date.into()) {
-                    cal.next_bday(date.into())?.into()
+                if cal.is_holiday(date) {
+                    cal.next_bday(date)?
                 } else {
                     date
                 }
             }
             DayAdjust::Preceding => {
-                if cal.is_holiday(date.into()) {
-                    cal.prev_bday(date.into())?.into()
+                if cal.is_holiday(date) {
+                    cal.prev_bday(date)?
                 } else {
                     date
                 }
@@ -41,15 +57,16 @@ impl DayAdjust {
                 if cal.is_business_day(date) {
                     date
                 } else {
-                    let new_date = cal.next_bday(date.into());
+                    let new_date = cal.next_bday(date)?;
                     if new_date.month() != date.month() {
-                        cal.prev_bday(date.into())?.into()
+                        cal.prev_bday(date)?
                     } else {
                         new_date
                     }
                 }
             }
-        }
+        };
+        Ok(from_date(adjusted_date)?)
     }
 }
 

@@ -4,7 +4,8 @@ use log::{debug, trace};
 use thiserror::Error;
 
 use crate::datatypes::{
-    date_time_helper::naive_date_to_date_time, CashFlow, Transaction, TransactionType,
+    date_time_helper::{naive_date_to_date_time, DateTimeError},
+    CashFlow, Transaction, TransactionType,
 };
 use crate::{portfolio::PortfolioPosition, time_period::TimePeriod, Market};
 
@@ -13,7 +14,9 @@ pub enum StrategyError {
     #[error("Failed to retreive data from database")]
     RectreivingDataFailed(#[from] crate::datatypes::DataError),
     #[error("date/time conversion error")]
-    DateTimeError(#[from] crate::datatypes::date_time_helper::DateTimeError),
+    DateConversionError(#[from] DateTimeError),
+    #[error("Failed to apply time period")]
+    TimePeriodError(#[from] crate::time_period::TimePeriodError),
 }
 
 #[derive(Default, Debug, Clone)]
@@ -55,7 +58,7 @@ pub trait Strategy {
         position: &PortfolioPosition,
         date: NaiveDate,
     ) -> Result<Vec<Transaction>, StrategyError>;
-    fn next_day(&self, date: NaiveDate) -> NaiveDate;
+    fn next_day(&self, date: NaiveDate) -> Result<NaiveDate, StrategyError>;
 }
 
 fn cash_flow_idx(date: NaiveDate, cash_flows: &[CashFlow]) -> Option<usize> {
@@ -137,9 +140,9 @@ impl Strategy for StaticInSingleStock {
         Ok(transactions)
     }
 
-    fn next_day(&self, date: NaiveDate) -> NaiveDate {
+    fn next_day(&self, date: NaiveDate) -> Result<NaiveDate, StrategyError> {
         let one_day = "1D".parse::<TimePeriod>().unwrap();
-        one_day.add_to(date, None)
+        Ok(one_day.add_to(date, None)?)
     }
 }
 
@@ -258,16 +261,16 @@ impl Strategy for ReInvestInSingleStock {
                     transactions.push(fee_transaction);
                 }
             }
-            debug!("ReInvestInSingleStock: added dividend with amount {} and tax {} and buying {} shares with fee {} from available cash {} with price {} at date {}.", 
+            debug!("ReInvestInSingleStock: added dividend with amount {} and tax {} and buying {} shares with fee {} from available cash {} with price {} at date {}.",
                 dividend.amount.amount, -tax.amount.amount, additional_position, fee, available_cash, asset_quote.price, date);
         }
 
         Ok(transactions)
     }
 
-    fn next_day(&self, date: NaiveDate) -> NaiveDate {
+    fn next_day(&self, date: NaiveDate) -> Result<NaiveDate, StrategyError> {
         let one_day = "1D".parse::<TimePeriod>().unwrap();
-        one_day.add_to(date, None)
+        Ok(one_day.add_to(date, None)?)
     }
 }
 

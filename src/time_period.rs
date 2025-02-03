@@ -2,7 +2,6 @@
 //! in terms of day, months or years that can be added to a given date.
 //! Time periods may als be negative.
 
-use std::error;
 use std::fmt;
 use std::str::FromStr;
 
@@ -11,47 +10,27 @@ use chrono::{Datelike, Duration, NaiveDate};
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
+use thiserror::Error;
+
+use crate::datatypes::date_time_helper::{from_date, to_date, DateTimeError};
 
 /// Error type related to the TimePeriod struct
-#[derive(Debug, Clone)]
+#[derive(Error, Debug)]
 pub enum TimePeriodError {
+    #[error("couldn't parse time period, string is too short")]
     ParseError,
+    #[error("invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'")]
     InvalidUnit,
+    #[error("parsing number of periods for time period failed")]
     InvalidPeriod,
+    #[error("the time period can't be converted to frequency")]
     NoFrequency,
-}
-
-impl fmt::Display for TimePeriodError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            TimePeriodError::ParseError => {
-                write!(f, "couldn't parse time period, string is too short")
-            }
-            TimePeriodError::InvalidUnit => write!(
-                f,
-                "invalid time period unit, use one of 'D', 'B', 'W', 'M', or 'Y'"
-            ),
-            TimePeriodError::InvalidPeriod => {
-                write!(f, "parsing number of periods for time period failed")
-            }
-            TimePeriodError::NoFrequency => {
-                write!(f, "the time period can't be converted to frequency")
-            }
-        }
-    }
-}
-
-/// This is important for other errors to wrap this one.
-impl error::Error for TimePeriodError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        None
-    }
-}
-
-impl de::Error for TimePeriodError {
-    fn custom<T: fmt::Display>(_: T) -> Self {
-        TimePeriodError::ParseError
-    }
+    #[error("conversion between differen date objects failed")]
+    InvalidDateCovnersion(#[from] DateTimeError),
+    #[error("calendar error")]
+    CalendarError(#[from] cal_calc::CalendarError),
+    #[error("invalid date")]
+    InvalidDate,
 }
 
 /// Possible units of a time period
@@ -87,8 +66,12 @@ impl TimePeriod {
     /// Add time period to a given date.
     /// The function call will panic is the resulting year is out
     /// of the valid range or if not calendar is provided in case of BusinessDaily time periods
-    pub fn add_to(&self, mut date: NaiveDate, cal: Option<&Calendar>) -> NaiveDate {
-        match self.unit {
+    pub fn add_to(
+        &self,
+        mut date: NaiveDate,
+        cal: Option<&Calendar>,
+    ) -> Result<NaiveDate, TimePeriodError> {
+        Ok(match self.unit {
             TimePeriodUnit::Daily => date + Duration::days(self.num as i64),
             TimePeriodUnit::BusinessDaily => {
                 let is_neg = self.num < 0;
@@ -96,9 +79,9 @@ impl TimePeriod {
                 let cal = cal.unwrap();
                 for _ in 0..n {
                     date = if is_neg {
-                        cal.prev_bday(date)
+                        from_date(cal.prev_bday(to_date(date)?)?)?
                     } else {
-                        cal.next_bday(date)
+                        from_date(cal.next_bday(to_date(date)?)?)?
                     };
                 }
                 date
@@ -124,20 +107,26 @@ impl TimePeriod {
                     month -= 12;
                 }
                 if day > 28 {
-                    let last_date_of_month = last_day_of_month(year, month as u32);
-                    day = std::cmp::min(day, last_date_of_month);
+                    let last_date_of_month = last_day_of_month(year, month as u8);
+                    day = std::cmp::min(day, last_date_of_month as u32);
                 }
-                NaiveDate::from_ymd_opt(year, month as u32, day)?
+                NaiveDate::from_ymd_opt(year, month as u32, day)
+                    .ok_or(TimePeriodError::InvalidDate)?
             }
             TimePeriodUnit::Annual => {
-                NaiveDate::from_ymd_opt(date.year() + self.num, date.month(), date.day())?
+                NaiveDate::from_ymd_opt(date.year() + self.num, date.month(), date.day())
+                    .ok_or(TimePeriodError::InvalidDate)?
             }
-        }
+        })
     }
 
     /// Substract time period from a given date.
-    pub fn sub_from(&self, date: NaiveDate, cal: Option<&Calendar>) -> NaiveDate {
-        self.inverse().add_to(date, cal)
+    pub fn sub_from(
+        &self,
+        date: NaiveDate,
+        cal: Option<&Calendar>,
+    ) -> Result<NaiveDate, TimePeriodError> {
+        Ok(self.inverse().add_to(date, cal)?)
     }
 
     /// Substract time period from a given date.
@@ -248,7 +237,7 @@ impl Add<TimePeriod> for NaiveDate {
     type Output = NaiveDate;
 
     fn add(self, period: TimePeriod) -> NaiveDate {
-        period.add_to(self, None)
+        period.add_to(self, None).unwrap_or(self)
     }
 }
 
@@ -256,19 +245,19 @@ impl Add<&TimePeriod> for NaiveDate {
     type Output = NaiveDate;
 
     fn add(self, period: &TimePeriod) -> NaiveDate {
-        period.add_to(self, None)
+        period.add_to(self, None).unwrap_or(self)
     }
 }
 
 impl AddAssign<TimePeriod> for NaiveDate {
     fn add_assign(&mut self, period: TimePeriod) {
-        *self = period.add_to(*self, None)
+        *self = period.add_to(*self, None).unwrap_or(*self)
     }
 }
 
 impl AddAssign<&TimePeriod> for NaiveDate {
     fn add_assign(&mut self, period: &TimePeriod) {
-        *self = period.add_to(*self, None)
+        *self = period.add_to(*self, None).unwrap_or(*self)
     }
 }
 
@@ -276,7 +265,7 @@ impl Sub<TimePeriod> for NaiveDate {
     type Output = NaiveDate;
 
     fn sub(self, period: TimePeriod) -> NaiveDate {
-        period.sub_from(self, None)
+        period.sub_from(self, None).unwrap_or(self)
     }
 }
 
@@ -284,19 +273,19 @@ impl Sub<&TimePeriod> for NaiveDate {
     type Output = NaiveDate;
 
     fn sub(self, period: &TimePeriod) -> NaiveDate {
-        period.sub_from(self, None)
+        period.sub_from(self, None).unwrap_or(self)
     }
 }
 
 impl SubAssign<TimePeriod> for NaiveDate {
     fn sub_assign(&mut self, period: TimePeriod) {
-        *self = period.sub_from(*self, None)
+        *self = period.sub_from(*self, None).unwrap_or(*self)
     }
 }
 
 impl SubAssign<&TimePeriod> for NaiveDate {
     fn sub_assign(&mut self, period: &TimePeriod) {
-        *self = period.sub_from(*self, None)
+        *self = period.sub_from(*self, None).unwrap_or(*self)
     }
 }
 

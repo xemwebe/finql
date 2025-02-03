@@ -47,7 +47,7 @@ impl MarketQuoteProvider for AlphaVantage {
             .await?;
 
         let mut quotes = Vec::new();
-        for quote in alpha_quotes.entry() {
+        for quote in alpha_quotes.data().iter() {
             let time = date_time_from_str_standard(quote.time(), 18, ticker.tz.clone())?;
             if time >= start && time <= end {
                 quotes.push(Quote {

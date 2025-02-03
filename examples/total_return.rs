@@ -17,6 +17,7 @@ use finql::datatypes::{
 };
 use finql::postgres::PostgresDB;
 use finql::{
+    market::CachePolicy,
     market_quotes::MarketDataSource,
     portfolio::{calc_delta_position, PortfolioPosition},
     strategy::{
@@ -26,7 +27,6 @@ use finql::{
     time_period::TimePeriod,
     time_series::{TimeSeries, TimeSeriesError, TimeValue},
     Market,
-    market::CachePolicy,
 };
 
 async fn calc_strategy(
@@ -42,10 +42,21 @@ async fn calc_strategy(
     let mut transactions = start_transactions.clone();
 
     let mut position = PortfolioPosition::new(currency);
-    calc_delta_position(&mut position, &transactions, Some(start), Some(start), market.clone()).await.unwrap();
+    calc_delta_position(
+        &mut position,
+        &transactions,
+        Some(start),
+        Some(start),
+        market.clone(),
+    )
+    .await
+    .unwrap();
 
     position
-        .add_quote(naive_date_to_date_time(&start, 20, None).unwrap(), market.clone())
+        .add_quote(
+            naive_date_to_date_time(&start, 20, None).unwrap(),
+            market.clone(),
+        )
         .await;
     //let totals = position.calc_totals();
     //total_return.push(TimeValue{ value: totals.value, date: current_date});
@@ -68,7 +79,7 @@ async fn calc_strategy(
             &transactions,
             Some(current_date),
             Some(next_date),
-            market.clone()
+            market.clone(),
         )
         .await
         .unwrap();
@@ -139,7 +150,8 @@ async fn main() {
     };
     let ticker_id = db.insert_ticker(&ticker).await.unwrap();
     let price_offset_period = "7D".parse::<TimePeriod>().unwrap();
-    let history_start_time = naive_date_to_date_time(&price_offset_period.sub_from(start, None), 0, None).unwrap();
+    let history_start_time =
+        naive_date_to_date_time(&price_offset_period.sub_from(start, None), 0, None).unwrap();
     let start_time = naive_date_to_date_time(&start, 0, None).unwrap();
     let end_time = naive_date_to_date_time(&today, 20, None).unwrap();
     market
@@ -164,7 +176,10 @@ async fn main() {
         cash_flow,
         note: Some("start capital".to_string()),
     });
-    let asset_price = market.get_asset_price(asset_id, usd, start_time).await.unwrap();
+    let asset_price = market
+        .get_asset_price(asset_id, usd, start_time)
+        .await
+        .unwrap();
 
     println!("Buy transaction for initial stock position");
     transactions.push(Transaction {

@@ -1,5 +1,8 @@
 use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::datatypes::{date_time_helper::unix_to_date_time, CashFlow, Quote, Ticker};
+use crate::datatypes::{
+    date_time_helper::{to_offset_date_time, unix_to_date_time},
+    CashFlow, Quote, Ticker,
+};
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use yahoo_finance_api as yahoo;
@@ -10,7 +13,7 @@ pub struct Yahoo {}
 impl MarketQuoteProvider for Yahoo {
     /// Fetch latest quote
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
-        let yahoo = yahoo::YahooConnector::new();
+        let yahoo = yahoo::YahooConnector::new()?;
         let response = yahoo.get_latest_quotes(&ticker.name, "1d").await?;
         let quote = response.last_quote()?;
         Ok(Quote {
@@ -28,9 +31,13 @@ impl MarketQuoteProvider for Yahoo {
         start: DateTime<Local>,
         end: DateTime<Local>,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
-        let yahoo = yahoo::YahooConnector::new();
+        let yahoo = yahoo::YahooConnector::new()?;
         let response = yahoo
-            .get_quote_history(&ticker.name, start.into(), end.into())
+            .get_quote_history(
+                &ticker.name,
+                to_offset_date_time(start)?,
+                to_offset_date_time(end)?,
+            )
             .await?;
         let yahoo_quotes = response.quotes()?;
         let mut quotes = Vec::new();
@@ -55,9 +62,13 @@ impl MarketQuoteProvider for Yahoo {
         start: DateTime<Local>,
         end: DateTime<Local>,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
-        let yahoo = yahoo::YahooConnector::new();
+        let yahoo = yahoo::YahooConnector::new()?;
         let response = yahoo
-            .get_quote_history(&ticker.name, start.into(), end.into())
+            .get_quote_history(
+                &ticker.name,
+                to_offset_date_time(start)?,
+                to_offset_date_time(end)?,
+            )
             .await?;
         let yahoo_dividends = response.dividends()?;
         let mut dividends = Vec::new();

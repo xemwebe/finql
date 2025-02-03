@@ -1,4 +1,3 @@
-
 //! Definition of bonds and similar fixed income products
 //! and functionality to rollout cashflows and calculate basic
 //! valuation figures
@@ -6,12 +5,11 @@
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use std::fmt;
 
 use crate::datatypes::cash_flow::CashFlow;
 use crate::datatypes::currency::Currency;
 
-use crate::day_adjust::DayAdjust;
+use crate::day_adjust::{AdjustDateError, DayAdjust};
 use crate::day_count_conv::{DayCountConv, DayCountConvError};
 use crate::fixed_income::FixedIncome;
 use crate::rates::DiscountError;
@@ -21,13 +19,16 @@ use cal_calc::{CalendarError, CalendarProvider};
 /// Error related to bonds
 #[derive(Error, Debug)]
 pub enum BondError {
-    
     #[error("discounting cash flows failed")]
-    DiscountingFailure(#[from]DiscountError),
+    DiscountingFailure(#[from] DiscountError),
     #[error("unknown or invalid calendar")]
-    MissingCalendar(#[from]CalendarError),
+    MissingCalendar(#[from] CalendarError),
     #[error("invalid day count convention in this context")]
-    DayCountError(#[from]DayCountConvError),
+    DayCountError(#[from] DayCountConvError),
+    #[error("failed to adjust day to business day")]
+    DayAdjustError(#[from] AdjustDateError),
+    #[error("failed to apply time period")]
+    TimePeriodError(#[from] crate::time_period::TimePeriodError),
 }
 
 /// Container for bonds and similar fixed income assets
@@ -135,19 +136,19 @@ impl FixedIncome for Bond {
         let amount =
             position * (self.denomination as f64) * self.coupon.rate / 100. * year_fraction;
         let cal = calendar_provider.get_calendar(&self.calendar)?;
-        let pay_date = self.business_day_rule.adjust_date(end_date, cal);
+        let pay_date = self.business_day_rule.adjust_date(end_date, cal)?;
         let cf = CashFlow::new(amount, self.currency, pay_date);
         cfs.push(cf);
         let maturity = self.maturity;
         while end_date < maturity {
             let start_date = end_date;
-            end_date = self.coupon.period.add_to(start_date, None);
+            end_date = self.coupon.period.add_to(start_date, None)?;
             let year_fraction = self
                 .coupon
                 .year_fraction(start_date, end_date, start_date)?;
             let amount =
                 position * (self.denomination as f64) * self.coupon.rate / 100. * year_fraction;
-            let pay_date = self.business_day_rule.adjust_date(end_date, cal);
+            let pay_date = self.business_day_rule.adjust_date(end_date, cal)?;
             let cf = CashFlow::new(amount, self.currency, pay_date);
             cfs.push(cf);
         }
@@ -155,7 +156,7 @@ impl FixedIncome for Bond {
         let cf = CashFlow::new(
             position * (self.denomination as f64),
             self.currency,
-            self.business_day_rule.adjust_date(maturity, cal),
+            self.business_day_rule.adjust_date(maturity, cal)?,
         );
         cfs.push(cf);
 
@@ -170,7 +171,7 @@ impl FixedIncome for Bond {
         let mut end_date = self.first_coupon_end(start_date);
         while today > end_date && end_date < self.maturity {
             start_date = end_date;
-            end_date = self.coupon.period.add_to(start_date, None);
+            end_date = self.coupon.period.add_to(start_date, None)?;
         }
         if end_date >= self.maturity {
             return Ok(0.);
@@ -272,10 +273,26 @@ mod tests {
         assert_eq!(cash_flows.len(), 5);
         let curr = Currency::from_str("EUR").unwrap();
         let reference_cash_flows = vec![
-            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd_opt(2021, 4, 1).unwrap()),
-            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd_opt(2021, 10, 1).unwrap()),
-            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd_opt(2022, 4, 1).unwrap()),
-            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd_opt(2022, 10, 3).unwrap()),
+            CashFlow::new(
+                0.05 * 1000. / 2.,
+                curr,
+                NaiveDate::from_ymd_opt(2021, 4, 1).unwrap(),
+            ),
+            CashFlow::new(
+                0.05 * 1000. / 2.,
+                curr,
+                NaiveDate::from_ymd_opt(2021, 10, 1).unwrap(),
+            ),
+            CashFlow::new(
+                0.05 * 1000. / 2.,
+                curr,
+                NaiveDate::from_ymd_opt(2022, 4, 1).unwrap(),
+            ),
+            CashFlow::new(
+                0.05 * 1000. / 2.,
+                curr,
+                NaiveDate::from_ymd_opt(2022, 10, 3).unwrap(),
+            ),
             CashFlow::new(1000., curr, NaiveDate::from_ymd_opt(2022, 10, 3).unwrap()),
         ];
         let tol = 1e-11;
