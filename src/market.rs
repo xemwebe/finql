@@ -9,6 +9,7 @@ use chrono::{DateTime, Local, NaiveDate};
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
+use log::debug;
 use thiserror::Error;
 
 use crate::datatypes::{
@@ -395,6 +396,7 @@ impl CurrencyConverter for Market {
         if base_currency == quote_currency {
             return Ok(1.0);
         } else {
+            debug!("convert currency {} to {}", base_currency, quote_currency);
             let base_curr_id = base_currency
                 .id
                 .ok_or(CurrencyError::CurrencyNotInDatabase(

@@ -24,15 +24,15 @@ impl DayAdjust {
         match self {
             DayAdjust::None => date,
             DayAdjust::Following => {
-                if cal.is_holiday(date) {
-                    cal.next_bday(date)
+                if cal.is_holiday(date.into()) {
+                    cal.next_bday(date.into())?.into()
                 } else {
                     date
                 }
             }
             DayAdjust::Preceding => {
-                if cal.is_holiday(date) {
-                    cal.prev_bday(date)
+                if cal.is_holiday(date.into()) {
+                    cal.prev_bday(date.into())?.into()
                 } else {
                     date
                 }
@@ -41,9 +41,9 @@ impl DayAdjust {
                 if cal.is_business_day(date) {
                     date
                 } else {
-                    let new_date = cal.next_bday(date);
+                    let new_date = cal.next_bday(date.into());
                     if new_date.month() != date.month() {
-                        cal.prev_bday(date)
+                        cal.prev_bday(date.into())?.into()
                     } else {
                         new_date
                     }
@@ -61,77 +61,77 @@ mod tests {
     #[test]
     fn day_adjust() {
         let holidays = vec![
-            Holiday::SingularDay(NaiveDate::from_ymd(2019, 10, 10)),
-            Holiday::SingularDay(NaiveDate::from_ymd(2019, 10, 31)),
+            Holiday::SingularDay(date!(2019, 10, 10)),
+            Holiday::SingularDay(date!(2019, 10, 31)),
         ];
         let cal = Calendar::calc_calendar(&holidays, 2019, 2019);
         let rule = DayAdjust::None;
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 1), &cal),
-            NaiveDate::from_ymd(2019, 10, 1)
+            rule.adjust_date(date!(2019, 10, 1), &cal),
+            date!(2019, 10, 1)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 10), &cal),
-            NaiveDate::from_ymd(2019, 10, 10)
+            rule.adjust_date(date!(2019, 10, 10), &cal),
+            date!(2019, 10, 10)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 31), &cal),
-            NaiveDate::from_ymd(2019, 10, 31)
+            rule.adjust_date(date!(2019, 10, 31), &cal),
+            date!(2019, 10, 31)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 11, 30), &cal),
-            NaiveDate::from_ymd(2019, 11, 30)
+            rule.adjust_date(date!(2019, 11, 30), &cal),
+            date!(2019, 11, 30)
         );
         let rule = DayAdjust::Following;
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 1), &cal),
-            NaiveDate::from_ymd(2019, 10, 1)
+            rule.adjust_date(date!(2019, 10, 1), &cal),
+            date!(2019, 10, 1)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 10), &cal),
-            NaiveDate::from_ymd(2019, 10, 11)
+            rule.adjust_date(date!(2019, 10, 10), &cal),
+            date!(2019, 10, 11)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 31), &cal),
-            NaiveDate::from_ymd(2019, 11, 1)
+            rule.adjust_date(date!(2019, 10, 31), &cal),
+            date!(2019, 11, 1)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 11, 30), &cal),
-            NaiveDate::from_ymd(2019, 11, 30)
+            rule.adjust_date(date!(2019, 11, 30), &cal),
+            date!(2019, 11, 30)
         );
         let rule = DayAdjust::Preceding;
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 1), &cal),
-            NaiveDate::from_ymd(2019, 10, 1)
+            rule.adjust_date(date!(2019, 10, 1), &cal),
+            date!(2019, 10, 1)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 10), &cal),
-            NaiveDate::from_ymd(2019, 10, 9)
+            rule.adjust_date(date!(2019, 10, 10), &cal),
+            date!(2019, 10, 9)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 31), &cal),
-            NaiveDate::from_ymd(2019, 10, 30)
+            rule.adjust_date(date!(2019, 10, 31), &cal),
+            date!(2019, 10, 30)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 11, 30), &cal),
-            NaiveDate::from_ymd(2019, 11, 30)
+            rule.adjust_date(date!(2019, 11, 30), &cal),
+            date!(2019, 11, 30)
         );
         let rule = DayAdjust::Modified;
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 1), &cal),
-            NaiveDate::from_ymd(2019, 10, 1)
+            rule.adjust_date(date!(2019, 10, 1), &cal),
+            date!(2019, 10, 1)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 10), &cal),
-            NaiveDate::from_ymd(2019, 10, 11)
+            rule.adjust_date(date!(2019, 10, 10), &cal),
+            date!(2019, 10, 11)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 10, 31), &cal),
-            NaiveDate::from_ymd(2019, 10, 30)
+            rule.adjust_date(date!(2019, 10, 31), &cal),
+            date!(2019, 10, 30)
         );
         assert_eq!(
-            rule.adjust_date(NaiveDate::from_ymd(2019, 11, 30), &cal),
-            NaiveDate::from_ymd(2019, 11, 30)
+            rule.adjust_date(date!(2019, 11, 30), &cal),
+            date!(2019, 11, 30)
         );
     }
 }

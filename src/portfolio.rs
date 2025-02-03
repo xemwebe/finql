@@ -373,7 +373,7 @@ pub async fn calculate_position_and_pnl(
         .get_asset_names(market.db().into_arc_dispatch())
         .await?;
     let date_time: DateTime<Local> = if let Some(date) = date {
-        Local.from_local_datetime(&date.and_hms(0, 0, 0)).unwrap()
+        Local.from_local_datetime(&date.and_hms_opt(0, 0, 0).unwrap()).unwrap()
     } else {
         Local::now()
     };
@@ -451,7 +451,7 @@ mod tests {
                     amount: 10000.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 1, 1),
+                date: NaiveDate::from_ymd_opt(2020, 1, 1),
             },
             note: None,
         });
@@ -470,7 +470,7 @@ mod tests {
                     amount: -104.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 1, 2),
+                date: NaiveDate::from_ymd_opt(2020, 1, 2),
             },
             note: None,
         });
@@ -484,7 +484,7 @@ mod tests {
                     amount: -5.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 1, 2),
+                date: NaiveDate::from_ymd_opt(2020, 1, 2),
             },
             note: None,
         });
@@ -508,7 +508,7 @@ mod tests {
                     amount: 60.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 1, 31),
+                date: NaiveDate::from_ymd_opt(2020, 1, 31),
             },
             note: None,
         });
@@ -522,7 +522,7 @@ mod tests {
                     amount: -3.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 1, 31),
+                date: NaiveDate::from_ymd_opt(2020, 1, 31),
             },
             note: None,
         });
@@ -536,7 +536,7 @@ mod tests {
                     amount: -2.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 1, 31),
+                date: NaiveDate::from_ymd_opt(2020, 1, 31),
             },
             note: None,
         });
@@ -565,7 +565,7 @@ mod tests {
                     amount: -140.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 2, 15),
+                date: NaiveDate::from_ymd_opt(2020, 2, 15),
             },
             note: None,
         });
@@ -579,7 +579,7 @@ mod tests {
                     amount: -7.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 2, 25),
+                date: NaiveDate::from_ymd_opt(2020, 2, 25),
             },
             note: None,
         });
@@ -593,7 +593,7 @@ mod tests {
                     amount: -4.5,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 2, 26),
+                date: NaiveDate::from_ymd_opt(2020, 2, 26),
             },
             note: None,
         });
@@ -605,7 +605,7 @@ mod tests {
                     amount: 13.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 2, 27),
+                date: NaiveDate::from_ymd_opt(2020, 2, 27),
             },
             note: None,
         });
@@ -617,7 +617,7 @@ mod tests {
                     amount: 6.6,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd(2020, 2, 28),
+                date: NaiveDate::from_ymd_opt(2020, 2, 28),
             },
             note: None,
         });

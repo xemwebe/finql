@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::cmp::{Eq, PartialEq};
 use thiserror::Error;
 
 /// Error type related to the Currency
@@ -80,12 +81,20 @@ impl FromStr for CurrencyISOCode {
 }
 
 /// Special type for currencies
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Currency {
     pub id: Option<i32>,
     pub iso_code: CurrencyISOCode,
     pub rounding_digits: i32,
 }
+
+impl PartialEq for Currency {
+    fn eq(&self, other: &Self) -> bool {
+        self.iso_code == other.iso_code
+    }
+}
+
+impl Eq for Currency {}
 
 impl Currency {
     pub fn new(id: Option<i32>, iso_code: CurrencyISOCode, rounding_digits: Option<i32>) -> Self {

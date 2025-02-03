@@ -1,10 +1,11 @@
+
 //! Definition of bonds and similar fixed income products
 //! and functionality to rollout cashflows and calculate basic
 //! valuation figures
 
 use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
-use std::error::Error;
+use thiserror::Error;
 use std::fmt;
 
 use crate::datatypes::cash_flow::CashFlow;
@@ -15,54 +16,18 @@ use crate::day_count_conv::{DayCountConv, DayCountConvError};
 use crate::fixed_income::FixedIncome;
 use crate::rates::DiscountError;
 use crate::time_period::TimePeriod;
-use cal_calc::{CalendarNotFound, CalendarProvider};
+use cal_calc::{CalendarError, CalendarProvider};
 
 /// Error related to bonds
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum BondError {
-    DiscountingFailure(DiscountError),
-    MissingCalendar,
-    DayCountError(DayCountConvError),
-}
-
-impl fmt::Display for BondError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            BondError::MissingCalendar => write!(f, "unknown calendar"),
-            BondError::DayCountError(_) => {
-                write!(f, "invalid day count convention in this context")
-            }
-            BondError::DiscountingFailure(_) => write!(f, "discounting cash flows failed"),
-        }
-    }
-}
-
-impl Error for BondError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            BondError::DayCountError(err) => Some(err),
-            BondError::DiscountingFailure(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-impl From<DayCountConvError> for BondError {
-    fn from(error: DayCountConvError) -> Self {
-        BondError::DayCountError(error)
-    }
-}
-
-impl From<CalendarNotFound> for BondError {
-    fn from(_: CalendarNotFound) -> Self {
-        BondError::MissingCalendar
-    }
-}
-
-impl From<crate::rates::DiscountError> for BondError {
-    fn from(error: DiscountError) -> Self {
-        BondError::DiscountingFailure(error)
-    }
+    
+    #[error("discounting cash flows failed")]
+    DiscountingFailure(#[from]DiscountError),
+    #[error("unknown or invalid calendar")]
+    MissingCalendar(#[from]CalendarError),
+    #[error("invalid day count convention in this context")]
+    DayCountError(#[from]DayCountConvError),
 }
 
 /// Container for bonds and similar fixed income assets
@@ -255,24 +220,24 @@ mod tests {
             CashFlow::new(
                 0.05 * 1000. * 183. / 365.,
                 curr,
-                NaiveDate::from_ymd(2020, 4, 1),
+                NaiveDate::from_ymd_opt(2020, 4, 1).unwrap(),
             ),
             CashFlow::new(
                 0.05 * 1000. * 183. / 365.,
                 curr,
-                NaiveDate::from_ymd(2020, 10, 1),
+                NaiveDate::from_ymd_opt(2020, 10, 1).unwrap(),
             ),
             CashFlow::new(
                 0.05 * 1000. * 182. / 365.,
                 curr,
-                NaiveDate::from_ymd(2021, 4, 1),
+                NaiveDate::from_ymd_opt(2021, 4, 1).unwrap(),
             ),
             CashFlow::new(
                 0.05 * 1000. * 183. / 365.,
                 curr,
-                NaiveDate::from_ymd(2021, 10, 1),
+                NaiveDate::from_ymd_opt(2021, 10, 1).unwrap(),
             ),
-            CashFlow::new(1000., curr, NaiveDate::from_ymd(2021, 10, 1)),
+            CashFlow::new(1000., curr, NaiveDate::from_ymd_opt(2021, 10, 1).unwrap()),
         ];
         let tol = 1e-11;
         assert!(reference_cash_flows[0].fuzzy_cash_flows_cmp_eq(&cash_flows[0], tol));
@@ -307,11 +272,11 @@ mod tests {
         assert_eq!(cash_flows.len(), 5);
         let curr = Currency::from_str("EUR").unwrap();
         let reference_cash_flows = vec![
-            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd(2021, 4, 1)),
-            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd(2021, 10, 1)),
-            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd(2022, 4, 1)),
-            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd(2022, 10, 3)),
-            CashFlow::new(1000., curr, NaiveDate::from_ymd(2022, 10, 3)),
+            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd_opt(2021, 4, 1).unwrap()),
+            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd_opt(2021, 10, 1).unwrap()),
+            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd_opt(2022, 4, 1).unwrap()),
+            CashFlow::new(0.05 * 1000. / 2., curr, NaiveDate::from_ymd_opt(2022, 10, 3).unwrap()),
+            CashFlow::new(1000., curr, NaiveDate::from_ymd_opt(2022, 10, 3).unwrap()),
         ];
         let tol = 1e-11;
         assert!(reference_cash_flows[0].fuzzy_cash_flows_cmp_eq(&cash_flows[0], tol));

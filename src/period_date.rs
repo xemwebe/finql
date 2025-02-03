@@ -66,11 +66,11 @@ impl PeriodDate {
             PeriodDate::Today => Ok(Local::today().naive_local()),
             PeriodDate::FirstOfMonth => {
                 let today = Local::today().naive_local();
-                Ok(NaiveDate::from_ymd(today.year(), today.month(), 1))
+                Ok(NaiveDate::from_ymd_opt(today.year(), today.month(), 1))
             }
             PeriodDate::FirstOfYear => {
                 let today = Local::today().naive_local();
-                Ok(NaiveDate::from_ymd(today.year(), 1, 1))
+                Ok(NaiveDate::from_ymd_opt(today.year(), 1, 1))
             }
             PeriodDate::FixedDate(date) => Ok(*date),
             PeriodDate::Inception => inception.ok_or(PeriodDateError::MissingInceptionDate),

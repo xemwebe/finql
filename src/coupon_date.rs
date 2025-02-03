@@ -64,8 +64,8 @@ impl CouponDate {
         }
         // Any year that is not a leap year will do.
         // We exclude explicitly February 29th, which is not a proper chosen coupon date
-        let last = cal_calc::last_day_of_month(2019, month);
-        if day > 0 && month > 0 && month <= 12 && day <= last {
+        let last = cal_calc::last_day_of_month(2019, month as u8);
+        if day > 0 && month > 0 && month <= 12 && day as u8 <= last {
             Ok(CouponDate { day, month })
         } else {
             Err(CouponDateError::DayToBig)

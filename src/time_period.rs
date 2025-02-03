@@ -127,10 +127,10 @@ impl TimePeriod {
                     let last_date_of_month = last_day_of_month(year, month as u32);
                     day = std::cmp::min(day, last_date_of_month);
                 }
-                NaiveDate::from_ymd(year, month as u32, day)
+                NaiveDate::from_ymd_opt(year, month as u32, day)?
             }
             TimePeriodUnit::Annual => {
-                NaiveDate::from_ymd(date.year() + self.num, date.month(), date.day())
+                NaiveDate::from_ymd_opt(date.year() + self.num, date.month(), date.day())?
             }
         }
     }
@@ -316,73 +316,73 @@ mod tests {
 
     #[test]
     fn standard_periods() {
-        let date = NaiveDate::from_ymd(2019, 11, 18);
+        let date = NaiveDate::from_ymd_opt(2019, 11, 18);
         assert_eq!(
             TimePeriod::from_str("3M").unwrap().add_to(date, None),
-            NaiveDate::from_ymd(2020, 2, 18)
+            NaiveDate::from_ymd_opt(2020, 2, 18)
         );
         assert_eq!(
             TimePeriod::from_str("1Y").unwrap().add_to(date, None),
-            NaiveDate::from_ymd(2020, 11, 18)
+            NaiveDate::from_ymd_opt(2020, 11, 18)
         );
         assert_eq!(
             TimePeriod::from_str("6M").unwrap().add_to(date, None),
-            NaiveDate::from_ymd(2020, 5, 18)
+            NaiveDate::from_ymd_opt(2020, 5, 18)
         );
         assert_eq!(
             TimePeriod::from_str("1W").unwrap().add_to(date, None),
-            NaiveDate::from_ymd(2019, 11, 25)
+            NaiveDate::from_ymd_opt(2019, 11, 25)
         );
 
-        let date = NaiveDate::from_ymd(2019, 11, 30);
+        let date = NaiveDate::from_ymd_opt(2019, 11, 30);
         assert_eq!(
             TimePeriod::from_str("3M").unwrap().add_to(date, None),
-            NaiveDate::from_ymd(2020, 2, 29)
+            NaiveDate::from_ymd_opt(2020, 2, 29)
         );
         assert_eq!(
             TimePeriod::from_str("1Y").unwrap().add_to(date, None),
-            NaiveDate::from_ymd(2020, 11, 30)
+            NaiveDate::from_ymd_opt(2020, 11, 30)
         );
         assert_eq!(
             TimePeriod::from_str("6M").unwrap().add_to(date, None),
-            NaiveDate::from_ymd(2020, 5, 30)
+            NaiveDate::from_ymd_opt(2020, 5, 30)
         );
         assert_eq!(
             TimePeriod::from_str("1W").unwrap().add_to(date, None),
-            NaiveDate::from_ymd(2019, 12, 7)
+            NaiveDate::from_ymd_opt(2019, 12, 7)
         );
     }
 
     #[test]
     fn negative_periods() {
-        let date = NaiveDate::from_ymd(2019, 11, 18);
+        let date = NaiveDate::from_ymd_opt(2019, 11, 18);
         let neg_quarterly = TimePeriod::from_str("-3M").unwrap();
         let neg_annual = TimePeriod::from_str("-1Y").unwrap();
         let neg_weekly = TimePeriod::from_str("-1W").unwrap();
         assert_eq!(
-            neg_quarterly.add_to(NaiveDate::from_ymd(2020, 2, 18), None),
+            neg_quarterly.add_to(NaiveDate::from_ymd_opt(2020, 2, 18), None),
             date
         );
         assert_eq!(
-            neg_annual.add_to(NaiveDate::from_ymd(2020, 11, 18), None),
+            neg_annual.add_to(NaiveDate::from_ymd_opt(2020, 11, 18), None),
             date
         );
         assert_eq!(
-            neg_weekly.add_to(NaiveDate::from_ymd(2019, 11, 25), None),
+            neg_weekly.add_to(NaiveDate::from_ymd_opt(2019, 11, 25), None),
             date
         );
 
-        let date = NaiveDate::from_ymd(2019, 11, 30);
+        let date = NaiveDate::from_ymd_opt(2019, 11, 30);
         assert_eq!(
-            neg_quarterly.add_to(NaiveDate::from_ymd(2020, 2, 29), None),
-            NaiveDate::from_ymd(2019, 11, 29)
+            neg_quarterly.add_to(NaiveDate::from_ymd_opt(2020, 2, 29), None),
+            NaiveDate::from_ymd_opt(2019, 11, 29)
         );
         assert_eq!(
-            neg_annual.add_to(NaiveDate::from_ymd(2020, 11, 30), None),
+            neg_annual.add_to(NaiveDate::from_ymd_opt(2020, 11, 30), None),
             date
         );
         assert_eq!(
-            neg_weekly.add_to(NaiveDate::from_ymd(2019, 12, 7), None),
+            neg_weekly.add_to(NaiveDate::from_ymd_opt(2019, 12, 7), None),
             date
         );
     }
@@ -403,7 +403,7 @@ mod tests {
     #[test]
     fn parse_business_daily() {
         let holiday_rules = vec![
-            Holiday::SingularDay(NaiveDate::from_ymd(2019, 11, 21)),
+            Holiday::SingularDay(NaiveDate::from_ymd_opt(2019, 11, 21)),
             Holiday::WeekDay(Weekday::Sat),
             Holiday::WeekDay(Weekday::Sun),
         ];
@@ -417,32 +417,32 @@ mod tests {
         assert_eq!("2B", &format!("{}", bdaily2));
         assert_eq!("-1B", &format!("{}", bdaily_1));
 
-        let date = NaiveDate::from_ymd(2019, 11, 20);
+        let date = NaiveDate::from_ymd_opt(2019, 11, 20);
         assert_eq!(
             bdaily1.add_to(date, Some(&cal)),
-            NaiveDate::from_ymd(2019, 11, 22)
+            NaiveDate::from_ymd_opt(2019, 11, 22)
         );
         assert_eq!(
             bdaily2.add_to(date, Some(&cal)),
-            NaiveDate::from_ymd(2019, 11, 25)
+            NaiveDate::from_ymd_opt(2019, 11, 25)
         );
         assert_eq!(
             bdaily_1.add_to(date, Some(&cal)),
-            NaiveDate::from_ymd(2019, 11, 19)
+            NaiveDate::from_ymd_opt(2019, 11, 19)
         );
 
-        let date = NaiveDate::from_ymd(2019, 11, 25);
+        let date = NaiveDate::from_ymd_opt(2019, 11, 25);
         assert_eq!(
             bdaily1.add_to(date, Some(&cal)),
-            NaiveDate::from_ymd(2019, 11, 26)
+            NaiveDate::from_ymd_opt(2019, 11, 26)
         );
         assert_eq!(
             bdaily2.add_to(date, Some(&cal)),
-            NaiveDate::from_ymd(2019, 11, 27)
+            NaiveDate::from_ymd_opt(2019, 11, 27)
         );
         assert_eq!(
             bdaily_1.add_to(date, Some(&cal)),
-            NaiveDate::from_ymd(2019, 11, 22)
+            NaiveDate::from_ymd_opt(2019, 11, 22)
         );
     }
 
@@ -473,17 +473,17 @@ mod tests {
     #[test]
     fn operator_add_period() {
         let period_6m = TimePeriod::from_str("6M").unwrap();
-        let start = NaiveDate::from_ymd(2019, 12, 16);
-        let end = NaiveDate::from_ymd(2020, 6, 16);
+        let start = NaiveDate::from_ymd_opt(2019, 12, 16);
+        let end = NaiveDate::from_ymd_opt(2020, 6, 16);
         assert_eq!(start + period_6m, end);
         assert_eq!(end - period_6m, start);
         let minus_period_6m = -period_6m;
         assert_eq!(end + minus_period_6m, start);
         assert_eq!(start - minus_period_6m, end);
-        let mut new_start = NaiveDate::from_ymd(2019, 12, 16);
+        let mut new_start = NaiveDate::from_ymd_opt(2019, 12, 16);
         new_start += period_6m;
         assert_eq!(new_start, end);
-        let mut new_end = NaiveDate::from_ymd(2020, 6, 16);
+        let mut new_end = NaiveDate::from_ymd_opt(2020, 6, 16);
         new_end -= period_6m;
         assert_eq!(start, new_end);
     }

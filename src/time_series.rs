@@ -124,9 +124,9 @@ mod tests {
     #[test]
     fn finding_gaps() {
         let holidays = vec![
-            Holiday::SingularDay(NaiveDate::from_ymd(2021, 11, 4)),
-            Holiday::SingularDay(NaiveDate::from_ymd(2021, 11, 5)),
-            Holiday::SingularDay(NaiveDate::from_ymd(2021, 11, 8)),
+            Holiday::SingularDay(NaiveDate::from_ymd_opt(2021, 11, 4)),
+            Holiday::SingularDay(NaiveDate::from_ymd_opt(2021, 11, 5)),
+            Holiday::SingularDay(NaiveDate::from_ymd_opt(2021, 11, 8)),
             Holiday::WeekDay(Weekday::Sat),
             Holiday::WeekDay(Weekday::Sun),
         ];
@@ -156,11 +156,11 @@ mod tests {
 
         let gaps = ts.find_gaps(&cal, 1).unwrap();
         assert_eq!(gaps.len(), 3);
-        assert_eq!(gaps[0].0, NaiveDate::from_ymd(2021, 10, 29));
-        assert_eq!(gaps[0].1, NaiveDate::from_ymd(2021, 10, 29));
-        assert_eq!(gaps[1].0, NaiveDate::from_ymd(2021, 11, 2));
-        assert_eq!(gaps[1].1, NaiveDate::from_ymd(2021, 11, 3));
-        assert_eq!(gaps[2].0, NaiveDate::from_ymd(2021, 11, 10));
+        assert_eq!(gaps[0].0, NaiveDate::from_ymd_opt(2021, 10, 29));
+        assert_eq!(gaps[0].1, NaiveDate::from_ymd_opt(2021, 10, 29));
+        assert_eq!(gaps[1].0, NaiveDate::from_ymd_opt(2021, 11, 2));
+        assert_eq!(gaps[1].1, NaiveDate::from_ymd_opt(2021, 11, 3));
+        assert_eq!(gaps[2].0, NaiveDate::from_ymd_opt(2021, 11, 10));
         assert_eq!(gaps[2].1, today);
     }
 }

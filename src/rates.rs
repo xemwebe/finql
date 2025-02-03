@@ -153,7 +153,7 @@ mod tests {
             compounding: Compounding::Annual,
             currency: curr,
         };
-        let start_date = NaiveDate::from_ymd(2019, 12, 16);
+        let start_date = NaiveDate::from_ymd_opt(2019, 12, 16);
         let end_date = start_date + TimePeriod::from_str("6M").unwrap();
         let yf: f64 = DayCountConv::Act365
             .year_fraction(start_date, end_date, None, None)
@@ -241,12 +241,12 @@ mod tests {
             currency: curr,
         };
         let cash_flows = vec![
-            CashFlow::new(100., curr, NaiveDate::from_ymd(2021, 4, 1)),
-            CashFlow::new(100., curr, NaiveDate::from_ymd(2021, 10, 1)),
-            CashFlow::new(100., curr, NaiveDate::from_ymd(2022, 4, 1)),
-            CashFlow::new(100., curr, NaiveDate::from_ymd(2022, 10, 3)),
+            CashFlow::new(100., curr, NaiveDate::from_ymd_opt(2021, 4, 1)),
+            CashFlow::new(100., curr, NaiveDate::from_ymd_opt(2021, 10, 1)),
+            CashFlow::new(100., curr, NaiveDate::from_ymd_opt(2022, 4, 1)),
+            CashFlow::new(100., curr, NaiveDate::from_ymd_opt(2022, 10, 3)),
         ];
-        let today = NaiveDate::from_ymd(2019, 10, 1);
+        let today = NaiveDate::from_ymd_opt(2019, 10, 1);
         assert_fuzzy_eq!(
             rate.discount_cash_flow(&cash_flows[0], today)
                 .unwrap()
