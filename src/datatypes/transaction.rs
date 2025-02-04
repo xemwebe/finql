@@ -1,6 +1,6 @@
+//! Implementation of basic transaction types
 use super::CashFlow;
 use super::{DataError, DataItem};
-///! Implementation of basic transaction types
 use serde::{Deserialize, Serialize};
 
 /// Type of transaction

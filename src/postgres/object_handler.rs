@@ -1,4 +1,4 @@
-///! Implementation of sqlite3 object handler
+//! Implementation of sqlite3 object handler
 use async_trait::async_trait;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json;
@@ -15,7 +15,7 @@ impl ObjectHandler for PostgresDB {
         _object_type: &str,
         object: &T,
     ) -> Result<(), DataError> {
-        let object_json = serde_json::to_value(&object)?;
+        let object_json = serde_json::to_value(object)?;
 
         sqlx::query!(
             "INSERT INTO objects (id, object) VALUES ($1, $2)",

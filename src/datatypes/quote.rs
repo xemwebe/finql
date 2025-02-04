@@ -1,4 +1,4 @@
-///! Implementation of a container for basic asset data
+//! Implementation of a container for basic asset data
 use std::cmp::Ordering;
 
 use chrono::{DateTime, Local};

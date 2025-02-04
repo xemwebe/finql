@@ -109,7 +109,7 @@ impl Serialize for CouponDate {
 
 struct CouponDateVisitor;
 
-impl<'de> Visitor<'de> for CouponDateVisitor {
+impl Visitor<'_> for CouponDateVisitor {
     type Value = CouponDate;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

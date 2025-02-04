@@ -126,7 +126,7 @@ impl TimePeriod {
         date: NaiveDate,
         cal: Option<&Calendar>,
     ) -> Result<NaiveDate, TimePeriodError> {
-        Ok(self.inverse().add_to(date, cal)?)
+        self.inverse().add_to(date, cal)
     }
 
     /// Substract time period from a given date.
@@ -206,7 +206,7 @@ impl Serialize for TimePeriod {
 
 struct TimePeriodVisitor;
 
-impl<'de> Visitor<'de> for TimePeriodVisitor {
+impl Visitor<'_> for TimePeriodVisitor {
     type Value = TimePeriod;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {

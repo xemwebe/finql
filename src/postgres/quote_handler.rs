@@ -1,6 +1,6 @@
+//! Implementation for quote handler with Sqlite3 database as backend
 use async_trait::async_trait;
 use chrono::{DateTime, Local};
-///! Implementation for quote handler with Sqlite3 database as backend
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -242,7 +242,7 @@ impl QuoteHandler for PostgresDB {
                 "not yet stored to database".to_string(),
             ));
         }
-        let id = ticker.id.unwrap() as i32;
+        let id = ticker.id.unwrap();
         let cid = ticker.currency.id.expect("currency asset_id required");
         sqlx::query!(
                 "UPDATE ticker SET name = $2, asset_id = $3, source = $4, priority = $5, currency_id = $6, factor = $7, tz = $8, cal = $9
@@ -271,7 +271,7 @@ impl QuoteHandler for PostgresDB {
     // insert, get, update and delete for market data sources
     async fn insert_quote(&self, quote: &Quote) -> Result<i32, DataError> {
         let row = sqlx::query!(
-            "INSERT INTO quotes (ticker_id, price, time, volume) 
+            "INSERT INTO quotes (ticker_id, price, time, volume)
                 VALUES ($1, $2, $3, $4) RETURNING id",
             (quote.ticker as i32),
             quote.price,
@@ -417,7 +417,7 @@ impl QuoteHandler for PostgresDB {
     async fn get_all_quotes_for_ticker(&self, ticker_id: i32) -> Result<Vec<Quote>, DataError> {
         let mut quotes = Vec::new();
         for row in sqlx::query!(
-            "SELECT id, price, time, volume FROM quotes 
+            "SELECT id, price, time, volume FROM quotes
                 WHERE ticker_id=$1 ORDER BY time ASC;",
             (ticker_id as i32),
         )
@@ -443,7 +443,7 @@ impl QuoteHandler for PostgresDB {
                 "not yet stored to database".to_string(),
             ));
         }
-        let id = quote.id.unwrap() as i32;
+        let id = quote.id.unwrap();
         sqlx::query!(
             "UPDATE quotes SET ticker_id=$2, price=$3, time=$4, volume=$5
                 WHERE id=$1",
@@ -468,17 +468,17 @@ impl QuoteHandler for PostgresDB {
     async fn remove_duplicates(&self) -> Result<(), DataError> {
         sqlx::query!(
             "
-            delete from quotes q 
+            delete from quotes q
             where q.id in
             (select q2.id
-            from 
+            from
                 quotes q1,
                 quotes q2
-            where 
+            where
                 q1.id < q2.id
-            and q1.ticker_id = q2.ticker_id 
+            and q1.ticker_id = q2.ticker_id
             and q1.time = q2.time
-            and q1.price = q2.price) 
+            and q1.price = q2.price)
             "
         )
         .execute(&self.pool)

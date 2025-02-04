@@ -1,6 +1,6 @@
+//! Implementation of a data handler trait to deal with global data
 use serde_json;
 use sqlx;
-///! Implementation of a data handler trait to deal with global data
 use thiserror::Error;
 
 pub mod asset;

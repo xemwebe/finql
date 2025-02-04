@@ -89,7 +89,7 @@ struct FlatRateDiscounter<'a> {
     rate: FlatRate,
 }
 
-impl<'a> CostFunction for FlatRateDiscounter<'a> {
+impl CostFunction for FlatRateDiscounter<'_> {
     // one dimensional problem, no vector needed
     type Param = f64;
     type Output = f64;

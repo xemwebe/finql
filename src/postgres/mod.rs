@@ -1,4 +1,4 @@
-///! Implementation of PostgreSQL data handler
+//! Implementation of PostgreSQL data handler
 use sqlx::postgres::{PgPoolOptions, Postgres};
 
 pub mod asset_handler;
@@ -124,7 +124,7 @@ impl PostgresDB {
                 price FLOAT8 NOT NULL,
                 time TIMESTAMP WITH TIME ZONE NOT NULL,
                 volume FLOAT8,
-                FOREIGN KEY(ticker_id) REFERENCES ticker(id) 
+                FOREIGN KEY(ticker_id) REFERENCES ticker(id)
             )"
         )
         .execute(&self.pool)

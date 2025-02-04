@@ -1,4 +1,4 @@
-///! Calculation of fx rates based on currency quotes
+/// Calculation of fx rates based on currency quotes
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;

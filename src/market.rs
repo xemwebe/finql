@@ -1,8 +1,8 @@
-/// A market is either a container to store market data or
-/// an adapter to receive and send market data from an external
-/// source, e.g a database, files, or REST service.
-/// Market data consist of non-static data, like interest rates,
-/// asset prices, or foreign exchange rates.
+//! A market is either a container to store market data or
+//! an adapter to receive and send market data from an external
+//! source, e.g a database, files, or REST service.
+//! Market data consist of non-static data, like interest rates,
+//! asset prices, or foreign exchange rates.
 use std::sync::{Arc, RwLock};
 
 use chrono::{DateTime, Local, NaiveDate, NaiveTime};
@@ -74,12 +74,14 @@ async fn currency_map(db: Arc<dyn QuoteHandler + Sync + Send>) -> BTreeMap<i32, 
     currency_map
 }
 
+type TimeSeries = BTreeMap<DateTime<Local>, (f64, i32)>;
+
 /// Container or adaptor to market data
 struct MarketImpl {
     /// Stored calendars
     calendars: BTreeMap<String, Calendar>,
     /// Pre-fetched asset prices
-    prices: RwLock<BTreeMap<i32, BTreeMap<DateTime<Local>, (f64, i32)>>>,
+    prices: RwLock<BTreeMap<i32, TimeSeries>>,
     /// collection of market data quotes provider
     providers: RwLock<BTreeMap<String, Arc<dyn MarketQuoteProvider + Sync + Send>>>,
     /// Quotes database
@@ -171,7 +173,7 @@ impl Market {
     fn store_currency_in_cache(&self, currency: Currency) {
         if let Some(id) = currency.id {
             if let Ok(mut currencies) = self.inner.currencies.write() {
-                (*currencies).insert(id, currency.clone());
+                (*currencies).insert(id, currency);
             }
         }
     }
@@ -247,11 +249,7 @@ impl Market {
     pub async fn update_quote_for_ticker(&self, ticker_id: i32) -> Result<(), MarketError> {
         let ticker = self.inner.db.get_ticker_by_id(ticker_id).await?;
         let provider = if let Ok(providers) = self.inner.providers.read() {
-            if let Some(provider) = (*providers).get(&ticker.source) {
-                Some(provider.clone())
-            } else {
-                None
-            }
+            (*providers).get(&ticker.source).cloned()
         } else {
             None
         };
@@ -270,11 +268,7 @@ impl Market {
     ) -> Result<(), MarketError> {
         let ticker = self.inner.db.get_ticker_by_id(ticker_id).await?;
         let provider = if let Ok(providers) = self.inner.providers.read() {
-            if let Some(provider) = (*providers).get(&ticker.source) {
-                Some(provider.clone())
-            } else {
-                None
-            }
+            (*providers).get(&ticker.source).cloned()
         } else {
             None
         };

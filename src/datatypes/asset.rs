@@ -1,16 +1,16 @@
-///! Implementation of a container for basic asset data
+//! Implementation of a container for basic asset data
 use serde::{Deserialize, Serialize};
 
 use super::{Currency, DataError, DataItem, Stock};
 
-///! Asset enum could contain any supported asset
+/// Asset enum could contain any supported asset
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Asset {
     Currency(Currency),
     Stock(Stock),
 }
 
-///! AssetSelector is useful for creation of choice list to choose an asset from
+/// AssetSelector is useful for creation of choice list to choose an asset from
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssetSelector {
     pub id: i32,

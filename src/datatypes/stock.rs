@@ -1,5 +1,5 @@
+//! Implementation of a container for basic asset data
 use super::{DataError, DataItem};
-///! Implementation of a container for basic asset data
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

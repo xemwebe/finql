@@ -1,5 +1,5 @@
+//! Data handler trait for market quotes
 use async_trait::async_trait;
-///! Data handler trait for market quotes
 use chrono::{DateTime, Local};
 use std::sync::Arc;
 

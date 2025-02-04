@@ -148,11 +148,11 @@ pub fn from_date(date: time::Date) -> Result<NaiveDate, DateTimeError> {
 }
 
 pub fn to_offset_date_time(time: DateTime<Local>) -> Result<time::OffsetDateTime, DateTimeError> {
-    Ok(time::OffsetDateTime::from_unix_timestamp_nanos(
+    time::OffsetDateTime::from_unix_timestamp_nanos(
         time.timestamp_nanos_opt()
             .ok_or(DateTimeError::InvalidDateError)? as i128,
     )
-    .map_err(|_| DateTimeError::InvalidDateError)?)
+    .map_err(|_| DateTimeError::InvalidDateError)
 }
 
 #[cfg(test)]

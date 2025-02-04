@@ -1,7 +1,7 @@
 use crate::datatypes::Transaction;
 use chrono::{Datelike, Local, NaiveDate};
+use core::default::Default;
 use serde::{Deserialize, Serialize};
-use std::default::Default;
 use std::fmt::Display;
 use thiserror::Error;
 
@@ -18,9 +18,10 @@ pub enum PeriodDateError {
 }
 
 /// Period start or end date
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub enum PeriodDate {
     Inception,
+    #[default]
     Today,
     FirstOfMonth,
     FirstOfYear,
@@ -36,12 +37,6 @@ impl Display for PeriodDate {
             PeriodDate::FirstOfYear => write!(f, "FirstOfYear"),
             PeriodDate::FixedDate(_) => write!(f, "FixedDate"),
         }
-    }
-}
-
-impl Default for PeriodDate {
-    fn default() -> PeriodDate {
-        PeriodDate::Today
     }
 }
 
