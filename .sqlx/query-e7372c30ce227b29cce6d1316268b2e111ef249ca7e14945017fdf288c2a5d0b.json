@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO quotes (ticker_id, price, time, volume) \n                VALUES ($1, $2, $3, $4) RETURNING id",
+  "query": "INSERT INTO quotes (ticker_id, price, time, volume)\n                VALUES ($1, $2, $3, $4) RETURNING id",
   "describe": {
     "columns": [
       {
@@ -21,5 +21,5 @@
       false
     ]
   },
-  "hash": "1cbbdea6fe78cfd2c7192c0379371769b3da2fcbd331901fc9243c6d568baa66"
+  "hash": "e7372c30ce227b29cce6d1316268b2e111ef249ca7e14945017fdf288c2a5d0b"
 }

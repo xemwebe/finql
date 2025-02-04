@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, price, time, volume FROM quotes \n                WHERE ticker_id=$1 ORDER BY time ASC;",
+  "query": "SELECT id, price, time, volume FROM quotes\n                WHERE ticker_id=$1 ORDER BY time ASC;",
   "describe": {
     "columns": [
       {
@@ -36,5 +36,5 @@
       true
     ]
   },
-  "hash": "1487b837dd4ba264205a1d341659eca93055783ff2c395ab4831268a8f8e9f14"
+  "hash": "5a7e33be3071df651bc2eb14c397ee6fb9b56f75939027d278d6aeb4fbff3274"
 }

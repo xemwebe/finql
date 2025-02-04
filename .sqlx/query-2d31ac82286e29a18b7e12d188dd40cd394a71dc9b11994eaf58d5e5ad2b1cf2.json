@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            delete from quotes q\n            where q.id in\n            (select q2.id\n            from\n                quotes q1,\n                quotes q2\n            where\n                q1.id < q2.id\n            and q1.ticker_id = q2.ticker_id\n            and q1.time = q2.time\n            and q1.price = q2.price)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "2d31ac82286e29a18b7e12d188dd40cd394a71dc9b11994eaf58d5e5ad2b1cf2"
+}
