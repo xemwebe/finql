@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "CREATE TABLE IF NOT EXISTS quotes (\n                id SERIAL PRIMARY KEY,\n                ticker_id INTEGER NOT NULL,\n                price FLOAT8 NOT NULL,\n                time TIMESTAMP WITH TIME ZONE NOT NULL,\n                volume FLOAT8,\n                FOREIGN KEY(ticker_id) REFERENCES ticker(id) \n            )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "a15d6dddda647bdc06668a5e84410d924f7cce05a78627d39eef14ae67fb49ab"
+}

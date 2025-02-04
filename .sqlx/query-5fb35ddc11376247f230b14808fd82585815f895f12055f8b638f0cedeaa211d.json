@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "CREATE TABLE IF NOT EXISTS transactions (\n                id SERIAL PRIMARY KEY,\n                trans_type TEXT NOT NULL,\n                asset_id INTEGER,\n                cash_amount FLOAT8 NOT NULL,\n                cash_currency_id INT NOT NULL,\n                cash_date DATE NOT NULL,\n                related_trans INTEGER,\n                position FLOAT8,\n                note TEXT,\n                FOREIGN KEY(asset_id) REFERENCES assets(id),\n                FOREIGN KEY(cash_currency_id) REFERENCES currencies(id),\n                FOREIGN KEY(related_trans) REFERENCES transactions(id)\n            )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "5fb35ddc11376247f230b14808fd82585815f895f12055f8b638f0cedeaa211d"
+}

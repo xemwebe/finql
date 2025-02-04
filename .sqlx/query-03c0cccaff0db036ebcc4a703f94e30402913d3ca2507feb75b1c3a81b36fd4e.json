@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                         id,\n                         iso_code,\n                         rounding_digits\n                     FROM currencies \n                     WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "iso_code",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "rounding_digits",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "03c0cccaff0db036ebcc4a703f94e30402913d3ca2507feb75b1c3a81b36fd4e"
+}

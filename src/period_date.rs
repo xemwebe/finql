@@ -65,14 +65,14 @@ impl PeriodDate {
 
     pub fn date(&self, inception: Option<NaiveDate>) -> Result<NaiveDate, PeriodDateError> {
         match self {
-            PeriodDate::Today => Ok(Local::today().naive_local()),
+            PeriodDate::Today => Ok(Local::now().naive_local().date()),
             PeriodDate::FirstOfMonth => {
-                let today = Local::today().naive_local();
+                let today = Local::now().naive_local();
                 NaiveDate::from_ymd_opt(today.year(), today.month(), 1)
                     .ok_or(PeriodDateError::InvalidDate)
             }
             PeriodDate::FirstOfYear => {
-                let today = Local::today().naive_local();
+                let today = Local::now().naive_local();
                 NaiveDate::from_ymd_opt(today.year(), 1, 1).ok_or(PeriodDateError::InvalidDate)
             }
             PeriodDate::FixedDate(date) => Ok(*date),

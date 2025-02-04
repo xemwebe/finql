@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "CREATE TABLE IF NOT EXISTS ticker (\n                id SERIAL PRIMARY KEY,\n                name TEXT NOT NULL,\n                asset_id INTEGER NOT NULL,\n                source TEXT NOT NULL,\n                priority INTEGER NOT NULL,\n                currency_id INT NOT NULL,\n                factor FLOAT8 NOT NULL DEFAULT 1.0,\n                tz TEXT,\n                cal TEXT,\n                FOREIGN KEY(asset_id) REFERENCES assets(id),\n                FOREIGN KEY(currency_id) REFERENCES currencies(id)\n            )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "5db584dfe26f5eb524472c46911413849477e87b7677f806686e7e89ccd3c5f9"
+}

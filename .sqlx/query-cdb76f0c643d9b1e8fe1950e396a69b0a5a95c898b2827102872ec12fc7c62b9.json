@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE transactions SET \n                trans_type=$2, \n                asset_id=$3, \n                cash_amount=$4, \n                cash_currency_id=$5,\n                cash_date=$6,\n                related_trans=$7,\n                position=$8,\n                note=$9\n            WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text",
+        "Int4",
+        "Float8",
+        "Int4",
+        "Date",
+        "Int4",
+        "Float8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cdb76f0c643d9b1e8fe1950e396a69b0a5a95c898b2827102872ec12fc7c62b9"
+}

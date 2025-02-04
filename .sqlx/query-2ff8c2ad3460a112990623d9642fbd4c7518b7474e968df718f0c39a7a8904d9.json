@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "CREATE TABLE IF NOT EXISTS objects (\n            id TEXT PRIMARY KEY,\n            object JSON NOT NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "2ff8c2ad3460a112990623d9642fbd4c7518b7474e968df718f0c39a7a8904d9"
+}

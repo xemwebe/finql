@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                    t.name,\n                    t.asset_id,\n                    t.source,\n                    t.priority,\n                    t.factor,\n                    t.tz,\n                    t.cal,\n                    c.id AS currency_id,\n                    c.iso_code AS currency_iso_code,\n                    c.rounding_digits AS currency_rounding_digits\n                 FROM ticker t\n                 JOIN currencies c ON c.id = t.currency_id\n                 WHERE t.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "asset_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "priority",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "factor",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "tz",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "cal",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "currency_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "currency_iso_code",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "currency_rounding_digits",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e3694be21665149fba002d28c893d9fb51442af1b4260bd61e4056daa38e631d"
+}

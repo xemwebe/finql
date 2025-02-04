@@ -5,7 +5,7 @@
 /// asset prices, or foreign exchange rates.
 use std::sync::{Arc, RwLock};
 
-use chrono::{DateTime, Local, NaiveDate};
+use chrono::{DateTime, Local, NaiveDate, NaiveTime};
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
@@ -351,8 +351,12 @@ impl Market {
                     (quote.price, currency.id.unwrap())
                 }
                 CachePolicy::PredefinedPeriod(time_range) => {
-                    let date_start = time.date().and_hms(0, 0, 0);
-                    let date_end = time.date().and_hms_milli(23, 59, 59, 999);
+                    let date_start = time
+                        .with_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
+                        .unwrap();
+                    let date_end = time
+                        .with_time(NaiveTime::from_hms_milli_opt(23, 59, 59, 999).unwrap())
+                        .unwrap();
                     let start = std::cmp::min(time_range.start, date_start);
                     let end = std::cmp::max(time_range.end, date_end);
                     let quotes = self

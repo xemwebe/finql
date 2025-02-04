@@ -29,6 +29,8 @@ pub enum BondError {
     DayAdjustError(#[from] AdjustDateError),
     #[error("failed to apply time period")]
     TimePeriodError(#[from] crate::time_period::TimePeriodError),
+    #[error("invalid date")]
+    InvalidDate,
 }
 
 /// Container for bonds and similar fixed income assets
@@ -103,19 +105,21 @@ impl Coupon {
 
 impl Bond {
     /// Calculate first coupon period end date
-    fn first_coupon_end(&self, start_date: NaiveDate) -> NaiveDate {
+    fn first_coupon_end(&self, start_date: NaiveDate) -> Result<NaiveDate, BondError> {
         if self.coupon.coupon_month() <= start_date.month() {
-            NaiveDate::from_ymd(
+            NaiveDate::from_ymd_opt(
                 start_date.year() + 1,
                 self.coupon.coupon_month(),
                 self.coupon.coupon_day(),
             )
+            .ok_or(BondError::InvalidDate)
         } else {
-            NaiveDate::from_ymd(
+            NaiveDate::from_ymd_opt(
                 start_date.year(),
                 self.coupon.coupon_month(),
                 self.coupon.coupon_day(),
             )
+            .ok_or(BondError::InvalidDate)
         }
     }
 }
@@ -131,7 +135,7 @@ impl FixedIncome for Bond {
     ) -> Result<Vec<CashFlow>, BondError> {
         let mut cfs = Vec::new();
         let start_date = self.issue_date;
-        let mut end_date = self.first_coupon_end(start_date);
+        let mut end_date = self.first_coupon_end(start_date)?;
         let year_fraction = self.coupon.year_fraction(start_date, end_date, end_date)?;
         let amount =
             position * (self.denomination as f64) * self.coupon.rate / 100. * year_fraction;
@@ -168,7 +172,7 @@ impl FixedIncome for Bond {
         if today < start_date {
             return Ok(0.);
         }
-        let mut end_date = self.first_coupon_end(start_date);
+        let mut end_date = self.first_coupon_end(start_date)?;
         while today > end_date && end_date < self.maturity {
             start_date = end_date;
             end_date = self.coupon.period.add_to(start_date, None)?;

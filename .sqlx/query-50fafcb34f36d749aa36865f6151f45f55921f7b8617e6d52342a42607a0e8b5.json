@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE stocks \n                        SET \n                            name=$2,\n                            isin=$3,\n                            wkn=$4,\n                            note=$5\n                        WHERE id=$1;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text",
+        "Bpchar",
+        "Bpchar",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "50fafcb34f36d749aa36865f6151f45f55921f7b8617e6d52342a42607a0e8b5"
+}

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO transactions (trans_type, asset_id, cash_amount,\n                cash_currency_id, cash_date, related_trans, position,\n                note) \n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Float8",
+        "Int4",
+        "Date",
+        "Int4",
+        "Float8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6b92ff941fe692c55811052a94e762190e17404526d777be9d83f6ee2db1edb5"
+}

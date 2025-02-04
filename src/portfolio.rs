@@ -30,6 +30,8 @@ pub enum PositionError {
     CurrencyError(#[from] CurrencyError),
     #[error("Failed to access market data")]
     MarketDataError(#[from] crate::market::MarketError),
+    #[error("Invalid date")]
+    InvalidDate,
 }
 
 /// Calculate the total position as of a given date by applying a specified set of filters
@@ -127,7 +129,7 @@ impl PortfolioPosition {
         &mut self,
         db: Arc<dyn AssetHandler + Send + Sync>,
     ) -> Result<(), DataError> {
-        for (id, mut pos) in &mut self.assets {
+        for (id, pos) in &mut self.assets {
             let asset = db.get_asset_by_id(*id).await?;
             pos.name = match asset {
                 Asset::Currency(c) => c.iso_code.to_string(),
@@ -181,7 +183,7 @@ impl PortfolioPosition {
         self.cash.interest = 0.0;
         self.cash.fees = 0.0;
         self.cash.tax = 0.0;
-        for mut pos in self.assets.iter_mut() {
+        for pos in self.assets.iter_mut() {
             pos.1.trading_pnl = 0.0;
             pos.1.dividend = 0.0;
             pos.1.interest = 0.0;
@@ -411,7 +413,12 @@ pub async fn calculate_position_for_period(
         .get_asset_names(market.db().into_arc_dispatch())
         .await?;
     let end_date_time: DateTime<Local> = Local
-        .from_local_datetime(&end.succ().and_hms(0, 0, 0))
+        .from_local_datetime(
+            &end.succ_opt()
+                .ok_or(PositionError::InvalidDate)?
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
         .unwrap();
     position.add_quote(end_date_time, market).await;
     let totals = position.calc_totals();

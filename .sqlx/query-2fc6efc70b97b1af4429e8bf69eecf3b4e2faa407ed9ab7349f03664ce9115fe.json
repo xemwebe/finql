@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                        id,\n                        name,\n                        isin,\n                        wkn,\n                        note\n                     FROM stocks s\n                     WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "isin",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "wkn",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "note",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "2fc6efc70b97b1af4429e8bf69eecf3b4e2faa407ed9ab7349f03664ce9115fe"
+}

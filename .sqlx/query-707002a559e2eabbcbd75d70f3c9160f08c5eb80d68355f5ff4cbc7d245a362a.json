@@ -1,0 +1,71 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                   q.id,\n                   q.ticker_id,\n                   q.price,\n                   q.time,\n                   q.volume,\n                   qc.id AS currency_id,\n                   qc.iso_code,\n                   qc.rounding_digits,\n                   t.priority\n                FROM quotes q\n                JOIN ticker t ON t.id = q.ticker_id\n                JOIN currencies c ON c.id = t.asset_id\n                JOIN currencies qc ON qc.id = t.currency_id\n                WHERE\n                    c.iso_code = $1\n                    AND q.time <= $2\n                ORDER BY q.time DESC, t.priority ASC\n                LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "ticker_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "price",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "volume",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "currency_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "iso_code",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "rounding_digits",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "priority",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "707002a559e2eabbcbd75d70f3c9160f08c5eb80d68355f5ff4cbc7d245a362a"
+}

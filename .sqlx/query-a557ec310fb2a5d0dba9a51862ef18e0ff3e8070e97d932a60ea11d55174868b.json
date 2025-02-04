@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE currencies \n                        SET \n                            iso_code=$2,\n                            rounding_digits=$3\n                        WHERE id=$1;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Bpchar",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a557ec310fb2a5d0dba9a51862ef18e0ff3e8070e97d932a60ea11d55174868b"
+}

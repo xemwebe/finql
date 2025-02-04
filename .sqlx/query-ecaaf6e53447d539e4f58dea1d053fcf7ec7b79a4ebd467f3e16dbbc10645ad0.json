@@ -1,0 +1,80 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                t.id AS \"id!\",\n                t.trans_type AS \"trans_type!\",\n                t.asset_id,\n                t.cash_amount AS \"cash_amount!\",\n                c.id AS \"cash_currency_id!\",\n                c.iso_code AS \"cash_iso_code!\",\n                c.rounding_digits AS \"cash_rounding_digits!\",\n                t.cash_date AS \"cash_date!\",\n                t.related_trans,\n                t.position,\n                t.note\n                FROM transactions t\n                JOIN currencies c ON c.id = t.cash_currency_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "trans_type!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "asset_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "cash_amount!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "cash_currency_id!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "cash_iso_code!",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "cash_rounding_digits!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "cash_date!",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 8,
+        "name": "related_trans",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "position",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "note",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "ecaaf6e53447d539e4f58dea1d053fcf7ec7b79a4ebd467f3e16dbbc10645ad0"
+}

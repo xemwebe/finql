@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DROP TYPE IF EXISTS market_data_source",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "822d5edb4ae161de1b0ddb8bbb059e151a8e456a65f94fbf9442b1f5893102e2"
+}

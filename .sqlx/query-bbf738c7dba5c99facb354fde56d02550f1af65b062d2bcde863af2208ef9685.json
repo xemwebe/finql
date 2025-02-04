@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "CREATE TABLE IF NOT EXISTS currencies (\n                    id INTEGER PRIMARY KEY,\n                    iso_code CHAR(3) NOT NULL UNIQUE,\n                    rounding_digits INT NOT NULL,\n                    FOREIGN KEY(id) REFERENCES assets(id)\n                )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "bbf738c7dba5c99facb354fde56d02550f1af65b062d2bcde863af2208ef9685"
+}

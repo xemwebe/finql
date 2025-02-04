@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                a.id as \"id!\",\n                a.asset_class as \"asset_class!\",\n                CASE \n                    WHEN a.asset_class='currency' THEN c.iso_code \n                    ELSE s.name\n                END as \"name!\"\n            FROM \n                assets a\n                LEFT JOIN stocks s ON a.id = s.id\n                LEFT JOIN currencies c ON a.id = c.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "asset_class!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "name!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "b17067063d609646637eb1536d0a197667fc262df28486279260b6d3633304ef"
+}

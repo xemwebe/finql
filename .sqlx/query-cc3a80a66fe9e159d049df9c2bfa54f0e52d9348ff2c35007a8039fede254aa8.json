@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "CREATE TABLE IF NOT EXISTS stocks (\n                  id INTEGER PRIMARY KEY,\n                  name TEXT NOT NULL UNIQUE,\n                  wkn CHAR(6) UNIQUE,\n                  isin CHAR(12) UNIQUE,\n                  note TEXT,\n                  FOREIGN KEY(id) REFERENCES assets(id)\n                )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "cc3a80a66fe9e159d049df9c2bfa54f0e52d9348ff2c35007a8039fede254aa8"
+}

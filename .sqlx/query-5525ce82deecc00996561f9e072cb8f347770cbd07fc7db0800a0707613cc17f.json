@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "CREATE TABLE IF NOT EXISTS assets (\n                id SERIAL PRIMARY KEY,\n                asset_class VARCHAR(20) NOT NULL\n            )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "5525ce82deecc00996561f9e072cb8f347770cbd07fc7db0800a0707613cc17f"
+}
