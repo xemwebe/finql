@@ -47,6 +47,8 @@ pub enum MarketError {
     CurrencyNotInDatabase(String),
     #[error("Missing quote for currency pair {0}/{1}")]
     MissingQuoteForCurrencyPair(String, String),
+    #[error("Ivalid date")]
+    InvalidDate(#[from] cal_calc::CalendarError),
 }
 
 #[derive(Clone)]

@@ -155,6 +155,19 @@ pub fn to_offset_date_time(time: DateTime<Local>) -> Result<time::OffsetDateTime
     .map_err(|_| DateTimeError::InvalidDateError)
 }
 
+pub fn convert_local_result_to_datetime(
+    local_result: chrono::LocalResult<DateTime<Local>>,
+) -> Option<DateTime<Local>> {
+    match local_result {
+        chrono::LocalResult::Single(datetime) => Some(datetime),
+        chrono::LocalResult::Ambiguous(datetime1, _) => {
+            // choose the earlier one
+            Some(datetime1)
+        }
+        chrono::LocalResult::None => None, // No valid datetime could be found.
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
