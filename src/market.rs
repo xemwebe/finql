@@ -435,7 +435,7 @@ pub fn generate_calendars() -> BTreeMap<String, Calendar> {
     calendars.insert("uk".to_string(), uk_cal);
 
     let target_cal = Calendar::calc_calendar(&target_holidays(), 1990, 2050).unwrap();
-    calendars.insert("TARGET".to_string(), target_cal).unwrap();
+    calendars.insert("TARGET".to_string(), target_cal);
 
     calendars
 }
