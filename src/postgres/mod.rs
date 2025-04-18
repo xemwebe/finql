@@ -7,18 +7,19 @@ pub mod quote_handler;
 pub mod transaction_handler;
 
 /// Struct to handle connections to postgres databases
+#[derive(Clone)]
 pub struct PostgresDB {
     /// pool is made public to allow extending this struct outside of the library
     pub pool: sqlx::Pool<Postgres>,
 }
 
 impl PostgresDB {
-    pub async fn new(connection_string: &str) -> Result<PostgresDB, sqlx::Error> {
+    pub async fn new(connection_string: &str) -> Result<Self, sqlx::Error> {
         let pool = PgPoolOptions::new()
             .max_connections(5)
             .connect(connection_string)
             .await?;
-        Ok(PostgresDB { pool })
+        Ok(Self { pool })
     }
 
     /// Clean database by dropping all tables and than run init
