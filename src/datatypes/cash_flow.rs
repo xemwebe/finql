@@ -5,8 +5,8 @@ use std::{
     fmt::{Display, Formatter},
 };
 
-use chrono::{DateTime, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
+use time::{Date, OffsetDateTime};
 
 use super::{Currency, CurrencyConverter, CurrencyError};
 
@@ -25,7 +25,7 @@ impl CashAmount {
     pub async fn add(
         &mut self,
         cash_amount: CashAmount,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
         currency_converter: &(dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
@@ -47,7 +47,7 @@ impl CashAmount {
     pub async fn add_opt(
         &mut self,
         cash_amount: Option<CashAmount>,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
         currency_converter: &(dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
@@ -63,7 +63,7 @@ impl CashAmount {
     pub async fn sub(
         &mut self,
         cash_amount: CashAmount,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
         currency_converter: &(dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
@@ -85,7 +85,7 @@ impl CashAmount {
     pub async fn sub_opt(
         &mut self,
         cash_amount: Option<CashAmount>,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
         currency_converter: &(dyn CurrencyConverter + Send + Sync),
         with_rounding: bool,
     ) -> Result<&mut Self, CurrencyError> {
@@ -138,12 +138,12 @@ impl Neg for CashAmount {
 #[derive(Deserialize, Serialize, Debug, Clone, Copy)]
 pub struct CashFlow {
     pub amount: CashAmount,
-    pub date: NaiveDate,
+    pub date: Date,
 }
 
 impl CashFlow {
     /// Construct new cash flow
-    pub fn new(amount: f64, currency: Currency, date: NaiveDate) -> CashFlow {
+    pub fn new(amount: f64, currency: Currency, date: Date) -> CashFlow {
         CashFlow {
             amount: CashAmount { amount, currency },
             date,

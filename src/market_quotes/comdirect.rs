@@ -1,14 +1,14 @@
 //! A tool to fetch prices by parsing comdirect web page
 use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::datatypes::{date_time_helper::date_time_from_str, CashFlow, Quote, Ticker};
+use crate::datatypes::{date_time_helper::offset_date_time_from_str, CashFlow, Quote, Ticker};
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
 use scraper::{Html, Selector};
+use time::OffsetDateTime;
 use tokio_compat_02::FutureExt;
 
 #[derive(Debug)]
 pub struct ComdirectQuote {
-    date: DateTime<Local>,
+    date: OffsetDateTime,
     close: f64,
     volume: Option<f64>,
 }
@@ -61,15 +61,20 @@ impl Comdirect {
     pub async fn get_quote_history(
         &self,
         id: &str,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<ComdirectQuote>, MarketQuoteError> {
         let url = format!(
             "{}{}{}{}{}{}",
             self.hurl1,
-            end.format("%d.%m.%Y"),
+            format!("{:02}.{:02}.{}", end.day(), end.month() as u8, end.year()),
             self.hurl2,
-            start.format("%d.%m.%Y"),
+            format!(
+                "{:02}.{:02}.{}",
+                start.day(),
+                start.month() as u8,
+                start.year()
+            ),
             self.hurl3,
             id
         );
@@ -112,7 +117,7 @@ impl Comdirect {
             let date_time_str = record
                 .get(0)
                 .ok_or_else(|| MarketQuoteError::UnexpectedError("empty field".to_string()))?;
-            let date = date_time_from_str(date_time_str, "%d.%m.%Y", 18, None);
+            let date = offset_date_time_from_str(date_time_str, "%d.%m.%Y", 18, None);
             if date.is_err() {
                 continue;
             }
@@ -145,7 +150,7 @@ impl MarketQuoteProvider for Comdirect {
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let codi = Comdirect::new();
         let price = codi.get_latest_quote(&ticker.name).await?;
-        let time = Local::now();
+        let time = OffsetDateTime::now_utc();
         Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
@@ -158,8 +163,8 @@ impl MarketQuoteProvider for Comdirect {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let codi = Comdirect::new();
         let codi_quotes = codi.get_quote_history(&ticker.name, start, end).await?;
@@ -181,8 +186,8 @@ impl MarketQuoteProvider for Comdirect {
     async fn fetch_dividend_history(
         &self,
         _ticker: &Ticker,
-        _start: DateTime<Local>,
-        _end: DateTime<Local>,
+        _start: OffsetDateTime,
+        _end: OffsetDateTime,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         Err(MarketQuoteError::UnexpectedError(
             "The comdirect interface does not support fetching dividends".to_string(),

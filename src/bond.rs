@@ -2,9 +2,9 @@
 //! and functionality to rollout cashflows and calculate basic
 //! valuation figures
 
-use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use time::Date;
 
 use crate::datatypes::cash_flow::CashFlow;
 use crate::datatypes::currency::Currency;
@@ -49,8 +49,8 @@ pub struct Bond {
     coupon: Coupon,
     business_day_rule: DayAdjust,
     calendar: String,
-    issue_date: NaiveDate,
-    maturity: NaiveDate,
+    issue_date: Date,
+    maturity: Date,
     /// Smallest purchasable unit
     pub denomination: u32,
     volume: Option<f64>,
@@ -94,9 +94,9 @@ impl Coupon {
     }
     fn year_fraction(
         &self,
-        start: NaiveDate,
-        end: NaiveDate,
-        roll_date: NaiveDate,
+        start: Date,
+        end: Date,
+        roll_date: Date,
     ) -> Result<f64, DayCountConvError> {
         self.day_count_convention
             .year_fraction(start, end, Some(roll_date), Some(self.period))
@@ -105,21 +105,26 @@ impl Coupon {
 
 impl Bond {
     /// Calculate first coupon period end date
-    fn first_coupon_end(&self, start_date: NaiveDate) -> Result<NaiveDate, BondError> {
-        if self.coupon.coupon_month() <= start_date.month() {
-            NaiveDate::from_ymd_opt(
+    fn first_coupon_end(&self, start_date: Date) -> Result<Date, BondError> {
+        use std::convert::TryFrom;
+        use time::Month;
+
+        let coupon_month = Month::try_from(self.coupon.coupon_month() as u8)
+            .map_err(|_| BondError::InvalidDate)?;
+        if self.coupon.coupon_month() <= start_date.month() as u32 {
+            Date::from_calendar_date(
                 start_date.year() + 1,
-                self.coupon.coupon_month(),
-                self.coupon.coupon_day(),
+                coupon_month,
+                self.coupon.coupon_day() as u8,
             )
-            .ok_or(BondError::InvalidDate)
+            .map_err(|_| BondError::InvalidDate)
         } else {
-            NaiveDate::from_ymd_opt(
+            Date::from_calendar_date(
                 start_date.year(),
-                self.coupon.coupon_month(),
-                self.coupon.coupon_day(),
+                coupon_month,
+                self.coupon.coupon_day() as u8,
             )
-            .ok_or(BondError::InvalidDate)
+            .map_err(|_| BondError::InvalidDate)
         }
     }
 }
@@ -167,7 +172,7 @@ impl FixedIncome for Bond {
         Ok(cfs)
     }
 
-    fn accrued_interest(&self, today: NaiveDate) -> Result<f64, BondError> {
+    fn accrued_interest(&self, today: Date) -> Result<f64, BondError> {
         let mut start_date = self.issue_date;
         if today < start_date {
             return Ok(0.);
@@ -184,8 +189,8 @@ impl FixedIncome for Bond {
             .coupon
             .year_fraction(start_date, end_date, start_date)?;
         let amount = (self.denomination as f64) * self.coupon.rate / 100. * year_fraction;
-        let fraction = today.signed_duration_since(start_date).num_days() as f64
-            / end_date.signed_duration_since(start_date).num_days() as f64;
+        let fraction =
+            (today - start_date).whole_days() as f64 / (end_date - start_date).whole_days() as f64;
 
         Ok(amount * fraction)
     }
@@ -225,24 +230,28 @@ mod tests {
             CashFlow::new(
                 0.05 * 1000. * 183. / 365.,
                 curr,
-                NaiveDate::from_ymd_opt(2020, 4, 1).unwrap(),
+                Date::from_calendar_date(2020, time::Month::April, 1).unwrap(),
             ),
             CashFlow::new(
                 0.05 * 1000. * 183. / 365.,
                 curr,
-                NaiveDate::from_ymd_opt(2020, 10, 1).unwrap(),
+                Date::from_calendar_date(2020, time::Month::October, 1).unwrap(),
             ),
             CashFlow::new(
                 0.05 * 1000. * 182. / 365.,
                 curr,
-                NaiveDate::from_ymd_opt(2021, 4, 1).unwrap(),
+                Date::from_calendar_date(2021, time::Month::April, 1).unwrap(),
             ),
             CashFlow::new(
                 0.05 * 1000. * 183. / 365.,
                 curr,
-                NaiveDate::from_ymd_opt(2021, 10, 1).unwrap(),
+                Date::from_calendar_date(2021, time::Month::October, 1).unwrap(),
             ),
-            CashFlow::new(1000., curr, NaiveDate::from_ymd_opt(2021, 10, 1).unwrap()),
+            CashFlow::new(
+                1000.,
+                curr,
+                Date::from_calendar_date(2021, time::Month::October, 1).unwrap(),
+            ),
         ];
         let tol = 1e-11;
         assert!(reference_cash_flows[0].fuzzy_cash_flows_cmp_eq(&cash_flows[0], tol));
@@ -280,24 +289,28 @@ mod tests {
             CashFlow::new(
                 0.05 * 1000. / 2.,
                 curr,
-                NaiveDate::from_ymd_opt(2021, 4, 1).unwrap(),
+                Date::from_calendar_date(2021, time::Month::April, 1).unwrap(),
             ),
             CashFlow::new(
                 0.05 * 1000. / 2.,
                 curr,
-                NaiveDate::from_ymd_opt(2021, 10, 1).unwrap(),
+                Date::from_calendar_date(2021, time::Month::October, 1).unwrap(),
             ),
             CashFlow::new(
                 0.05 * 1000. / 2.,
                 curr,
-                NaiveDate::from_ymd_opt(2022, 4, 1).unwrap(),
+                Date::from_calendar_date(2022, time::Month::April, 1).unwrap(),
             ),
             CashFlow::new(
                 0.05 * 1000. / 2.,
                 curr,
-                NaiveDate::from_ymd_opt(2022, 10, 3).unwrap(),
+                Date::from_calendar_date(2022, time::Month::October, 3).unwrap(),
             ),
-            CashFlow::new(1000., curr, NaiveDate::from_ymd_opt(2022, 10, 3).unwrap()),
+            CashFlow::new(
+                1000.,
+                curr,
+                Date::from_calendar_date(2022, time::Month::October, 3).unwrap(),
+            ),
         ];
         let tol = 1e-11;
         assert!(reference_cash_flows[0].fuzzy_cash_flows_cmp_eq(&cash_flows[0], tol));

@@ -5,15 +5,15 @@
 //! asset prices, or foreign exchange rates.
 use std::sync::{Arc, RwLock};
 
-use chrono::{DateTime, Local, NaiveDate, NaiveTime};
 use std::collections::BTreeMap;
+use time::{Date, OffsetDateTime, Time};
 
 use async_trait::async_trait;
 use log::debug;
 use thiserror::Error;
 
 use crate::datatypes::{
-    date_time_helper::naive_date_to_date_time, Asset, Currency, CurrencyConverter, CurrencyError,
+    date_time_helper::date_to_offset_date_time, Asset, Currency, CurrencyConverter, CurrencyError,
     CurrencyISOCode, QuoteHandler,
 };
 
@@ -53,8 +53,8 @@ pub enum MarketError {
 
 #[derive(Clone)]
 struct TimeRange {
-    start: DateTime<Local>,
-    end: DateTime<Local>,
+    start: OffsetDateTime,
+    end: OffsetDateTime,
 }
 
 /// Caching policy for Market
@@ -76,7 +76,7 @@ async fn currency_map(db: Arc<dyn QuoteHandler + Sync + Send>) -> BTreeMap<i32, 
     currency_map
 }
 
-type TimeSeries = BTreeMap<DateTime<Local>, (f64, i32)>;
+type TimeSeries = BTreeMap<OffsetDateTime, (f64, i32)>;
 
 /// Container or adaptor to market data
 struct MarketImpl {
@@ -116,12 +116,12 @@ impl Market {
 
     pub async fn new_with_date_range(
         db: Arc<dyn QuoteHandler + Sync + Send>,
-        start: NaiveDate,
-        end: NaiveDate,
+        start: Date,
+        end: Date,
     ) -> Result<Self, MarketError> {
         let cache_policy = CachePolicy::PredefinedPeriod(TimeRange {
-            start: naive_date_to_date_time(&start, 0, None)?,
-            end: naive_date_to_date_time(&end, 24, None)?,
+            start: date_to_offset_date_time(&start, 0, None)?,
+            end: date_to_offset_date_time(&end, 24, None)?,
         });
         Ok(Self {
             inner: Arc::new(MarketImpl {
@@ -142,8 +142,8 @@ impl Market {
 
     pub fn set_cache_period(
         &self,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<(), MarketError> {
         if let Ok(mut policy) = self.inner.cache_policy.write() {
             let new_policy = match &*policy {
@@ -265,8 +265,8 @@ impl Market {
     pub async fn update_quote_history(
         &self,
         ticker_id: i32,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<(), MarketError> {
         let ticker = self.inner.db.get_ticker_by_id(ticker_id).await?;
         let provider = if let Ok(providers) = self.inner.providers.read() {
@@ -291,8 +291,8 @@ impl Market {
     pub async fn update_quote_history_for_asset(
         &self,
         asset_id: i32,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<(), MarketError> {
         let tickers = self.inner.db.get_all_ticker_for_asset(asset_id).await?;
         if let Ok(providers) = self.inner.providers.read() {
@@ -312,7 +312,7 @@ impl Market {
         Ok(())
     }
 
-    pub fn try_from_cache(&self, asset_id: i32, time: DateTime<Local>) -> Option<(f64, i32)> {
+    pub fn try_from_cache(&self, asset_id: i32, time: OffsetDateTime) -> Option<(f64, i32)> {
         if let Ok(prices) = self.inner.prices.read() {
             if let Some(series) = (*prices).get(&asset_id) {
                 return series.range(..time).last().map(|entry| *entry.1);
@@ -325,7 +325,7 @@ impl Market {
         &self,
         asset_id: i32,
         currency: Currency,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
     ) -> Result<f64, MarketError> {
         let (price, quote_currency_id) = if let Some((quote, curr)) =
             self.try_from_cache(asset_id, time)
@@ -347,12 +347,9 @@ impl Market {
                     (quote.price, currency.id.unwrap())
                 }
                 CachePolicy::PredefinedPeriod(time_range) => {
-                    let date_start = time
-                        .with_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap())
-                        .unwrap();
-                    let date_end = time
-                        .with_time(NaiveTime::from_hms_milli_opt(23, 59, 59, 999).unwrap())
-                        .unwrap();
+                    let date_start = time.replace_time(Time::from_hms(0, 0, 0).unwrap());
+                    let date_end =
+                        time.replace_time(Time::from_hms_milli(23, 59, 59, 999).unwrap());
                     let start = std::cmp::min(time_range.start, date_start);
                     let end = std::cmp::max(time_range.end, date_end);
                     let quotes = self
@@ -391,7 +388,7 @@ impl CurrencyConverter for Market {
         &self,
         base_currency: Currency,
         quote_currency: Currency,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
     ) -> Result<f64, CurrencyError> {
         if base_currency == quote_currency {
             return Ok(1.0);

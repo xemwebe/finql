@@ -1,10 +1,12 @@
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
 use reqwest;
+use time::OffsetDateTime;
 
 use alpha_vantage as alpha;
 
-use crate::datatypes::{date_time_helper::date_time_from_str_standard, CashFlow, Quote, Ticker};
+use crate::datatypes::{
+    date_time_helper::offset_date_time_from_str_standard, CashFlow, Quote, Ticker,
+};
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
@@ -24,7 +26,8 @@ impl MarketQuoteProvider for AlphaVantage {
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let api_key = alpha::set_api(&self.token, reqwest::Client::new());
         let alpha_quote = api_key.quote(&ticker.name).json().await.unwrap();
-        let time = date_time_from_str_standard(alpha_quote.last_trading(), 0, ticker.tz.clone())?;
+        let time =
+            offset_date_time_from_str_standard(alpha_quote.last_trading(), 0, ticker.tz.clone())?;
         Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
@@ -37,8 +40,8 @@ impl MarketQuoteProvider for AlphaVantage {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let api_key = alpha::set_api(&self.token, reqwest::Client::new());
         let alpha_quotes = api_key
@@ -48,7 +51,7 @@ impl MarketQuoteProvider for AlphaVantage {
 
         let mut quotes = Vec::new();
         for quote in alpha_quotes.data().iter() {
-            let time = date_time_from_str_standard(quote.time(), 18, ticker.tz.clone())?;
+            let time = offset_date_time_from_str_standard(quote.time(), 18, ticker.tz.clone())?;
             if time >= start && time <= end {
                 quotes.push(Quote {
                     id: None,
@@ -66,8 +69,8 @@ impl MarketQuoteProvider for AlphaVantage {
     async fn fetch_dividend_history(
         &self,
         _ticker: &Ticker,
-        _start: DateTime<Local>,
-        _end: DateTime<Local>,
+        _start: OffsetDateTime,
+        _end: OffsetDateTime,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         Err(MarketQuoteError::UnexpectedError(
             "The Alpha Vantage API does not support fetching dividends".to_string(),

@@ -1,13 +1,14 @@
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
 use gurufocus_api as gfapi;
 use std::str::FromStr;
+use time::OffsetDateTime;
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
 use crate::datatypes::{
     date_time_helper::{
-        date_from_str, date_time_from_str_american, naive_date_to_date_time, unix_to_date_time,
+        date_from_str, date_to_offset_date_time, offset_date_time_from_str_american,
+        unix_to_offset_date_time,
     },
     CashFlow, Currency, Quote, Ticker,
 };
@@ -34,7 +35,7 @@ impl MarketQuoteProvider for GuruFocus {
 
         let quote: gfapi::Quote = serde_json::from_value(prices)?;
 
-        let time = unix_to_date_time(quote.timestamp as u64);
+        let time = unix_to_offset_date_time(quote.timestamp as u64);
         Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
@@ -47,8 +48,8 @@ impl MarketQuoteProvider for GuruFocus {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let gf_quotes = self.connector.get_price_hist(&ticker.name).await?;
 
@@ -56,7 +57,7 @@ impl MarketQuoteProvider for GuruFocus {
 
         let mut quotes = Vec::new();
         for (timestamp, price) in &gf_quotes {
-            let time = date_time_from_str_american(timestamp, 18, ticker.tz.clone())?;
+            let time = offset_date_time_from_str_american(timestamp, 18, ticker.tz.clone())?;
             if time < start || time > end {
                 continue;
             }
@@ -75,15 +76,15 @@ impl MarketQuoteProvider for GuruFocus {
     async fn fetch_dividend_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let gf_dividends = self.connector.get_dividend_history(&ticker.name).await?;
         let dividends: DividendHistory = serde_json::from_value(gf_dividends)?;
         let mut div_cash_flows = Vec::new();
         for div in dividends {
             let pay_date = date_from_str(&div.pay_date, "%Y-%m-%d")?;
-            let pay_date_time = naive_date_to_date_time(&pay_date, 18, ticker.tz.clone())?;
+            let pay_date_time = date_to_offset_date_time(&pay_date, 18, ticker.tz.clone())?;
             if pay_date_time >= start && pay_date_time <= end {
                 let currency = Currency::from_str(&div.currency)?;
                 div_cash_flows.push(CashFlow::new(div.amount.into(), currency, pay_date));
@@ -98,9 +99,9 @@ mod tests {
     use super::*;
     use crate::datatypes::Currency;
     use crate::market_quotes::MarketDataSource;
-    use chrono::offset::TimeZone;
     use std::env;
     use std::str::FromStr;
+    use time::{macros::offset, OffsetDateTime};
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_gf_fetch_quote() {
@@ -136,8 +137,16 @@ mod tests {
             tz: None,
             cal: None,
         };
-        let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
-        let end = Local.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
+        let start = OffsetDateTime::new_in_offset(
+            time::Date::from_calendar_date(2020, time::Month::January, 1).unwrap(),
+            time::Time::from_hms_milli(0, 0, 0, 0).unwrap(),
+            offset!(UTC),
+        );
+        let end = OffsetDateTime::new_in_offset(
+            time::Date::from_calendar_date(2020, time::Month::January, 31).unwrap(),
+            time::Time::from_hms_milli(23, 59, 59, 999).unwrap(),
+            offset!(UTC),
+        );
         let quotes = gf.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert!(quotes.len() > 15);
         assert!(quotes[0].price != 0.0);

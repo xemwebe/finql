@@ -1,8 +1,8 @@
-use crate::datatypes::date_time_helper::{from_date, to_date, DateTimeError};
+use crate::datatypes::date_time_helper::{from_time_date, to_time_date, DateTimeError};
 use cal_calc::{Calendar, CalendarError};
-use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use time::Date;
 
 /// Day adjustment error
 #[derive(Error, Debug)]
@@ -31,12 +31,8 @@ pub enum DayAdjust {
 }
 
 impl DayAdjust {
-    pub fn adjust_date(
-        &self,
-        date: NaiveDate,
-        cal: &Calendar,
-    ) -> Result<NaiveDate, AdjustDateError> {
-        let date = to_date(date)?;
+    pub fn adjust_date(&self, date: Date, cal: &Calendar) -> Result<Date, AdjustDateError> {
+        let date = to_time_date(date);
         let adjusted_date = match self {
             DayAdjust::None => date,
             DayAdjust::Following => {
@@ -66,7 +62,7 @@ impl DayAdjust {
                 }
             }
         };
-        Ok(from_date(adjusted_date)?)
+        Ok(from_time_date(adjusted_date))
     }
 }
 

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use chrono::NaiveDate;
 use std::str::FromStr;
+use time::Date;
 
 use crate::datatypes::cash_flow::{CashAmount, CashFlow};
 use crate::datatypes::currency::Currency;
@@ -15,7 +15,7 @@ pub struct RawTransaction {
     pub asset: Option<i32>,
     pub cash_amount: f64,
     pub cash_currency: Currency,
-    pub cash_date: NaiveDate,
+    pub cash_date: Date,
     pub related_trans: Option<i32>,
     pub position: Option<f64>,
     pub note: Option<String>,
@@ -131,7 +131,7 @@ impl TransactionHandler for PostgresDB {
         let row = sqlx::query!(
             "INSERT INTO transactions (trans_type, asset_id, cash_amount,
                 cash_currency_id, cash_date, related_trans, position,
-                note) 
+                note)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
             transaction.trans_type,
             transaction.asset,
@@ -237,10 +237,10 @@ impl TransactionHandler for PostgresDB {
         }
         let transaction = RawTransaction::from_transaction(transaction);
         sqlx::query!(
-            "UPDATE transactions SET 
-                trans_type=$2, 
-                asset_id=$3, 
-                cash_amount=$4, 
+            "UPDATE transactions SET
+                trans_type=$2,
+                asset_id=$3,
+                cash_amount=$4,
                 cash_currency_id=$5,
                 cash_date=$6,
                 related_trans=$7,

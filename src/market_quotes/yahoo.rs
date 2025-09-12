@@ -1,10 +1,11 @@
 use super::{MarketQuoteError, MarketQuoteProvider};
 use crate::datatypes::{
-    date_time_helper::{to_offset_date_time, unix_to_date_time},
+    date_time_helper::{to_time_offset_date_time, unix_to_offset_date_time},
     CashFlow, Quote, Ticker,
 };
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
+use std::convert::TryInto;
+use time::OffsetDateTime;
 use yahoo_finance_api as yahoo;
 
 pub struct Yahoo {}
@@ -20,7 +21,7 @@ impl MarketQuoteProvider for Yahoo {
             id: None,
             ticker: ticker.id.unwrap(),
             price: quote.close,
-            time: unix_to_date_time(quote.timestamp),
+            time: unix_to_offset_date_time(quote.timestamp.try_into().unwrap()),
             volume: Some(quote.volume as f64),
         })
     }
@@ -28,22 +29,22 @@ impl MarketQuoteProvider for Yahoo {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new()?;
         let response = yahoo
             .get_quote_history(
                 &ticker.name,
-                to_offset_date_time(start)?,
-                to_offset_date_time(end)?,
+                to_time_offset_date_time(start),
+                to_time_offset_date_time(end),
             )
             .await?;
         let yahoo_quotes = response.quotes()?;
         let mut quotes = Vec::new();
         for quote in &yahoo_quotes {
             let volume = Some(quote.volume as f64);
-            let time = unix_to_date_time(quote.timestamp);
+            let time = unix_to_offset_date_time(quote.timestamp.try_into().unwrap());
             quotes.push(Quote {
                 id: None,
                 ticker: ticker.id.unwrap(),
@@ -59,27 +60,23 @@ impl MarketQuoteProvider for Yahoo {
     async fn fetch_dividend_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new()?;
         let response = yahoo
             .get_quote_history(
                 &ticker.name,
-                to_offset_date_time(start)?,
-                to_offset_date_time(end)?,
+                to_time_offset_date_time(start),
+                to_time_offset_date_time(end),
             )
             .await?;
         let yahoo_dividends = response.dividends()?;
         let mut dividends = Vec::new();
         for dividend in &yahoo_dividends {
             let amount = dividend.amount;
-            let time = unix_to_date_time(dividend.date);
-            dividends.push(CashFlow::new(
-                amount,
-                ticker.currency,
-                time.naive_local().date(),
-            ));
+            let time = unix_to_offset_date_time(dividend.date.try_into().unwrap());
+            dividends.push(CashFlow::new(amount, ticker.currency, time.date()));
         }
         Ok(dividends)
     }
@@ -87,9 +84,8 @@ impl MarketQuoteProvider for Yahoo {
 
 #[cfg(test)]
 mod tests {
-    use chrono::offset::TimeZone;
-    use chrono_tz::America::New_York;
     use std::str::FromStr;
+    use time::{macros::offset, OffsetDateTime};
 
     use crate::datatypes::Currency;
 
@@ -128,14 +124,16 @@ mod tests {
             tz: None,
             cal: None,
         };
-        let start = New_York
-            .ymd(2020, 1, 1)
-            .and_hms_milli(0, 0, 0, 0)
-            .with_timezone(&Local);
-        let end = New_York
-            .ymd(2020, 1, 31)
-            .and_hms_milli(23, 59, 59, 999)
-            .with_timezone(&Local);
+        let start = OffsetDateTime::new_in_offset(
+            time::Date::from_calendar_date(2020, time::Month::January, 1).unwrap(),
+            time::Time::from_hms_milli(0, 0, 0, 0).unwrap(),
+            offset!(-05:00),
+        );
+        let end = OffsetDateTime::new_in_offset(
+            time::Date::from_calendar_date(2020, time::Month::January, 31).unwrap(),
+            time::Time::from_hms_milli(23, 59, 59, 999).unwrap(),
+            offset!(-05:00),
+        );
         let quotes = yahoo
             .fetch_quote_history(&ticker, start, end)
             .await

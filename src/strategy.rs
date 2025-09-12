@@ -1,10 +1,10 @@
 use async_trait::async_trait;
-use chrono::naive::NaiveDate;
 use log::{debug, trace};
 use thiserror::Error;
+use time::Date;
 
 use crate::datatypes::{
-    date_time_helper::{naive_date_to_date_time, DateTimeError},
+    date_time_helper::{date_to_offset_date_time, DateTimeError},
     CashFlow, Transaction, TransactionType,
 };
 use crate::{portfolio::PortfolioPosition, time_period::TimePeriod, Market};
@@ -56,12 +56,12 @@ pub trait Strategy {
     async fn apply(
         &self,
         position: &PortfolioPosition,
-        date: NaiveDate,
+        date: Date,
     ) -> Result<Vec<Transaction>, StrategyError>;
-    fn next_day(&self, date: NaiveDate) -> Result<NaiveDate, StrategyError>;
+    fn next_day(&self, date: Date) -> Result<Date, StrategyError>;
 }
 
-fn cash_flow_idx(date: NaiveDate, cash_flows: &[CashFlow]) -> Option<usize> {
+fn cash_flow_idx(date: Date, cash_flows: &[CashFlow]) -> Option<usize> {
     for (i, cf) in cash_flows.iter().enumerate() {
         if cf.date == date {
             return Some(i);
@@ -95,7 +95,7 @@ impl Strategy for StaticInSingleStock {
     async fn apply(
         &self,
         position: &PortfolioPosition,
-        date: NaiveDate,
+        date: Date,
     ) -> Result<Vec<Transaction>, StrategyError> {
         let mut transactions = Vec::new();
         if let Some(idx) = cash_flow_idx(date, &self.dividends) {
@@ -140,7 +140,7 @@ impl Strategy for StaticInSingleStock {
         Ok(transactions)
     }
 
-    fn next_day(&self, date: NaiveDate) -> Result<NaiveDate, StrategyError> {
+    fn next_day(&self, date: Date) -> Result<Date, StrategyError> {
         let one_day = "1D".parse::<TimePeriod>().unwrap();
         Ok(one_day.add_to(date, None)?)
     }
@@ -177,7 +177,7 @@ impl Strategy for ReInvestInSingleStock {
     async fn apply(
         &self,
         position: &PortfolioPosition,
-        date: NaiveDate,
+        date: Date,
     ) -> Result<Vec<Transaction>, StrategyError> {
         let mut transactions = Vec::new();
         if let Some(idx) = cash_flow_idx(date, &self.dividends) {
@@ -221,7 +221,7 @@ impl Strategy for ReInvestInSingleStock {
                 .db()
                 .get_last_quote_before_by_id(
                     self.ticker_id,
-                    naive_date_to_date_time(&date, 20, None)?,
+                    date_to_offset_date_time(&date, 20, None)?,
                 )
                 .await?;
             let (additional_position, fee) =
@@ -268,7 +268,7 @@ impl Strategy for ReInvestInSingleStock {
         Ok(transactions)
     }
 
-    fn next_day(&self, date: NaiveDate) -> Result<NaiveDate, StrategyError> {
+    fn next_day(&self, date: Date) -> Result<Date, StrategyError> {
         let one_day = "1D".parse::<TimePeriod>().unwrap();
         Ok(one_day.add_to(date, None)?)
     }

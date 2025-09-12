@@ -1,5 +1,5 @@
-use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
+use time::Date;
 
 use crate::datatypes::cash_flow::{CashAmount, CashFlow};
 use crate::datatypes::currency::Currency;
@@ -46,18 +46,14 @@ impl std::error::Error for DiscountError {
 /// This could be applied to falt raters, rate curves, or more complex models.
 pub trait Discounter {
     /// Calculate the factor to discount a cash flow at `pay_date` to `today`.
-    fn discount_factor(&self, today: NaiveDate, pay_date: NaiveDate) -> f64;
+    fn discount_factor(&self, today: Date, pay_date: Date) -> f64;
 
     /// Each discounter must belong to a currency, i.e. only cash flows in
     /// the same currency can be discounted.
     fn currency(&self) -> Currency;
 
     /// Discount given cash flow
-    fn discount_cash_flow(
-        &self,
-        cf: &CashFlow,
-        today: NaiveDate,
-    ) -> Result<CashAmount, DiscountError> {
+    fn discount_cash_flow(&self, cf: &CashFlow, today: Date) -> Result<CashAmount, DiscountError> {
         if self.currency() == cf.amount.currency {
             let amount = self.discount_factor(today, cf.date) * cf.amount.amount;
             Ok(CashAmount {
@@ -73,7 +69,7 @@ pub trait Discounter {
     fn discount_cash_flow_stream(
         &self,
         cf_stream: &[CashFlow],
-        today: NaiveDate,
+        today: Date,
     ) -> Result<CashAmount, DiscountError> {
         let mut amount = CashAmount {
             amount: 0.0,
@@ -116,7 +112,7 @@ impl FlatRate {
 }
 
 impl Discounter for FlatRate {
-    fn discount_factor(&self, today: NaiveDate, pay_date: NaiveDate) -> f64 {
+    fn discount_factor(&self, today: Date, pay_date: Date) -> f64 {
         let yf = self
             .day_count_conv
             .year_fraction(today, pay_date, None, None)
@@ -153,7 +149,7 @@ mod tests {
             compounding: Compounding::Annual,
             currency: curr,
         };
-        let start_date = NaiveDate::from_ymd_opt(2019, 12, 16);
+        let start_date = Date::from_calendar_date(2019, time::Month::December, 16).unwrap();
         let end_date = start_date + TimePeriod::from_str("6M").unwrap();
         let yf: f64 = DayCountConv::Act365
             .year_fraction(start_date, end_date, None, None)
@@ -241,12 +237,28 @@ mod tests {
             currency: curr,
         };
         let cash_flows = vec![
-            CashFlow::new(100., curr, NaiveDate::from_ymd_opt(2021, 4, 1)),
-            CashFlow::new(100., curr, NaiveDate::from_ymd_opt(2021, 10, 1)),
-            CashFlow::new(100., curr, NaiveDate::from_ymd_opt(2022, 4, 1)),
-            CashFlow::new(100., curr, NaiveDate::from_ymd_opt(2022, 10, 3)),
+            CashFlow::new(
+                100.,
+                curr,
+                Date::from_calendar_date(2021, time::Month::April, 1).unwrap(),
+            ),
+            CashFlow::new(
+                100.,
+                curr,
+                Date::from_calendar_date(2021, time::Month::October, 1).unwrap(),
+            ),
+            CashFlow::new(
+                100.,
+                curr,
+                Date::from_calendar_date(2022, time::Month::April, 1).unwrap(),
+            ),
+            CashFlow::new(
+                100.,
+                curr,
+                Date::from_calendar_date(2022, time::Month::October, 3).unwrap(),
+            ),
         ];
-        let today = NaiveDate::from_ymd_opt(2019, 10, 1);
+        let today = Date::from_calendar_date(2019, time::Month::October, 1).unwrap();
         assert_fuzzy_eq!(
             rate.discount_cash_flow(&cash_flows[0], today)
                 .unwrap()

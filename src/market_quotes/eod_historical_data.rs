@@ -2,13 +2,15 @@ use std::str::FromStr;
 
 use crate::datatypes::{
     date_time_helper::{
-        date_from_str, date_time_from_str_standard, naive_date_to_date_time, unix_to_date_time,
+        date_from_str, date_to_offset_date_time, offset_date_time_from_str_standard,
+        unix_to_offset_date_time,
     },
     CashFlow, Currency, Quote, Ticker,
 };
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
 use eodhistoricaldata_api as eod_api;
+use sqlx::types::chrono::NaiveDate;
+use time::OffsetDateTime;
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
@@ -30,7 +32,7 @@ impl MarketQuoteProvider for EODHistData {
     async fn fetch_latest_quote(&self, ticker: &Ticker) -> Result<Quote, MarketQuoteError> {
         let eod_quote = self.connector.get_latest_quote(&ticker.name).await?;
 
-        let time = unix_to_date_time(eod_quote.timestamp as u64);
+        let time = unix_to_offset_date_time(eod_quote.timestamp as u64);
         Ok(Quote {
             id: None,
             ticker: ticker.id.unwrap(),
@@ -44,21 +46,31 @@ impl MarketQuoteProvider for EODHistData {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let eod_quotes = self
             .connector
             .get_quote_history(
                 &ticker.name,
-                start.naive_local().date(),
-                end.naive_local().date(),
+                NaiveDate::from_ymd_opt(
+                    start.date().year(),
+                    start.date().month() as u32,
+                    start.date().day() as u32,
+                )
+                .unwrap(),
+                NaiveDate::from_ymd_opt(
+                    end.date().year(),
+                    end.date().month() as u32,
+                    end.date().day() as u32,
+                )
+                .unwrap(),
             )
             .await?;
 
         let mut quotes = Vec::new();
         for quote in &eod_quotes {
-            let time = date_time_from_str_standard(&quote.date, 18, ticker.tz.clone())?;
+            let time = offset_date_time_from_str_standard(&quote.date, 18, ticker.tz.clone())?;
             let volume = quote.volume.map(|vol| vol as f64);
             if let Some(price) = quote.close {
                 quotes.push(Quote {
@@ -77,17 +89,25 @@ impl MarketQuoteProvider for EODHistData {
     async fn fetch_dividend_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let dividends_since_start = self
             .connector
-            .get_dividend_history(&ticker.name, start.naive_local().date())
+            .get_dividend_history(
+                &ticker.name,
+                NaiveDate::from_ymd_opt(
+                    start.date().year(),
+                    start.date().month() as u32,
+                    start.date().day() as u32,
+                )
+                .unwrap(),
+            )
             .await?;
         let mut div_cash_flows = Vec::new();
         for div in dividends_since_start {
             let pay_date = date_from_str(&div.payment_date, "%Y-%m-%d")?;
-            if naive_date_to_date_time(&pay_date, 18, ticker.tz.clone())? <= end {
+            if date_to_offset_date_time(&pay_date, 18, ticker.tz.clone())? <= end {
                 let currency = Currency::from_str(&div.currency)?;
                 div_cash_flows.push(CashFlow::new(div.value, currency, pay_date));
             }

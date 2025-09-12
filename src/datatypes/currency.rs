@@ -3,11 +3,11 @@ use std::str::FromStr;
 
 use super::{DataError, DataItem};
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::{Eq, PartialEq};
 use thiserror::Error;
+use time::OffsetDateTime;
 
 /// Error type related to the Currency
 #[derive(Error, Debug, PartialEq)]
@@ -204,7 +204,7 @@ pub trait CurrencyConverter {
         &self,
         base_currency: Currency,
         quote_currency: Currency,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
     ) -> Result<f64, CurrencyError>;
 }
 

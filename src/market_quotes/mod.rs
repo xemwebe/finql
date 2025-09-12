@@ -5,11 +5,11 @@ use std::sync::Arc;
 use crate::datatypes::{CashFlow, Quote, QuoteHandler, Ticker};
 use alpha_vantage;
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
 use gurufocus_api;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use thiserror::Error;
+use time::OffsetDateTime;
 
 pub mod alpha_vantage_wrapper;
 pub mod comdirect;
@@ -24,7 +24,7 @@ pub enum MarketQuoteError {
     #[error("Fetching quote(s) from provider failed")]
     FetchFailed(#[from] reqwest::Error),
     #[error("Parsing quote date failed")]
-    ParseDateFailed(#[from] chrono::format::ParseError),
+    ParseDateFailed,
     #[error("Parsing number failed")]
     ParseNumberFailed(#[from] std::num::ParseFloatError),
     #[error("Invalid currency")]
@@ -54,16 +54,16 @@ pub trait MarketQuoteProvider: Send + Sync {
     async fn fetch_quote_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<Quote>, MarketQuoteError>;
 
     /// Fetch historic dividends (if any), returning a vector of cash flows, each cash flow representing a dividend payment per single stock
     async fn fetch_dividend_history(
         &self,
         ticker: &Ticker,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<CashFlow>, MarketQuoteError>;
 }
 
@@ -82,8 +82,8 @@ pub async fn update_ticker_history<'a>(
     provider: Arc<dyn MarketQuoteProvider + Send + Sync + 'a>,
     ticker: &Ticker,
     db: Arc<dyn QuoteHandler + Send + Sync + 'a>,
-    start: DateTime<Local>,
-    end: DateTime<Local>,
+    start: OffsetDateTime,
+    end: OffsetDateTime,
 ) -> Result<(), MarketQuoteError> {
     let mut quotes = provider.fetch_quote_history(ticker, start, end).await?;
     for quote in &mut quotes {
@@ -220,8 +220,8 @@ mod tests {
         async fn fetch_dividend_history(
             &self,
             _ticker: &Ticker,
-            _start: DateTime<Local>,
-            _end: DateTime<Local>,
+            _start: OffsetDateTime,
+            _end: OffsetDateTime,
         ) -> Result<Vec<CashFlow>, MarketQuoteError> {
             Ok(Vec::new())
         }

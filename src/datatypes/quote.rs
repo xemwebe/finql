@@ -1,8 +1,8 @@
 //! Implementation of a container for basic asset data
 use std::cmp::Ordering;
 
-use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 
 use super::Currency;
 use super::{DataError, DataItem};
@@ -25,7 +25,7 @@ pub struct Quote {
     pub id: Option<i32>,
     pub ticker: i32,
     pub price: f64,
-    pub time: DateTime<Local>,
+    pub time: OffsetDateTime,
     pub volume: Option<f64>,
 }
 

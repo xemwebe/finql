@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
+use time::OffsetDateTime;
 
 use crate::datatypes::{
     Asset, Currency, CurrencyConverter, CurrencyError, DataError, DataItem, Quote, QuoteHandler,
@@ -17,7 +17,7 @@ pub async fn insert_fx_quote(
     fx_rate: f64,
     base_currency: Currency,
     quote_currency: Currency,
-    time: DateTime<Local>,
+    time: OffsetDateTime,
     quotes: Arc<dyn QuoteHandler + Send + Sync>,
 ) -> Result<(), DataError> {
     let base_id = if let Ok(id) = base_currency.get_id() {
@@ -93,7 +93,7 @@ impl CurrencyConverter for SimpleCurrencyConverter {
         &self,
         base_currency: Currency,
         quote_currency: Currency,
-        _time: DateTime<Local>,
+        _time: OffsetDateTime,
     ) -> Result<f64, CurrencyError> {
         let currency_string = format!(
             "{}/{}",

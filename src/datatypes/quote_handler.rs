@@ -1,7 +1,7 @@
 //! Data handler trait for market quotes
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
 use std::sync::Arc;
+use time::OffsetDateTime;
 
 use super::AssetHandler;
 use super::DataError;
@@ -33,22 +33,22 @@ pub trait QuoteHandler: AssetHandler {
     async fn get_last_fx_quote_before(
         &self,
         curr: &CurrencyISOCode,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
     ) -> Result<(Quote, Currency), DataError>;
 
     /// Get the last quote in database for a specific asset id on or before the given time
     async fn get_last_quote_before_by_id(
         &self,
         asset_id: i32,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
     ) -> Result<(Quote, Currency), DataError>;
 
     /// Get all quotes within a time range for a specific asset id
     async fn get_quotes_in_range_by_id(
         &self,
         asset_id: i32,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<(Quote, i32)>, DataError>;
 
     async fn get_all_quotes_for_ticker(&self, ticker_id: i32) -> Result<Vec<Quote>, DataError>;

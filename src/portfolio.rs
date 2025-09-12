@@ -4,13 +4,13 @@ use std::sync::Arc;
 use std::vec::Vec;
 use thiserror::Error;
 
-use chrono::offset::TimeZone;
-use chrono::{DateTime, Local, NaiveDate};
+// use chrono::offset::TimeZone;  // Removed - using time crate
 use serde::{Deserialize, Serialize};
+use time::{Date, OffsetDateTime};
 
 use crate::datatypes::{
     currency::CurrencyConverter,
-    date_time_helper::{naive_date_to_date_time, DateTimeError},
+    date_time_helper::{date_to_offset_date_time, DateTimeError},
     Asset, AssetHandler, Currency, CurrencyError, DataError, Transaction, TransactionType,
 };
 
@@ -49,7 +49,7 @@ pub struct Position {
     pub tax: f64,
     pub currency: Currency,
     pub last_quote: Option<f64>,
-    pub last_quote_time: Option<DateTime<Local>>,
+    pub last_quote_time: Option<OffsetDateTime>,
 }
 
 /// Calculate the total position as of a given date by applying a specified set of filters
@@ -93,7 +93,7 @@ impl Position {
     /// Add quote information to position
     /// If no quote is available (or no conversion to position currency), calculate
     /// from purchase value.
-    pub async fn add_quote(&mut self, time: DateTime<Local>, market: Market) {
+    pub async fn add_quote(&mut self, time: OffsetDateTime, market: Market) {
         if let Some(asset_id) = self.asset_id {
             if let Ok(price) = market.get_asset_price(asset_id, self.currency, time).await {
                 self.last_quote = Some(price);
@@ -106,7 +106,7 @@ impl Position {
         } else {
             // No asset ID, must be some technical account, set price to 1.0
             self.last_quote = Some(1.0);
-            self.last_quote_time = Some(Local::now());
+            self.last_quote_time = Some(OffsetDateTime::now_utc());
         };
     }
 }
@@ -139,7 +139,7 @@ impl PortfolioPosition {
         Ok(())
     }
 
-    pub async fn add_quote(&mut self, time: DateTime<Local>, market: &Market) {
+    pub async fn add_quote(&mut self, time: OffsetDateTime, market: &Market) {
         let mut get_quote_futures = Vec::new();
         for pos in self.assets.values_mut() {
             get_quote_futures.push(pos.add_quote(time, market.clone()));
@@ -229,7 +229,7 @@ fn get_asset_id(transactions: &[Transaction], trans_ref: Option<i32>) -> Option<
 pub async fn calc_position(
     base_currency: Currency,
     transactions: &[Transaction],
-    date: Option<NaiveDate>,
+    date: Option<Date>,
     market: Market,
 ) -> Result<PortfolioPosition, PositionError> {
     let mut positions = PortfolioPosition::new(base_currency);
@@ -241,8 +241,8 @@ pub async fn calc_position(
 pub async fn calc_delta_position(
     positions: &mut PortfolioPosition,
     transactions: &[Transaction],
-    start: Option<NaiveDate>,
-    end: Option<NaiveDate>,
+    start: Option<Date>,
+    end: Option<Date>,
     market: Market,
 ) -> Result<(), PositionError> {
     let base_currency = positions.cash.currency;
@@ -258,7 +258,7 @@ pub async fn calc_delta_position(
                 .fx_rate(
                     trans.cash_flow.amount.currency,
                     base_currency,
-                    naive_date_to_date_time(&trans.cash_flow.date, 20, None)?,
+                    date_to_offset_date_time(&trans.cash_flow.date, 20, None)?,
                 )
                 .await?
         } else {
@@ -366,19 +366,17 @@ pub async fn calc_delta_position(
 pub async fn calculate_position_and_pnl(
     currency: Currency,
     transactions: &[Transaction],
-    date: Option<NaiveDate>,
+    date: Option<Date>,
     market: &Market,
 ) -> Result<(PortfolioPosition, PositionTotals), PositionError> {
     let mut position = calc_position(currency, transactions, date, market.clone()).await?;
     position
         .get_asset_names(market.db().into_arc_dispatch())
         .await?;
-    let date_time: DateTime<Local> = if let Some(date) = date {
-        Local
-            .from_local_datetime(&date.and_hms_opt(0, 0, 0).unwrap())
-            .unwrap()
+    let date_time: OffsetDateTime = if let Some(date) = date {
+        date_to_offset_date_time(&date, 0, None)?
     } else {
-        Local::now()
+        OffsetDateTime::now_utc()
     };
     position.add_quote(date_time, market).await;
     let totals = position.calc_totals();
@@ -394,8 +392,8 @@ pub async fn calculate_position_and_pnl(
 pub async fn calculate_position_for_period(
     currency: Currency,
     transactions: &[Transaction],
-    start: NaiveDate,
-    end: NaiveDate,
+    start: Date,
+    end: Date,
     market: &Market,
 ) -> Result<(PortfolioPosition, PositionTotals), PositionError> {
     let (mut position, _) =
@@ -412,14 +410,8 @@ pub async fn calculate_position_for_period(
     position
         .get_asset_names(market.db().into_arc_dispatch())
         .await?;
-    let end_date_time: DateTime<Local> = Local
-        .from_local_datetime(
-            &end.succ_opt()
-                .ok_or(PositionError::InvalidDate)?
-                .and_hms_opt(0, 0, 0)
-                .unwrap(),
-        )
-        .unwrap();
+    let next_day = end.next_day().ok_or(PositionError::InvalidDate)?;
+    let end_date_time = date_to_offset_date_time(&next_day, 0, None)?;
     position.add_quote(end_date_time, market).await;
     let totals = position.calc_totals();
     Ok((position, totals))
@@ -468,7 +460,7 @@ mod tests {
                     amount: 10000.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 1, 1),
+                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 1).unwrap(),
             },
             note: None,
         });
@@ -489,7 +481,7 @@ mod tests {
                     amount: -104.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 1, 2),
+                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 2).unwrap(),
             },
             note: None,
         });
@@ -503,7 +495,7 @@ mod tests {
                     amount: -5.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 1, 2),
+                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 2).unwrap(),
             },
             note: None,
         });
@@ -529,7 +521,7 @@ mod tests {
                     amount: 60.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 1, 31),
+                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 31).unwrap(),
             },
             note: None,
         });
@@ -543,7 +535,7 @@ mod tests {
                     amount: -3.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 1, 31),
+                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 31).unwrap(),
             },
             note: None,
         });
@@ -557,7 +549,7 @@ mod tests {
                     amount: -2.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 1, 31),
+                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 31).unwrap(),
             },
             note: None,
         });
@@ -588,7 +580,7 @@ mod tests {
                     amount: -140.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 2, 15),
+                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 15).unwrap(),
             },
             note: None,
         });
@@ -602,7 +594,7 @@ mod tests {
                     amount: -7.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 2, 25),
+                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 25).unwrap(),
             },
             note: None,
         });
@@ -616,7 +608,7 @@ mod tests {
                     amount: -4.5,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 2, 26),
+                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 26).unwrap(),
             },
             note: None,
         });
@@ -628,7 +620,7 @@ mod tests {
                     amount: 13.0,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 2, 27),
+                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 27).unwrap(),
             },
             note: None,
         });
@@ -640,7 +632,7 @@ mod tests {
                     amount: 6.6,
                     currency: eur,
                 },
-                date: NaiveDate::from_ymd_opt(2020, 2, 28),
+                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 28).unwrap(),
             },
             note: None,
         });

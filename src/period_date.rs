@@ -1,9 +1,10 @@
 use crate::datatypes::Transaction;
-use chrono::{Datelike, Local, NaiveDate};
 use core::default::Default;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 use std::fmt::Display;
 use thiserror::Error;
+use time::{Date, Month, OffsetDateTime, UtcOffset};
 
 #[derive(Error, Debug)]
 pub enum PeriodDateError {
@@ -25,7 +26,7 @@ pub enum PeriodDate {
     Today,
     FirstOfMonth,
     FirstOfYear,
-    FixedDate(NaiveDate),
+    FixedDate(Date),
 }
 
 impl Display for PeriodDate {
@@ -41,7 +42,7 @@ impl Display for PeriodDate {
 }
 
 impl PeriodDate {
-    pub fn new(date_type: &str, date: Option<NaiveDate>) -> Result<PeriodDate, PeriodDateError> {
+    pub fn new(date_type: &str, date: Option<Date>) -> Result<PeriodDate, PeriodDateError> {
         match date_type {
             "Inception" => Ok(PeriodDate::Inception),
             "Today" => Ok(PeriodDate::Today),
@@ -58,24 +59,25 @@ impl PeriodDate {
         }
     }
 
-    pub fn date(&self, inception: Option<NaiveDate>) -> Result<NaiveDate, PeriodDateError> {
+    pub fn date(&self, inception: Option<Date>) -> Result<Date, PeriodDateError> {
         match self {
-            PeriodDate::Today => Ok(Local::now().naive_local().date()),
+            PeriodDate::Today => Ok(OffsetDateTime::now_utc().date()),
             PeriodDate::FirstOfMonth => {
-                let today = Local::now().naive_local();
-                NaiveDate::from_ymd_opt(today.year(), today.month(), 1)
-                    .ok_or(PeriodDateError::InvalidDate)
+                let today = OffsetDateTime::now_utc().date();
+                Date::from_calendar_date(today.year(), today.month(), 1)
+                    .map_err(|_| PeriodDateError::InvalidDate)
             }
             PeriodDate::FirstOfYear => {
-                let today = Local::now().naive_local();
-                NaiveDate::from_ymd_opt(today.year(), 1, 1).ok_or(PeriodDateError::InvalidDate)
+                let today = OffsetDateTime::now_utc().date();
+                Date::from_calendar_date(today.year(), Month::January, 1)
+                    .map_err(|_| PeriodDateError::InvalidDate)
             }
             PeriodDate::FixedDate(date) => Ok(*date),
             PeriodDate::Inception => inception.ok_or(PeriodDateError::MissingInceptionDate),
         }
     }
 
-    pub fn date_from_trades(&self, trades: &[Transaction]) -> Result<NaiveDate, PeriodDateError> {
+    pub fn date_from_trades(&self, trades: &[Transaction]) -> Result<Date, PeriodDateError> {
         let inception = trades.iter().map(|t| t.cash_flow.date).min();
         self.date(inception)
     }

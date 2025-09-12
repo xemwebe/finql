@@ -2,7 +2,7 @@ use std::f64;
 
 use argmin::core::{CostFunction, Error, Executor};
 use argmin::solver::brent::BrentRoot;
-use chrono::NaiveDate;
+use time::Date;
 
 use crate::datatypes::CashFlow;
 
@@ -11,7 +11,7 @@ use crate::rates::{Compounding, DiscountError, Discounter, FlatRate};
 use cal_calc::CalendarProvider;
 
 /// Get all future cash flows with respect to a given date
-pub fn get_cash_flows_after(cash_flows: &[CashFlow], date: NaiveDate) -> Vec<CashFlow> {
+pub fn get_cash_flows_after(cash_flows: &[CashFlow], date: Date) -> Vec<CashFlow> {
     let mut new_cash_flows = Vec::new();
     for cf in cash_flows {
         if cf.date > date {
@@ -32,7 +32,7 @@ pub trait FixedIncome {
     ) -> Result<Vec<CashFlow>, Self::Error>;
 
     /// Calculate accrued interest for current coupon period
-    fn accrued_interest(&self, today: NaiveDate) -> Result<f64, Self::Error>;
+    fn accrued_interest(&self, today: Date) -> Result<f64, Self::Error>;
 
     /// Calculate the yield to maturity (YTM) given a purchase price and date
     fn calculate_ytm(

@@ -1,8 +1,8 @@
 //! Implementation for quote handler with Sqlite3 database as backend
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
 use std::str::FromStr;
 use std::sync::Arc;
+use time::OffsetDateTime;
 
 use crate::datatypes::{
     Asset, AssetHandler, Currency, CurrencyISOCode, DataError, Quote, QuoteHandler, Ticker,
@@ -287,7 +287,7 @@ impl QuoteHandler for PostgresDB {
     async fn get_last_fx_quote_before(
         &self,
         curr: &CurrencyISOCode,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
     ) -> Result<(Quote, Currency), DataError> {
         let row = sqlx::query!(
             "SELECT
@@ -322,7 +322,7 @@ impl QuoteHandler for PostgresDB {
         );
         let ticker = row.ticker_id;
         let price = row.price;
-        let time: DateTime<Local> = row.time.into();
+        let time = row.time;
         let volume = row.volume;
         Ok((
             Quote {
@@ -339,7 +339,7 @@ impl QuoteHandler for PostgresDB {
     async fn get_last_quote_before_by_id(
         &self,
         asset_id: i32,
-        time: DateTime<Local>,
+        time: OffsetDateTime,
     ) -> Result<(Quote, Currency), DataError> {
         let row = sqlx::query!(
             "SELECT q.id, q.ticker_id, q.price, q.time, q.volume, t.currency_id, t.priority
@@ -357,7 +357,7 @@ impl QuoteHandler for PostgresDB {
         let id = row.id;
         let ticker = row.ticker_id;
         let price = row.price;
-        let time: DateTime<Local> = row.time.into();
+        let time = row.time;
         let volume = row.volume;
         let currency_id = row.currency_id;
 
@@ -383,8 +383,8 @@ impl QuoteHandler for PostgresDB {
     async fn get_quotes_in_range_by_id(
         &self,
         asset_id: i32,
-        start: DateTime<Local>,
-        end: DateTime<Local>,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
     ) -> Result<Vec<(Quote, i32)>, DataError> {
         let mut quotes = Vec::new();
         for row in sqlx::query!(
@@ -405,7 +405,7 @@ impl QuoteHandler for PostgresDB {
                     id: Some(row.id),
                     ticker: row.ticker_id,
                     price: row.price,
-                    time: row.time.into(),
+                    time: row.time,
                     volume: row.volume,
                 },
                 row.currency_id,
@@ -425,7 +425,7 @@ impl QuoteHandler for PostgresDB {
         .await?
         {
             let id = row.id;
-            let time = row.time.into();
+            let time = row.time;
             quotes.push(Quote {
                 id: Some(id),
                 ticker: ticker_id,
