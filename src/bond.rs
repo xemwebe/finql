@@ -205,6 +205,7 @@ mod tests {
 
     #[test]
     fn cash_flow_rollout_unadjusted() {
+        // issue date and maturity on 1st October
         let data = r#"{
             "bond_type": "bond",
             "currency": "EUR",
@@ -217,8 +218,8 @@ mod tests {
             },
             "business_day_rule": "none",
             "calendar": "TARGET",
-            "issue_date": "2019-10-01",
-            "maturity": "2021-10-01",
+            "issue_date": [2019, 274],
+            "maturity": [2021, 274],
             "denomination": 1000
         }"#;
         let bond: Bond = serde_json::from_str(&data).unwrap();
@@ -263,6 +264,7 @@ mod tests {
 
     #[test]
     fn cash_flow_rollout_adjusted() {
+        // issue date and maturity on 1st October
         let data = r#"{
             "bond_type": "bond",
             "currency": "EUR",
@@ -275,8 +277,8 @@ mod tests {
             },
             "business_day_rule": "modified",
             "calendar": "TARGET",
-            "issue_date": "2020-10-01",
-            "maturity": "2022-10-01",
+            "issue_date": [2020, 275],
+            "maturity": [2022, 274],
             "denomination": 1000
         }"#;
         let bond: Bond = serde_json::from_str(&data).unwrap();

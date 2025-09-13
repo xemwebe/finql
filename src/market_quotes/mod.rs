@@ -12,7 +12,6 @@ use thiserror::Error;
 use time::OffsetDateTime;
 
 pub mod alpha_vantage_wrapper;
-pub mod comdirect;
 pub mod eod_historical_data;
 pub mod guru_focus;
 pub mod yahoo;
@@ -102,7 +101,6 @@ pub enum MarketDataSource {
     GuruFocus,
     EodHistData,
     AlphaVantage,
-    Comdirect,
 }
 
 #[derive(Error, Debug, Clone)]
@@ -121,7 +119,6 @@ impl FromStr for MarketDataSource {
             "gurufocus" => Ok(Self::GuruFocus),
             "eodhistdata" => Ok(Self::EodHistData),
             "alpha_vantage" => Ok(Self::AlphaVantage),
-            "comdirect" => Ok(Self::Comdirect),
             _ => Err(MarketDataSourceError::ParseError),
         }
     }
@@ -135,7 +132,6 @@ impl fmt::Display for MarketDataSource {
             Self::GuruFocus => write!(f, "gurufocus"),
             Self::EodHistData => write!(f, "eodhistdata"),
             Self::AlphaVantage => write!(f, "alpha_vantage"),
-            Self::Comdirect => write!(f, "comdirect"),
         }
     }
 }
@@ -150,7 +146,6 @@ impl MarketDataSource {
             Self::GuruFocus => Some(Arc::new(guru_focus::GuruFocus::new(token))),
             Self::EodHistData => Some(Arc::new(eod_historical_data::EODHistData::new(token))),
             Self::AlphaVantage => Some(Arc::new(alpha_vantage_wrapper::AlphaVantage::new(token))),
-            Self::Comdirect => Some(Arc::new(comdirect::Comdirect::new())),
             _ => None,
         }
     }
