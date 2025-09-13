@@ -1,8 +1,8 @@
-use std::cmp::min;
-use std::error::Error;
 ///! Demonstrate total return calculation by single investment in dividend stock
 ///! Example storing general calendars as JSON object in PostgreSQL
 ///! Please note: All existing content of the database will be deleted!
+use std::cmp::min;
+use std::error::Error;
 use std::sync::Arc;
 
 use log::debug;
@@ -12,7 +12,7 @@ use time::{Date, Month};
 
 use cal_calc::last_day_of_month;
 use finql::datatypes::{
-    date_time_helper::make_time, Asset, CashFlow, Currency, QuoteHandler, Stock, Ticker,
+    date_time_helper::make_offset_time, Asset, CashFlow, Currency, QuoteHandler, Stock, Ticker,
     Transaction, TransactionType,
 };
 use finql::postgres::PostgresDB;

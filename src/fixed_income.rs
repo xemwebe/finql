@@ -123,9 +123,13 @@ mod tests {
         let cash_flows = vec![CashFlow::new(
             1050.,
             curr,
-            NaiveDate::from_ymd_opt(2021, 10, 1),
+            Date::from_calendar_date(2021, time::Month::October, 1).unwrap(),
         )];
-        let init_cash_flow = CashFlow::new(-1000., curr, NaiveDate::from_ymd_opt(2020, 10, 1));
+        let init_cash_flow = CashFlow::new(
+            -1000.,
+            curr,
+            Date::from_calendar_date(2020, time::Month::October, 1).unwrap(),
+        );
 
         let ytm = calculate_cash_flows_ytm(&cash_flows, &init_cash_flow).unwrap();
         assert_fuzzy_eq!(ytm, 0.05, tol);
@@ -134,7 +138,8 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn cash_amount_arithmetic_simple() {
         let tol = 1e-11;
-        let time = Local.ymd(2020, 4, 6).and_hms_milli(18, 0, 0, 0);
+        let time =
+            crate::datatypes::date_time_helper::make_offset_time(2020, 4, 6, 18, 0, 0).unwrap();
 
         let eur = Currency::from_str("EUR").unwrap();
         let jpy = Currency::from_str("JPY").unwrap();

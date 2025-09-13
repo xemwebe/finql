@@ -3,6 +3,7 @@
 use cal_calc::Holiday;
 use finql::datatypes::ObjectHandler;
 use finql::postgres::PostgresDB;
+use time::Weekday;
 
 #[tokio::main]
 async fn main() {
@@ -17,9 +18,9 @@ async fn main() {
     // we use a calendar as sample object
     let holidays = vec![
         // Saturdays
-        Holiday::WeekDay(Weekday::Sat),
+        Holiday::WeekDay(Weekday::Saturday),
         // Sundays
-        Holiday::WeekDay(Weekday::Sun),
+        Holiday::WeekDay(Weekday::Sunday),
         // New Year's day
         Holiday::MovableYearlyDay {
             month: 1,

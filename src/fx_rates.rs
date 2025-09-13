@@ -146,12 +146,13 @@ impl Default for SimpleCurrencyConverter {
 mod tests {
     use super::*;
     use crate::datatypes::CurrencyISOCode;
+    use crate::date_time_helper::make_offset_time;
     use crate::market::{CachePolicy, Market};
     use crate::postgres::PostgresDB;
     use std::sync::Arc;
 
     async fn prepare_db(db: Arc<dyn QuoteHandler + Send + Sync>) {
-        let time = Local.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);
+        let time = make_offset_time(1970, 1, 1, 0, 0, 1).unwrap();
         let eur = db
             .get_or_new_currency(CurrencyISOCode::new("EUR").unwrap())
             .await
@@ -179,7 +180,7 @@ mod tests {
         let market = Market::new(qh).await;
         let eur = market.get_currency_from_str("EUR").await.unwrap();
         let usd = market.get_currency_from_str("USD").await.unwrap();
-        let time = Local::now();
+        let time = time::UtcDateTime::now();
         let fx = market.fx_rate(usd, eur, time).await.unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);
     }

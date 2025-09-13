@@ -406,11 +406,11 @@ mod tests {
             Holiday::SingularDay(
                 Date::from_calendar_date(2019, time::Month::November, 21).unwrap(),
             ),
-            Holiday::WeekDay(Weekday::Sat),
-            Holiday::WeekDay(Weekday::Sun),
+            Holiday::WeekDay(Weekday::Saturday),
+            Holiday::WeekDay(Weekday::Sunday),
         ];
 
-        let cal = Calendar::calc_calendar(&holiday_rules, 2019, 2020);
+        let cal = Calendar::calc_calendar(&holiday_rules, 2019, 2020).unwrap();
         let bdaily1 = TimePeriod::from_str("1B").unwrap();
         let bdaily2 = TimePeriod::from_str("2B").unwrap();
         let bdaily_1 = TimePeriod::from_str("-1B").unwrap();

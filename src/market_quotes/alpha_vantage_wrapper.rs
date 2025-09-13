@@ -82,6 +82,7 @@ impl MarketQuoteProvider for AlphaVantage {
 mod tests {
     use super::*;
     use crate::datatypes::Currency;
+    use crate::date_time_helper::make_offset_time;
     use crate::market_quotes::MarketDataSource;
     use std::str::FromStr;
 
@@ -119,8 +120,8 @@ mod tests {
             tz: None,
             cal: None,
         };
-        let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
-        let end = Local.ymd(3000, 1, 31).and_hms_milli(23, 59, 59, 999);
+        let start = make_offset_time(2020, 1, 1, 0, 0, 0).unwrap();
+        let end = make_offset_time(3000, 1, 31, 23, 59, 59).unwrap();
         let quotes = alpha
             .fetch_quote_history(&ticker, start, end)
             .await

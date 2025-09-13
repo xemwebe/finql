@@ -200,6 +200,7 @@ impl DayCountConv {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::convert::TryFrom;
 
     #[test]
     fn days_this_year() {

@@ -195,8 +195,9 @@ impl MarketQuoteProvider for Comdirect {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::datatypes::Currency;
+    use crate::datatypes::{date_time_helper::make_offset_time, Currency};
     use crate::market_quotes::MarketDataSource;
+
     use std::str::FromStr;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -233,8 +234,8 @@ mod tests {
             tz: None,
             cal: None,
         };
-        let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
-        let end = Local.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
+        let start = make_offset_time(2020, 1, 1, 0, 0, 0).unwrap();
+        let end = make_offset_time(2020, 1, 31, 23, 59, 59).unwrap();
         let quotes = codi.fetch_quote_history(&ticker, start, end).await.unwrap();
         assert_eq!(quotes.len(), 21);
         assert!(quotes[0].price != 0.0);

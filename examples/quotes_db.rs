@@ -4,8 +4,8 @@ use std::io::{stdout, Write};
 use std::sync::Arc;
 
 use finql::datatypes::{
-    date_time_helper::make_time, Asset, Currency, CurrencyConverter, CurrencyISOCode, DataItem,
-    Quote, QuoteHandler, Stock, Ticker,
+    date_time_helper::make_offset_time, Asset, Currency, CurrencyConverter, CurrencyISOCode,
+    DataItem, Quote, QuoteHandler, Stock, Ticker,
 };
 use finql::fx_rates::insert_fx_quote;
 use finql::market::{CachePolicy, Market};
@@ -140,7 +140,7 @@ async fn quote_tests(market: Market) {
 
     // Dealing with quotes
     log("Insert market quotes...");
-    let time = make_time(2019, 12, 30, 20, 0, 0).unwrap();
+    let time = make_offset_time(2019, 12, 30, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
         ticker: basf_ticker_id,
@@ -149,7 +149,7 @@ async fn quote_tests(market: Market) {
         volume: None,
     };
     market.db().insert_quote(&quote).await.unwrap();
-    let time = make_time(2020, 1, 2, 20, 0, 0).unwrap();
+    let time = make_offset_time(2020, 1, 2, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
         ticker: basf_ticker_id,
@@ -158,7 +158,7 @@ async fn quote_tests(market: Market) {
         volume: None,
     };
     market.db().insert_quote(&quote).await.unwrap();
-    let time = make_time(2020, 1, 3, 20, 0, 0).unwrap();
+    let time = make_offset_time(2020, 1, 3, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
         ticker: basf_ticker_id,
@@ -167,7 +167,7 @@ async fn quote_tests(market: Market) {
         volume: None,
     };
     market.db().insert_quote(&quote).await.unwrap();
-    let time = make_time(2020, 1, 6, 20, 0, 0).unwrap();
+    let time = make_offset_time(2020, 1, 6, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
         ticker: basf_ticker_id,
@@ -176,7 +176,7 @@ async fn quote_tests(market: Market) {
         volume: None,
     };
     market.db().insert_quote(&quote).await.unwrap();
-    let time = make_time(2020, 1, 7, 20, 0, 0).unwrap();
+    let time = make_offset_time(2020, 1, 7, 20, 0, 0).unwrap();
     let quote = Quote {
         id: None,
         ticker: basf_ticker_id,

@@ -420,11 +420,12 @@ mod tests {
     use crate::assert_fuzzy_eq;
     use crate::datatypes::QuoteHandler;
     use crate::datatypes::{
-        date_time_helper::make_time, Asset, AssetHandler, CashAmount, CashFlow, Currency,
+        date_time_helper::make_offset_time, Asset, AssetHandler, CashAmount, CashFlow, Currency,
         CurrencyISOCode, Quote, Stock, Ticker,
     };
     use crate::market::CachePolicy;
     use crate::postgres::PostgresDB;
+    use std::convert::TryFrom;
 
     #[tokio::test]
     async fn test_portfolio_position() {
@@ -737,7 +738,7 @@ mod tests {
             .await
             .unwrap();
         // add quotes
-        let time = make_time(2019, 12, 30, 10, 0, 0).unwrap();
+        let time = make_offset_time(2019, 12, 30, 10, 0, 0).unwrap();
         let _ = db
             .insert_quote(&Quote {
                 id: None,
@@ -770,29 +771,29 @@ mod tests {
         crate::fx_rates::insert_fx_quote(1.2, eur, usd, time, qh.clone())
             .await
             .unwrap();
-        let time = make_time(2019, 12, 30, 10, 0, 0).unwrap();
+        let time = make_offset_time(2019, 12, 30, 10, 0, 0).unwrap();
         let market = Market::new(qh.clone()).await;
 
         eur_position.add_quote(time, market.clone()).await;
         assert_fuzzy_eq!(eur_position.last_quote.unwrap(), 12.34, tol);
         assert_eq!(
-            eur_position
+            &eur_position
                 .last_quote_time
                 .unwrap()
-                .format("%F %H:%M:%S")
-                .to_string(),
-            "2019-12-30 10:00:00"
+                .format(&time::format_description::well_known::Rfc3339)
+                .unwrap()[..19],
+            "2019-12-30T10:00:00"
         );
 
         usd_position.add_quote(time, market.clone()).await;
         assert_fuzzy_eq!(usd_position.last_quote.unwrap(), 36.0083, tol);
         assert_eq!(
-            usd_position
+            &usd_position
                 .last_quote_time
                 .unwrap()
-                .format("%F %H:%M:%S")
-                .to_string(),
-            "2019-12-30 10:00:00"
+                .format(&time::format_description::well_known::Rfc3339)
+                .unwrap()[..19],
+            "2019-12-30T10:00:00"
         );
     }
 }

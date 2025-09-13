@@ -101,7 +101,7 @@ impl TimeSeries {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::datatypes::date_time_helper::make_time;
+    use crate::datatypes::date_time_helper::make_offset_time;
     use cal_calc::Holiday;
     use time::Weekday;
 
@@ -111,30 +111,30 @@ mod tests {
             Holiday::SingularDay(Date::from_calendar_date(2021, time::Month::November, 4).unwrap()),
             Holiday::SingularDay(Date::from_calendar_date(2021, time::Month::November, 5).unwrap()),
             Holiday::SingularDay(Date::from_calendar_date(2021, time::Month::November, 8).unwrap()),
-            Holiday::WeekDay(Weekday::Sat),
-            Holiday::WeekDay(Weekday::Sun),
+            Holiday::WeekDay(Weekday::Saturday),
+            Holiday::WeekDay(Weekday::Sunday),
         ];
         let today = OffsetDateTime::now_utc().date();
-        let cal = Calendar::calc_calendar(&holidays, 2021, today.year());
+        let cal = Calendar::calc_calendar(&holidays, 2021, today.year()).unwrap();
 
         let mut ts = TimeSeries {
             title: "test".to_string(),
             series: Vec::new(),
         };
         ts.series.push(TimeValue {
-            time: make_time(2021, 10, 28, 20, 0, 0).unwrap(),
+            time: make_offset_time(2021, 10, 28, 20, 0, 0).unwrap(),
             value: 1.0,
         });
         ts.series.push(TimeValue {
-            time: make_time(2021, 11, 1, 20, 0, 0).unwrap(),
+            time: make_offset_time(2021, 11, 1, 20, 0, 0).unwrap(),
             value: 1.0,
         });
         ts.series.push(TimeValue {
-            time: make_time(2021, 11, 8, 20, 0, 0).unwrap(),
+            time: make_offset_time(2021, 11, 8, 20, 0, 0).unwrap(),
             value: 1.0,
         });
         ts.series.push(TimeValue {
-            time: make_time(2021, 11, 9, 20, 0, 0).unwrap(),
+            time: make_offset_time(2021, 11, 9, 20, 0, 0).unwrap(),
             value: 1.0,
         });
 

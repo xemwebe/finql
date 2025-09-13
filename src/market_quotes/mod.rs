@@ -173,9 +173,12 @@ impl MarketDataSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::datatypes::{Asset, CurrencyISOCode, QuoteHandler, Stock};
+    use crate::datatypes::{
+        date_time_helper::make_offset_time, Asset, CurrencyISOCode, QuoteHandler, Stock,
+    };
     use crate::postgres::PostgresDB;
     use rand::Rng;
+    use time::Duration;
     struct DummyProvider {}
 
     #[async_trait]
@@ -185,7 +188,7 @@ mod tests {
                 id: None,
                 ticker: ticker.id.unwrap(),
                 price: 1.23,
-                time: Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0),
+                time: make_offset_time(2020, 1, 1, 0, 0, 0).unwrap(),
                 volume: None,
             })
         }
@@ -193,10 +196,10 @@ mod tests {
         async fn fetch_quote_history(
             &self,
             ticker: &Ticker,
-            start: DateTime<Local>,
-            end: DateTime<Local>,
+            start: OffsetDateTime,
+            end: OffsetDateTime,
         ) -> Result<Vec<Quote>, MarketQuoteError> {
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             let mut quotes = Vec::new();
             let mut date = start;
             let mut price = 1.23;
@@ -209,7 +212,7 @@ mod tests {
                     volume: None,
                 });
                 date = date + Duration::days(1);
-                price *= (0.0001 + 0.2 * rng.gen::<f64>()).exp();
+                price *= (0.0001 + 0.2 * rng.random::<f64>()).exp();
             }
             Ok(quotes)
         }
@@ -271,7 +274,9 @@ mod tests {
         let db = Arc::new(db);
         let ticker = prepare_db(db.clone()).await;
         let provider = DummyProvider {};
-        update_ticker(&provider, &ticker, db.clone()).await.unwrap();
+        update_ticker(Arc::new(provider), &ticker, db.clone())
+            .await
+            .unwrap();
         let quotes = db
             .get_all_quotes_for_ticker(ticker.id.unwrap())
             .await
@@ -295,9 +300,11 @@ mod tests {
         let db = Arc::new(db);
         let ticker = prepare_db(db.clone()).await;
         let provider = DummyProvider {};
-        let start = Local.ymd(2020, 1, 1).and_hms_milli(0, 0, 0, 0);
-        let end = Local.ymd(2020, 1, 31).and_hms_milli(23, 59, 59, 999);
-        update_ticker_history(&provider, &ticker, db.clone(), start, end)
+        let start =
+            crate::datatypes::date_time_helper::make_offset_time(2020, 1, 1, 0, 0, 0).unwrap();
+        let end =
+            crate::datatypes::date_time_helper::make_offset_time(2020, 1, 31, 23, 59, 59).unwrap();
+        update_ticker_history(Arc::new(provider), &ticker, db.clone(), start, end)
             .await
             .unwrap();
         let quotes = db
