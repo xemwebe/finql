@@ -145,9 +145,8 @@ impl Default for SimpleCurrencyConverter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::datatypes::CurrencyISOCode;
-    use crate::date_time_helper::make_offset_time;
-    use crate::market::{CachePolicy, Market};
+    use crate::datatypes::{date_time_helper::make_offset_time, CurrencyISOCode};
+    use crate::market::Market;
     use crate::postgres::PostgresDB;
     use std::sync::Arc;
 
@@ -180,7 +179,7 @@ mod tests {
         let market = Market::new(qh).await;
         let eur = market.get_currency_from_str("EUR").await.unwrap();
         let usd = market.get_currency_from_str("USD").await.unwrap();
-        let time = time::UtcDateTime::now();
+        let time = time::OffsetDateTime::now_utc();
         let fx = market.fx_rate(usd, eur, time).await.unwrap();
         assert_fuzzy_eq!(fx, 0.9, tol);
     }

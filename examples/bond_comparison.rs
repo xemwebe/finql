@@ -16,7 +16,7 @@ async fn main() {
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
 
-    let today = Date::from_calendar_date(2019, Monht::December, 11)?;
+    let today = Date::from_calendar_date(2019, Month::December, 11).unwrap();
     let bond1: Bond = serde_json::from_str(&data).unwrap();
     let calendar = SimpleCalendar::default();
     let cfs1 = bond1.rollout_cash_flows(1., &calendar).unwrap();

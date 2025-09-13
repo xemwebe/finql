@@ -423,7 +423,6 @@ mod tests {
         date_time_helper::make_offset_time, Asset, AssetHandler, CashAmount, CashFlow, Currency,
         CurrencyISOCode, Quote, Stock, Ticker,
     };
-    use crate::market::CachePolicy;
     use crate::postgres::PostgresDB;
     use std::convert::TryFrom;
 

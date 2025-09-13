@@ -3,6 +3,7 @@ use finql::datatypes::{
     Asset, CashFlow, CurrencyISOCode, Stock, Transaction, TransactionHandler, TransactionType,
 };
 use finql::postgres::PostgresDB;
+use time::{Date, Month};
 
 async fn transaction_tests(db: &dyn TransactionHandler) {
     print!("Store asset...");
@@ -30,7 +31,11 @@ async fn transaction_tests(db: &dyn TransactionHandler) {
         .get_or_new_currency(CurrencyISOCode::new("EUR").unwrap())
         .await
         .unwrap();
-    let cash_flow = CashFlow::new(10_000.0, eur, NaiveDate::from_ymd_opt(2020, 01, 15))?;
+    let cash_flow = CashFlow::new(
+        10_000.0,
+        eur,
+        Date::from_calendar_date(2020, Month::January, 15).unwrap(),
+    );
     let cash_in = Transaction {
         id: None,
         transaction_type: TransactionType::Cash,
@@ -45,7 +50,11 @@ async fn transaction_tests(db: &dyn TransactionHandler) {
 
     // Lets buy the asset!
     print!("Store buy asset transaction...");
-    let cash_flow = CashFlow::new(-9_000.0, eur, NaiveDate::from_ymd_opt(2020, 01, 15))?;
+    let cash_flow = CashFlow::new(
+        -9_000.0,
+        eur,
+        Date::from_calendar_date(2020, Month::January, 15).unwrap(),
+    );
     let asset_buy = Transaction {
         id: None,
         transaction_type: TransactionType::Asset {
@@ -65,7 +74,11 @@ async fn transaction_tests(db: &dyn TransactionHandler) {
         transaction_type: TransactionType::Fee {
             transaction_ref: Some(trans_id),
         },
-        cash_flow: CashFlow::new(-30.0, eur, NaiveDate::from_ymd_opt(2020, 01, 15)?),
+        cash_flow: CashFlow::new(
+            -30.0,
+            eur,
+            Date::from_calendar_date(2020, Month::January, 15).unwrap(),
+        ),
         note: None,
     };
     let _ = db.insert_transaction(&fee).await.unwrap();
@@ -76,7 +89,11 @@ async fn transaction_tests(db: &dyn TransactionHandler) {
     let dividend = Transaction {
         id: None,
         transaction_type: TransactionType::Dividend { asset_id: 1 },
-        cash_flow: CashFlow::new(90.0, eur, NaiveDate::from_ymd_opt(2020, 01, 30)?),
+        cash_flow: CashFlow::new(
+            90.0,
+            eur,
+            Date::from_calendar_date(2020, Month::January, 30).unwrap(),
+        ),
         note: None,
     };
     let dividend_id = db.insert_transaction(&dividend).await.unwrap();
@@ -89,7 +106,11 @@ async fn transaction_tests(db: &dyn TransactionHandler) {
         transaction_type: TransactionType::Tax {
             transaction_ref: Some(dividend_id),
         },
-        cash_flow: CashFlow::new(-40.0, eur, NaiveDate::from_ymd_opt(2020, 01, 30)?),
+        cash_flow: CashFlow::new(
+            -40.0,
+            eur,
+            Date::from_calendar_date(2020, Month::January, 30).unwrap(),
+        ),
         note: None,
     };
     let _ = db.insert_transaction(&tax).await.unwrap();

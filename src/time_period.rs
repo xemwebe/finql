@@ -300,38 +300,62 @@ mod tests {
     fn standard_periods() {
         let date = Date::from_calendar_date(2019, time::Month::November, 18).unwrap();
         assert_eq!(
-            TimePeriod::from_str("3M").unwrap().add_to(date, None),
-            Ok(Date::from_calendar_date(2020, time::Month::February, 18).unwrap())
+            TimePeriod::from_str("3M")
+                .unwrap()
+                .add_to(date, None)
+                .unwrap(),
+            Date::from_calendar_date(2020, time::Month::February, 18).unwrap()
         );
         assert_eq!(
-            TimePeriod::from_str("1Y").unwrap().add_to(date, None),
-            Ok(Date::from_calendar_date(2020, time::Month::November, 18).unwrap())
+            TimePeriod::from_str("1Y")
+                .unwrap()
+                .add_to(date, None)
+                .unwrap(),
+            Date::from_calendar_date(2020, time::Month::November, 18).unwrap()
         );
         assert_eq!(
-            TimePeriod::from_str("6M").unwrap().add_to(date, None),
-            Ok(Date::from_calendar_date(2020, time::Month::May, 18).unwrap())
+            TimePeriod::from_str("6M")
+                .unwrap()
+                .add_to(date, None)
+                .unwrap(),
+            Date::from_calendar_date(2020, time::Month::May, 18).unwrap()
         );
         assert_eq!(
-            TimePeriod::from_str("1W").unwrap().add_to(date, None),
-            Ok(Date::from_calendar_date(2019, time::Month::November, 25).unwrap())
+            TimePeriod::from_str("1W")
+                .unwrap()
+                .add_to(date, None)
+                .unwrap(),
+            Date::from_calendar_date(2019, time::Month::November, 25).unwrap()
         );
 
         let date = Date::from_calendar_date(2019, time::Month::November, 30).unwrap();
         assert_eq!(
-            TimePeriod::from_str("3M").unwrap().add_to(date, None),
-            Ok(Date::from_calendar_date(2020, time::Month::February, 29).unwrap())
+            TimePeriod::from_str("3M")
+                .unwrap()
+                .add_to(date, None)
+                .unwrap(),
+            Date::from_calendar_date(2020, time::Month::February, 29).unwrap()
         );
         assert_eq!(
-            TimePeriod::from_str("1Y").unwrap().add_to(date, None),
-            Ok(Date::from_calendar_date(2020, time::Month::November, 30).unwrap())
+            TimePeriod::from_str("1Y")
+                .unwrap()
+                .add_to(date, None)
+                .unwrap(),
+            Date::from_calendar_date(2020, time::Month::November, 30).unwrap()
         );
         assert_eq!(
-            TimePeriod::from_str("6M").unwrap().add_to(date, None),
-            Ok(Date::from_calendar_date(2020, time::Month::May, 30).unwrap())
+            TimePeriod::from_str("6M")
+                .unwrap()
+                .add_to(date, None)
+                .unwrap(),
+            Date::from_calendar_date(2020, time::Month::May, 30).unwrap()
         );
         assert_eq!(
-            TimePeriod::from_str("1W").unwrap().add_to(date, None),
-            Ok(Date::from_calendar_date(2019, time::Month::December, 7).unwrap())
+            TimePeriod::from_str("1W")
+                .unwrap()
+                .add_to(date, None)
+                .unwrap(),
+            Date::from_calendar_date(2019, time::Month::December, 7).unwrap()
         );
     }
 
@@ -342,48 +366,60 @@ mod tests {
         let neg_annual = TimePeriod::from_str("-1Y").unwrap();
         let neg_weekly = TimePeriod::from_str("-1W").unwrap();
         assert_eq!(
-            neg_quarterly.add_to(
-                Date::from_calendar_date(2020, time::Month::February, 18).unwrap(),
-                None
-            ),
-            Ok(date)
+            neg_quarterly
+                .add_to(
+                    Date::from_calendar_date(2020, time::Month::February, 18).unwrap(),
+                    None
+                )
+                .unwrap(),
+            date
         );
         assert_eq!(
-            neg_annual.add_to(
-                Date::from_calendar_date(2020, time::Month::November, 18).unwrap(),
-                None
-            ),
-            Ok(date)
+            neg_annual
+                .add_to(
+                    Date::from_calendar_date(2020, time::Month::November, 18).unwrap(),
+                    None
+                )
+                .unwrap(),
+            date
         );
         assert_eq!(
-            neg_weekly.add_to(
-                Date::from_calendar_date(2019, time::Month::November, 25).unwrap(),
-                None
-            ),
-            Ok(date)
+            neg_weekly
+                .add_to(
+                    Date::from_calendar_date(2019, time::Month::November, 25).unwrap(),
+                    None
+                )
+                .unwrap(),
+            date
         );
 
         let date = Date::from_calendar_date(2019, time::Month::November, 30).unwrap();
         assert_eq!(
-            neg_quarterly.add_to(
-                Date::from_calendar_date(2020, time::Month::February, 29).unwrap(),
-                None
-            ),
-            Ok(Date::from_calendar_date(2019, time::Month::November, 29).unwrap())
+            neg_quarterly
+                .add_to(
+                    Date::from_calendar_date(2020, time::Month::February, 29).unwrap(),
+                    None
+                )
+                .unwrap(),
+            Date::from_calendar_date(2019, time::Month::November, 29).unwrap()
         );
         assert_eq!(
-            neg_annual.add_to(
-                Date::from_calendar_date(2020, time::Month::November, 30).unwrap(),
-                None
-            ),
-            Ok(date)
+            neg_annual
+                .add_to(
+                    Date::from_calendar_date(2020, time::Month::November, 30).unwrap(),
+                    None
+                )
+                .unwrap(),
+            date
         );
         assert_eq!(
-            neg_weekly.add_to(
-                Date::from_calendar_date(2019, time::Month::December, 7).unwrap(),
-                None
-            ),
-            Ok(date)
+            neg_weekly
+                .add_to(
+                    Date::from_calendar_date(2019, time::Month::December, 7).unwrap(),
+                    None
+                )
+                .unwrap(),
+            date
         );
     }
 
@@ -421,30 +457,30 @@ mod tests {
 
         let date = Date::from_calendar_date(2019, time::Month::November, 20).unwrap();
         assert_eq!(
-            bdaily1.add_to(date, Some(&cal)),
-            Ok(Date::from_calendar_date(2019, time::Month::November, 22).unwrap())
+            bdaily1.add_to(date, Some(&cal)).unwrap(),
+            Date::from_calendar_date(2019, time::Month::November, 22).unwrap()
         );
         assert_eq!(
-            bdaily2.add_to(date, Some(&cal)),
-            Ok(Date::from_calendar_date(2019, time::Month::November, 25).unwrap())
+            bdaily2.add_to(date, Some(&cal)).unwrap(),
+            Date::from_calendar_date(2019, time::Month::November, 25).unwrap()
         );
         assert_eq!(
-            bdaily_1.add_to(date, Some(&cal)),
-            Ok(Date::from_calendar_date(2019, time::Month::November, 19).unwrap())
+            bdaily_1.add_to(date, Some(&cal)).unwrap(),
+            Date::from_calendar_date(2019, time::Month::November, 19).unwrap()
         );
 
         let date = Date::from_calendar_date(2019, time::Month::November, 25).unwrap();
         assert_eq!(
-            bdaily1.add_to(date, Some(&cal)),
-            Ok(Date::from_calendar_date(2019, time::Month::November, 26).unwrap())
+            bdaily1.add_to(date, Some(&cal)).unwrap(),
+            Date::from_calendar_date(2019, time::Month::November, 26).unwrap()
         );
         assert_eq!(
-            bdaily2.add_to(date, Some(&cal)),
-            Ok(Date::from_calendar_date(2019, time::Month::November, 27).unwrap())
+            bdaily2.add_to(date, Some(&cal)).unwrap(),
+            Date::from_calendar_date(2019, time::Month::November, 27).unwrap()
         );
         assert_eq!(
-            bdaily_1.add_to(date, Some(&cal)),
-            Ok(Date::from_calendar_date(2019, time::Month::November, 22).unwrap())
+            bdaily_1.add_to(date, Some(&cal)).unwrap(),
+            Date::from_calendar_date(2019, time::Month::November, 22).unwrap()
         );
     }
 

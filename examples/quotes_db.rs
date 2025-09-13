@@ -8,7 +8,7 @@ use finql::datatypes::{
     DataItem, Quote, QuoteHandler, Stock, Ticker,
 };
 use finql::fx_rates::insert_fx_quote;
-use finql::market::{CachePolicy, Market};
+use finql::market::Market;
 use finql::market_quotes::MarketDataSource;
 use finql::postgres::PostgresDB;
 
@@ -185,7 +185,7 @@ async fn quote_tests(market: Market) {
         volume: None,
     };
     market.db().insert_quote(&quote).await.unwrap();
-    let time = make_time(2020, 1, 8, 20, 0, 0).unwrap();
+    let time = make_offset_time(2020, 1, 8, 20, 0, 0).unwrap();
     let mut wrong_quote = Quote {
         id: None,
         ticker: siemens_id,
@@ -195,7 +195,7 @@ async fn quote_tests(market: Market) {
     };
     let wrong_quote_id = market.db().insert_quote(&wrong_quote).await.unwrap();
     println!("ok");
-    let time = make_time(2020, 1, 4, 0, 0, 0).unwrap();
+    let time = make_offset_time(2020, 1, 4, 0, 0, 0).unwrap();
     log("get last quote...");
     let (quote, currency) = market
         .db()

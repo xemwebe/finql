@@ -81,8 +81,7 @@ impl MarketQuoteProvider for AlphaVantage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::datatypes::Currency;
-    use crate::date_time_helper::make_offset_time;
+    use crate::datatypes::{date_time_helper::make_offset_time, Currency};
     use crate::market_quotes::MarketDataSource;
     use std::str::FromStr;
 

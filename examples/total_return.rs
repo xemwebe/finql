@@ -5,19 +5,19 @@ use std::cmp::min;
 use std::error::Error;
 use std::sync::Arc;
 
+use chrono::{DateTime, Utc};
 use log::debug;
 use plotters::prelude::*;
 use pretty_env_logger;
-use time::{Date, Month};
+use time::{Date, OffsetDateTime};
 
 use cal_calc::last_day_of_month;
 use finql::datatypes::{
-    date_time_helper::make_offset_time, Asset, CashFlow, Currency, QuoteHandler, Stock, Ticker,
-    Transaction, TransactionType,
+    date_time_helper::{date_to_offset_date_time, make_offset_time},
+    Asset, CashFlow, Currency, QuoteHandler, Stock, Ticker, Transaction, TransactionType,
 };
 use finql::postgres::PostgresDB;
 use finql::{
-    market::CachePolicy,
     market_quotes::MarketDataSource,
     portfolio::{calc_delta_position, PortfolioPosition},
     strategy::{
@@ -53,13 +53,8 @@ async fn calc_strategy(
     .unwrap();
 
     position
-        .add_quote(
-            naive_date_to_date_time(&start, 20, None).unwrap(),
-            market.clone(),
-        )
+        .add_quote(date_to_offset_date_time(&start, 20, None).unwrap(), &market)
         .await;
-    //let totals = position.calc_totals();
-    //total_return.push(TimeValue{ value: totals.value, date: current_date});
 
     while current_date < end {
         // Update list of transactions with new strategic transactions for the current day
@@ -67,7 +62,7 @@ async fn calc_strategy(
         transactions.append(&mut new_transactions);
 
         // roll position forward to next day
-        let next_date = min(end, strategy.next_day(current_date));
+        let next_date = min(end, strategy.next_day(current_date).unwrap());
 
         // Calculate new position including new transactions
         debug!(
@@ -89,8 +84,8 @@ async fn calc_strategy(
         );
 
         current_date = next_date;
-        let current_time = naive_date_to_date_time(&current_date, 20, None).unwrap();
-        position.add_quote(current_time, market.clone()).await;
+        let current_time = date_to_offset_date_time(&current_date, 20, None).unwrap();
+        position.add_quote(current_time, &market).await;
         let totals = position.calc_totals();
         total_return.push(TimeValue {
             value: totals.value,
@@ -113,9 +108,9 @@ async fn main() {
     pretty_env_logger::init();
 
     println!("Calculate total return of single investment of 10'000 USD in Broadcom (AVGO) five years before today");
-    let today = Local::now().naive_local().date();
+    let today = time::UtcDateTime::now().date();
     let five_years_before = "-5Y".parse::<TimePeriod>().unwrap();
-    let start = five_years_before.add_to(today, None);
+    let start = five_years_before.add_to(today, None).unwrap();
     println!("The simulation will run from {} until {}.", start, today);
 
     db.clean().await.unwrap();
@@ -132,7 +127,9 @@ async fn main() {
     let asset_id = db.insert_asset(&asset).await.unwrap();
 
     println!("Get price history and dividends for AVGO");
-    let market = Market::new_with_date_range(db.clone(), start, today).await;
+    let market = Market::new_with_date_range(db.clone(), start, today)
+        .await
+        .unwrap();
     let yahoo = MarketDataSource::Yahoo;
     let quote_provider = yahoo.get_provider(String::new()).unwrap();
     market.add_provider(yahoo.to_string(), quote_provider.clone());
@@ -150,9 +147,14 @@ async fn main() {
     };
     let ticker_id = db.insert_ticker(&ticker).await.unwrap();
     let price_offset_period = "7D".parse::<TimePeriod>().unwrap();
-    let history_start_time = start - price_offset_period;
-    let start_time = date_to_date_time(&start, 0, None).unwrap();
-    let end_time = date_to_date_time(&today, 20, None).unwrap();
+    let start_time = date_to_offset_date_time(&start, 0, None).unwrap();
+    let end_time = date_to_offset_date_time(&today, 20, None).unwrap();
+    let history_start_time = date_to_offset_date_time(
+        &price_offset_period.sub_from(start, None).unwrap(),
+        20,
+        None,
+    )
+    .unwrap();
     market
         .update_quote_history(ticker_id, history_start_time, end_time)
         .await
@@ -292,6 +294,10 @@ async fn main() {
     make_plot("strategies.png", "Strategies Performance", &all_time_series).unwrap();
 }
 
+fn convert_to_utc(time: &OffsetDateTime) -> DateTime<Utc> {
+    return DateTime::from_timestamp_secs(time.unix_timestamp()).unwrap();
+}
+
 fn make_plot(
     file_name: &str,
     title: &str,
@@ -325,19 +331,21 @@ fn make_plot(
     }
 
     let y_range = min_val..max_val;
-    let min_time = make_time(min_date.year(), min_date.month(), 1, 0, 0, 0).unwrap();
+    let min_time = make_offset_time(min_date.year(), min_date.month() as u32, 1, 0, 0, 0).unwrap();
     let max_year = max_date.year();
     let max_month = max_date.month();
-    let max_time = make_time(
+    let max_time = make_offset_time(
         max_year,
-        max_month,
-        last_day_of_month(max_year, max_month),
+        max_month as u32,
+        last_day_of_month(max_year, max_month as u8) as u32,
         23,
         59,
         59,
     )
     .unwrap();
-    let x_range = (min_time..max_time).monthly();
+    let min_naive_time = convert_to_utc(&min_time);
+    let max_naive_time = convert_to_utc(&max_time);
+    let x_range = (min_naive_time..max_naive_time).monthly();
 
     let mut chart = ChartBuilder::on(&root)
         .margin(10)
@@ -362,7 +370,7 @@ fn make_plot(
     for ts in all_time_series {
         chart
             .draw_series(LineSeries::new(
-                ts.series.iter().map(|v| (v.time, v.value)),
+                ts.series.iter().map(|v| (convert_to_utc(&v.time), v.value)),
                 COLORS[color_index],
             ))?
             .label(&ts.title)

@@ -69,81 +69,82 @@ impl DayAdjust {
 mod tests {
     use super::*;
     use cal_calc::Holiday;
+    use time::macros::date;
 
     #[test]
     fn day_adjust() {
         let holidays = vec![
-            Holiday::SingularDay(date!(2019, 10, 10)),
-            Holiday::SingularDay(date!(2019, 10, 31)),
+            Holiday::SingularDay(date!(2019 - 10 - 10)),
+            Holiday::SingularDay(date!(2019 - 10 - 31)),
         ];
-        let cal = Calendar::calc_calendar(&holidays, 2019, 2019);
+        let cal = Calendar::calc_calendar(&holidays, 2019, 2019).unwrap();
         let rule = DayAdjust::None;
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 1), &cal),
-            date!(2019, 10, 1)
+            rule.adjust_date(date!(2019 - 10 - 1), &cal).unwrap(),
+            date!(2019 - 10 - 1)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 10), &cal),
-            date!(2019, 10, 10)
+            rule.adjust_date(date!(2019 - 10 - 10), &cal).unwrap(),
+            date!(2019 - 10 - 10)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 31), &cal),
-            date!(2019, 10, 31)
+            rule.adjust_date(date!(2019 - 10 - 31), &cal).unwrap(),
+            date!(2019 - 10 - 31)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 11, 30), &cal),
-            date!(2019, 11, 30)
+            rule.adjust_date(date!(2019 - 11 - 30), &cal).unwrap(),
+            date!(2019 - 11 - 30)
         );
         let rule = DayAdjust::Following;
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 1), &cal),
-            date!(2019, 10, 1)
+            rule.adjust_date(date!(2019 - 10 - 1), &cal).unwrap(),
+            date!(2019 - 10 - 1)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 10), &cal),
-            date!(2019, 10, 11)
+            rule.adjust_date(date!(2019 - 10 - 10), &cal).unwrap(),
+            date!(2019 - 10 - 11)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 31), &cal),
-            date!(2019, 11, 1)
+            rule.adjust_date(date!(2019 - 10 - 31), &cal).unwrap(),
+            date!(2019 - 11 - 1)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 11, 30), &cal),
-            date!(2019, 11, 30)
+            rule.adjust_date(date!(2019 - 11 - 30), &cal).unwrap(),
+            date!(2019 - 11 - 30)
         );
         let rule = DayAdjust::Preceding;
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 1), &cal),
-            date!(2019, 10, 1)
+            rule.adjust_date(date!(2019 - 10 - 1), &cal).unwrap(),
+            date!(2019 - 10 - 1)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 10), &cal),
-            date!(2019, 10, 9)
+            rule.adjust_date(date!(2019 - 10 - 10), &cal).unwrap(),
+            date!(2019 - 10 - 9)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 31), &cal),
-            date!(2019, 10, 30)
+            rule.adjust_date(date!(2019 - 10 - 31), &cal).unwrap(),
+            date!(2019 - 10 - 30)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 11, 30), &cal),
-            date!(2019, 11, 30)
+            rule.adjust_date(date!(2019 - 11 - 30), &cal).unwrap(),
+            date!(2019 - 11 - 30)
         );
         let rule = DayAdjust::Modified;
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 1), &cal),
-            date!(2019, 10, 1)
+            rule.adjust_date(date!(2019 - 10 - 1), &cal).unwrap(),
+            date!(2019 - 10 - 1)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 10), &cal),
-            date!(2019, 10, 11)
+            rule.adjust_date(date!(2019 - 10 - 10), &cal).unwrap(),
+            date!(2019 - 10 - 11)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 10, 31), &cal),
-            date!(2019, 10, 30)
+            rule.adjust_date(date!(2019 - 10 - 31), &cal).unwrap(),
+            date!(2019 - 10 - 30)
         );
         assert_eq!(
-            rule.adjust_date(date!(2019, 11, 30), &cal),
-            date!(2019, 11, 30)
+            rule.adjust_date(date!(2019 - 11 - 30), &cal).unwrap(),
+            date!(2019 - 11 - 30)
         );
     }
 }
