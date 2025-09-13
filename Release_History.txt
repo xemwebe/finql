@@ -1,56 +1,58 @@
 Version 0.13
-  * Market refactoring: Using the interior mutability pattern, Market can now be used 
+  * drop support for scraping data from comdirect web pages
+  * Migration to use crate time consistently instead of crate chrono or a mixture of both
+  * Market refactoring: Using the interior mutability pattern, Market can now be used
     as a regular, cloneable struct. Using mut is no longer required.
-  * Extension of Market with method for fetching/creating currencies and implicit 
+  * Extension of Market with method for fetching/creating currencies and implicit
     CachePolicy setting
 Version 0.12
-  * Breaking change Market extensions: 
+  * Breaking change Market extensions:
     - price cache with intrinsic mutability
     - Market::new() is now async, since it reads currency list from database
     - FX quote conventions consistent with market convention using
   * new struct AssetSelector type to generate asset choice lists
   * Module calendar is now a crate of its own: cal-calc
-  * Breaking change: change `id` members of assets to `i32` to align with postgresql 
+  * Breaking change: change `id` members of assets to `i32` to align with postgresql
     datatype `SERIAL`
 Version 0.11
   * Breaking change: A new enum `Asset` has been introduced. `Stock` and `Currency` are
     the first two asset classes that could be the underlying of a transaction. On database
-    level it is ensured that each asset regardless of its class has a unique id. In most 
+    level it is ensured that each asset regardless of its class has a unique id. In most
     cases, a `Currency` needs to be stored in the database to get its unique id before it
     could used in any meaningful way.
   * Breaking change: Sqlite3 is no longer supported, leaving PostgreSQL as the sole supported
     database. As a consequence, sub-crates `finql-data` and `finql-postgres` have been
     reintegrated into the main (and again single) crate as separate modules.
-  * Breaking change: Switch to Local time zone. Originally, internally Utc has been used 
+  * Breaking change: Switch to Local time zone. Originally, internally Utc has been used
     for all DateTime values (mainly related to quote times). On the other hand, input values
     have been assumed to be in local time, resulting in a lot of conversions which (some
-    of them implicitly, e.g. when storing in database). In turned out to be difficult to 
+    of them implicitly, e.g. when storing in database). In turned out to be difficult to
     maintain consistency here. Therefore, we use now internally TimeZone Local. To make this
-    consistent with inputs form external sources (e.g. market data providers like yahoo, 
+    consistent with inputs form external sources (e.g. market data providers like yahoo,
     alphavantage, etc.), the ticker struct has been extended by an (optional) TimeZone and
     (optional) Calendar (to handle days where no quote is expected). In general, the TimeZone
     should be set to the TimeZone of the market data source (e.g. the exchange) and the
-    valid business day calendar for this source (e.g. again the exchange calendar, which 
-    may differ in one country for different exchanges or markets). As default, TimeZone 
-    Local and the Calendar with only Saturdays and Sundays as bank holidays will be used. 
+    valid business day calendar for this source (e.g. again the exchange calendar, which
+    may differ in one country for different exchanges or markets). As default, TimeZone
+    Local and the Calendar with only Saturdays and Sundays as bank holidays will be used.
   * A new object handler has been added to allow storing arbitrary objects which implement
     the Serialize and DeserializeOwned traits (e.g Calendar definitions).
   * Implementation of a investment strategy simulation framework: Simulate the effects of
     specified trading strategies by simulating the buying and selling assets, receive
     dividends or interests, pay taxes and fees, etc. The simulation can be run for a
     historical period, using the history of asset prices and fx rates to calculated the
-    performance. An example has been added that demonstrates the effects of different 
-    total return strategies with or without assumptions about fees and taxes to be paid. 
+    performance. An example has been added that demonstrates the effects of different
+    total return strategies with or without assumptions about fees and taxes to be paid.
     The resulting performance is plotted using the plotter crate. To support this new module,
-    to calculation of postions and performance have been improved and the concept of a 
+    to calculation of postions and performance have been improved and the concept of a
     TimeSeries has been introduced.
-    
+
 Version 0.10
-  * Ordering for quotes: Implementation of traits Ord, PartialOrd, PartialEq and Eq. Quotes 
+  * Ordering for quotes: Implementation of traits Ord, PartialOrd, PartialEq and Eq. Quotes
     are ordered by time and than by ticker id. This allows to use standard methods to sort
     quotes for time series analysis.
-  * Improved async support: QuoteHandler, MarketQuoteProvider and CurrencyConverter are now 
-    Send+Sync. Since is a breaking change (e.g. some functions expecting now Arc<QuoteHandler> 
+  * Improved async support: QuoteHandler, MarketQuoteProvider and CurrencyConverter are now
+    Send+Sync. Since is a breaking change (e.g. some functions expecting now Arc<QuoteHandler>
     instead of &QuoteHandler), the version number is increased to 0.10.
 
 Version 0.9
@@ -59,46 +61,46 @@ Version 0.9
     the query! macro of sqlx, SQL queries are now checkt for correct syntax and types used
     at compile time. Database instances no longer need to be of mutable.
   * Sqlite and PostgreSQL are still supported, but could no longer be used in the same
-    build. The (mis-)use of an in-memory sqlite database as cache for fx rates or the like is 
+    build. The (mis-)use of an in-memory sqlite database as cache for fx rates or the like is
     no longer required due to the CurrencyConverter trait, therefore, using both sqlite
-    and PostgreSQL in the same build has lost much of its appeal. 
-  * Due to compile-time checks of SQL queries the build process has become more complex. See 
+    and PostgreSQL in the same build has lost much of its appeal.
+  * Due to compile-time checks of SQL queries the build process has become more complex. See
     the Readme.md files of finql, finql-sqlite and finql-postgres for advice
 
 Version 0.8
   * major refactoring of data handler: data handler has been moved to separate sub crate,
     same for sqlite and postgres adaptors. Therefore, it's up to the user if she wants to include
-    sqlite or postgres or both databases (or none, using a custom implementations of AssetHandler, 
+    sqlite or postgres or both databases (or none, using a custom implementations of AssetHandler,
     TransactionHandler, etc.)
   * New trait CurrencyConverter for calculating fx rates, e.g. while adding cash flows in different
-    currencies. The database adaptors implement this trait (so databases could still be used to 
+    currencies. The database adaptors implement this trait (so databases could still be used to
     get fx exchange rates), but there is also a SimpleCurrencyConverter which can be initialized by
-    a set of fixed fx rates, without the need to push some external fx rates in an ad hoc database to 
+    a set of fixed fx rates, without the need to push some external fx rates in an ad hoc database to
     use them for conversion
 
 Version 0.7.5-0.7.7
   * In total: no change (I was just to fast with publishing and later reverted all changes
   after I realized my fatal error, sorry)
-  
+
 Version 0.7.4
   * In database handlers, store reference to database connections instead of owning
     the connection to allow (external) database pooling
   * extensions of AssetHandler and TransactionHandler traits by additional methods
   * bug fix in Transaction update query
-  
+
 Version 0.7.3
   * New market data source: comdirect (via scraping http web pages)
-  
+
 Version 0.7.2
   * Support for alpha vantage as additional market data provider
-  * `Ticker` has been extend by a `factor` for scaling quotes (e.g. 
+  * `Ticker` has been extend by a `factor` for scaling quotes (e.g.
     scale quotes in British pence to British pounds)
   * Utility functions for converting various date formats into DateTime<Utc> has
     been moved to a separate crates
   * Updated unit tests and examples.
-  * Replacement dependency on `yahoo-finance` by `yahoo_finance_api`, since the 
+  * Replacement dependency on `yahoo-finance` by `yahoo_finance_api`, since the
     latter does not panic.
-  
+
 Version 0.7.1
   * `Market` holds now a market quote data base (implementing trait QuoteHandler)
   * `Market` holds now list of support market data quote providers
@@ -107,9 +109,9 @@ Version 0.7.1
 Version 0.7.0
   * `MarketDataSource` is now en `enum` instead of a `struct`. In the database, it is no
   longer stored in a separate table, but as `TEXT` field in `ticker`. The number of
-  supported market data sources will hopefully increase over time. On the other hand, 
+  supported market data sources will hopefully increase over time. On the other hand,
   the method how to fetch quotes differs for each market data source. Therefore, it is
-  in the responsibility of the application to maintain the supported market data sources, 
+  in the responsibility of the application to maintain the supported market data sources,
   i.e. a market data source is not just data, but requires appropriate implementations
   of specific functionality.
 
@@ -119,12 +121,12 @@ Version 0.6.2
 Version 0.6.1
  * Fetching market data quotes from yahoo finance or gurufocus.com (requires a API token)
  * Storage of fetched market data in database
- 
+
 Version 0.6.0
  * Support of InMemoryDB has been dropped in favor of Sqlite's feature of in-memory database
-   Since the supported database feature grew in complexity it is unlikely that a naive 
+   Since the supported database feature grew in complexity it is unlikely that a naive
    in-memory database will have the same flexibility and performance as an in-memory Sqlite database.
-   All examples and test have been updated. 
+   All examples and test have been updated.
 
 Version 0.5.4
  * Insert asset in database with optional name override (attaching ' (NEW)')
@@ -150,7 +152,7 @@ Version 0.5.0
 * Some commonly used structs are re-exported on library level
 
 Version 0.4.4
-* DataHandler for PostgreSQL implemented (including update of 
+* DataHandler for PostgreSQL implemented (including update of
   example transaction_db)
 
 Version 0.4.3
@@ -199,7 +201,7 @@ Version 0.3.1
 Version 0.3.0
 * Calculation of cash flow rollout is now completed, including payment day
   adjustments. The example and unit tests have also been updated.
-* Business day adjustment rules have been moved to separate module and 
+* Business day adjustment rules have been moved to separate module and
   adjustment rules have been implemented
 * New struct Market, which will serve as provider for market data, either as
   in-memory container or adapter to some external storage facility. The current
@@ -207,16 +209,16 @@ Version 0.3.0
 * EasterHoliday accepts now also first and last year (required for TARGET calendar)
 
 Version 0.2.3
-* Implementation of Act/Act ICMA added. This had some wider consequence. 
+* Implementation of Act/Act ICMA added. This had some wider consequence.
   Application of Act/Act ICMA requires additional parameters for calculating
   year fractions (time period and rolling date), which have been added as optional
-  parameters to the year fraction method. Since Act/Act ICMA is only applicable 
-  under certain conditions, the year fraction method can fail. Therefore, a 
-  Result is returned instead of float. In turn, cash flow rollout may also 
+  parameters to the year fraction method. Since Act/Act ICMA is only applicable
+  under certain conditions, the year fraction method can fail. Therefore, a
+  Result is returned instead of float. In turn, cash flow rollout may also
   fail.
-* Since the year fraction method returns now a Result it is also flagged 
+* Since the year fraction method returns now a Result it is also flagged
   as an error, if some 30/x method is applied to the period of 30th to 31st
-  of the same month, in which case the method is also not applicable. 
+  of the same month, in which case the method is also not applicable.
 
 Version 0.2.2
 * Cash flow type added
@@ -235,15 +237,15 @@ Version 0.2.1
 
 Version 0.2.0
 * Replacement the SimpleCalendar and the Calendar trait by one Calendar struct. At
-  initialization, the holiday calendar is computed for a range of year by specifying 
-  a set of holiday rules. A very broad range of holiday calendars could be generated 
+  initialization, the holiday calendar is computed for a range of year by specifying
+  a set of holiday rules. A very broad range of holiday calendars could be generated
   this way. The method `is_holiday` returns true only for holidays, but not for
   weekends. There is another method `is_weekend` to check for that. The new
-  method `is_business_day` checks wether the given date is neither a weekend nor 
+  method `is_business_day` checks wether the given date is neither a weekend nor
   a holiday.
 
 Version 0.1.3
-* Implementation of TimerPeriod is no longer a trait, but a struct. The calendar 
+* Implementation of TimerPeriod is no longer a trait, but a struct. The calendar
   required for BusinessDaily time period is now an external parameter. This seems
   to be a better choice, since a calendar is more a parameter than part of a method.
   Calendars may also be subject to chance, though only rarely.

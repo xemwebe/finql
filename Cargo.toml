@@ -1,6 +1,6 @@
 [package]
 name = "finql"
-version = "0.12.0"
+version = "0.13.0"
 authors = ["Mark Beinker <mwb@quantlink.de>"]
 edition = "2018"
 description = "A quantitative finance toolbox"
@@ -23,8 +23,6 @@ rand = "0.9"
 eodhistoricaldata_api = "0.5"
 alpha_vantage = { version = "0.11", features = ["reqwest-client"] }
 reqwest = "0.12"
-scraper = "0.24"
-csv = "1.2"
 async-trait = "0.1"
 log = "0.4"
 thiserror = "2.0"
