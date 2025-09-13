@@ -1,7 +1,5 @@
 ///! Example storing general calendars as JSON object in PostgreSQL
 ///! Please note: All existing content of the database will be deleted!
-use chrono::Weekday;
-
 use cal_calc::Holiday;
 use finql::datatypes::ObjectHandler;
 use finql::postgres::PostgresDB;

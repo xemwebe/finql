@@ -5,15 +5,15 @@ use std::error::Error;
 ///! Please note: All existing content of the database will be deleted!
 use std::sync::Arc;
 
-use chrono::{Datelike, Local, NaiveDate};
 use log::debug;
 use plotters::prelude::*;
 use pretty_env_logger;
+use time::{Date, Month};
 
 use cal_calc::last_day_of_month;
 use finql::datatypes::{
-    date_time_helper::{make_time, naive_date_to_date_time},
-    Asset, CashFlow, Currency, QuoteHandler, Stock, Ticker, Transaction, TransactionType,
+    date_time_helper::make_time, Asset, CashFlow, Currency, QuoteHandler, Stock, Ticker,
+    Transaction, TransactionType,
 };
 use finql::postgres::PostgresDB;
 use finql::{
@@ -33,8 +33,8 @@ async fn calc_strategy(
     currency: Currency,
     start_transactions: &Vec<Transaction>,
     strategy: &dyn Strategy,
-    start: NaiveDate,
-    end: NaiveDate,
+    start: Date,
+    end: Date,
     market: Market,
 ) -> Vec<TimeValue> {
     let mut current_date = start;
@@ -150,10 +150,9 @@ async fn main() {
     };
     let ticker_id = db.insert_ticker(&ticker).await.unwrap();
     let price_offset_period = "7D".parse::<TimePeriod>().unwrap();
-    let history_start_time =
-        naive_date_to_date_time(&price_offset_period.sub_from(start, None), 0, None).unwrap();
-    let start_time = naive_date_to_date_time(&start, 0, None).unwrap();
-    let end_time = naive_date_to_date_time(&today, 20, None).unwrap();
+    let history_start_time = start - price_offset_period;
+    let start_time = date_to_date_time(&start, 0, None).unwrap();
+    let end_time = date_to_date_time(&today, 20, None).unwrap();
     market
         .update_quote_history(ticker_id, history_start_time, end_time)
         .await

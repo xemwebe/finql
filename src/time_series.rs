@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use thiserror::Error;
 use time::{Date, OffsetDateTime};
 
-use crate::datatypes::date_time_helper::{from_time_date, to_time_date, DateTimeError};
+use crate::datatypes::date_time_helper::DateTimeError;
 
 #[derive(Error, Debug)]
 pub enum TimeSeriesError {
@@ -78,8 +78,8 @@ impl TimeSeries {
                 Some(d) => {
                     if dates.contains(&date) {
                         if gap_size >= min_size {
-                            let prev_date = cal.prev_bday(to_time_date(date))?;
-                            gaps.push((d, from_time_date(prev_date)));
+                            let prev_date = cal.prev_bday(date)?;
+                            gaps.push((d, prev_date));
                         }
                         gap_begin = None;
                     } else {
@@ -87,8 +87,7 @@ impl TimeSeries {
                     }
                 }
             }
-            let next_date = cal.next_bday(to_time_date(date))?;
-            date = from_time_date(next_date);
+            date = cal.next_bday(date)?;
         }
 
         if let Some(d) = gap_begin {

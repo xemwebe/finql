@@ -1,6 +1,4 @@
 ///! Demonstration of storing Assets in Sqlite3 database
-use chrono::NaiveDate;
-
 use finql::datatypes::{
     Asset, CashFlow, CurrencyISOCode, Stock, Transaction, TransactionHandler, TransactionType,
 };

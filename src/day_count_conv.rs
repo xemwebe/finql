@@ -3,7 +3,7 @@
 use crate::time_period::TimePeriod;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use time::{Date, Duration, Month};
+use time::{Date, Month};
 
 /// Specify a day count method
 #[derive(Deserialize, Serialize, Clone, Copy, Debug)]

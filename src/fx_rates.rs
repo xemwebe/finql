@@ -145,14 +145,10 @@ impl Default for SimpleCurrencyConverter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-
-    use chrono::offset::TimeZone;
-    use chrono::Local;
-
     use crate::datatypes::CurrencyISOCode;
     use crate::market::{CachePolicy, Market};
     use crate::postgres::PostgresDB;
+    use std::sync::Arc;
 
     async fn prepare_db(db: Arc<dyn QuoteHandler + Send + Sync>) {
         let time = Local.ymd(1970, 1, 1).and_hms_milli(0, 0, 1, 444);

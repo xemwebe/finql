@@ -1,10 +1,11 @@
-use chrono::Utc;
 use finql::time_period::TimePeriod;
+use time::UtcDateTime;
+
 #[macro_use]
 extern crate text_io;
 
 fn main() {
-    let today = Utc::now().naive_local().date();
+    let today = UtcDateTime::now().date();
     let quarterly = "3M".parse::<TimePeriod>().unwrap();
     let date_in_three_months = quarterly.add_to(today, None);
     println!(

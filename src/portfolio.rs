@@ -1,11 +1,9 @@
 use futures::future::join_all;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::vec::Vec;
 use thiserror::Error;
-
-// use chrono::offset::TimeZone;  // Removed - using time crate
-use serde::{Deserialize, Serialize};
 use time::{Date, OffsetDateTime};
 
 use crate::datatypes::{
@@ -13,7 +11,6 @@ use crate::datatypes::{
     date_time_helper::{date_to_offset_date_time, DateTimeError},
     Asset, AssetHandler, Currency, CurrencyError, DataError, Transaction, TransactionType,
 };
-
 use crate::period_date::PeriodDateError;
 use crate::Market;
 
@@ -420,11 +417,8 @@ pub async fn calculate_position_for_period(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::datatypes::QuoteHandler;
-
-    use chrono::NaiveDate;
-
     use crate::assert_fuzzy_eq;
+    use crate::datatypes::QuoteHandler;
     use crate::datatypes::{
         date_time_helper::make_time, Asset, AssetHandler, CashAmount, CashFlow, Currency,
         CurrencyISOCode, Quote, Stock, Ticker,
@@ -521,7 +515,8 @@ mod tests {
                     amount: 60.0,
                     currency: eur,
                 },
-                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 31).unwrap(),
+                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 31)
+                    .unwrap(),
             },
             note: None,
         });
@@ -535,7 +530,8 @@ mod tests {
                     amount: -3.0,
                     currency: eur,
                 },
-                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 31).unwrap(),
+                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 31)
+                    .unwrap(),
             },
             note: None,
         });
@@ -549,7 +545,8 @@ mod tests {
                     amount: -2.0,
                     currency: eur,
                 },
-                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 31).unwrap(),
+                date: Date::from_calendar_date(2020, time::Month::try_from(1).unwrap(), 31)
+                    .unwrap(),
             },
             note: None,
         });
@@ -580,7 +577,8 @@ mod tests {
                     amount: -140.0,
                     currency: eur,
                 },
-                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 15).unwrap(),
+                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 15)
+                    .unwrap(),
             },
             note: None,
         });
@@ -594,7 +592,8 @@ mod tests {
                     amount: -7.0,
                     currency: eur,
                 },
-                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 25).unwrap(),
+                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 25)
+                    .unwrap(),
             },
             note: None,
         });
@@ -608,7 +607,8 @@ mod tests {
                     amount: -4.5,
                     currency: eur,
                 },
-                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 26).unwrap(),
+                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 26)
+                    .unwrap(),
             },
             note: None,
         });
@@ -620,7 +620,8 @@ mod tests {
                     amount: 13.0,
                     currency: eur,
                 },
-                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 27).unwrap(),
+                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 27)
+                    .unwrap(),
             },
             note: None,
         });
@@ -632,7 +633,8 @@ mod tests {
                     amount: 6.6,
                     currency: eur,
                 },
-                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 28).unwrap(),
+                date: Date::from_calendar_date(2020, time::Month::try_from(2).unwrap(), 28)
+                    .unwrap(),
             },
             note: None,
         });

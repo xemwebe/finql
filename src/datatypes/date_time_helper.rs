@@ -1,6 +1,4 @@
-// use chrono_tz::Tz;  // Removed - timezone support simplified
-use std::convert::{TryFrom, TryInto};
-// use std::time::{Duration, UNIX_EPOCH};  // Removed - not needed with time crate
+use std::convert::TryFrom;
 use thiserror::Error;
 use time::{Date, Month, OffsetDateTime, PrimitiveDateTime, UtcOffset};
 
@@ -212,7 +210,7 @@ pub fn to_offset_time(time: &str, zone: i32) -> Result<OffsetDateTime, DateTimeE
     }
 
     let date_part = parts[0];
-    let time_part = parts[1];
+    //let time_part = parts[1];
 
     // Parse date part (YYYY-MM-DD)
     let date_parts: Vec<&str> = date_part.split('-').collect();
@@ -262,24 +260,6 @@ pub fn make_offset_time(
     let local_offset = UtcOffset::current_local_offset().ok()?;
     Some(primitive_dt.assume_offset(local_offset))
 }
-
-// These conversion functions are no longer needed as we're using time crate throughout
-// Kept for backward compatibility during transition
-
-pub fn to_time_date(date: Date) -> Date {
-    date
-}
-
-pub fn from_time_date(date: Date) -> Date {
-    date
-}
-
-pub fn to_time_offset_date_time(time: OffsetDateTime) -> OffsetDateTime {
-    time
-}
-
-// This function is no longer needed with time crate
-// pub fn convert_local_result_to_datetime(...) - removed as chrono specific
 
 #[cfg(test)]
 mod tests {

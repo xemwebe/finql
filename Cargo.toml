@@ -11,26 +11,25 @@ keywords = ["finance", "bond", "period", "pricing"]
 categories = ["date-and-time", "mathematics"]
 
 [dependencies]
-time = "0.3"
+time = { version = "0.3", features = ["local-offset"] }
 text_io = "0.1"
 computus = "1.0"
 serde = { version = "1.0.*", features = ["derive"] }
 serde_json = "1.0.*"
 argmin = { version = "0.10", default-features = false }
 yahoo_finance_api = "4.1"
-gurufocus_api = "0.6"
+gurufocus_api = "0.9"
 rand = "0.9"
-eodhistoricaldata_api = "0.4"
+eodhistoricaldata_api = "0.5"
 alpha_vantage = { version = "0.11", features = ["reqwest-client"] }
 reqwest = "0.12"
-scraper = "0.22"
+scraper = "0.24"
 csv = "1.2"
 async-trait = "0.1"
-tokio-compat-02 = "0.2"
 log = "0.4"
 thiserror = "2.0"
 futures = "0.3"
-sqlx = { version = "0.8", features = [
+sqlx = { version = "0.8", default-features = false, features = [
     "runtime-tokio-rustls",
     "postgres",
     "macros",
@@ -41,6 +40,6 @@ sqlx = { version = "0.8", features = [
 cal-calc = "0.2"
 
 [dev-dependencies]
-tokio = { version = "1.26", features = ["full"] }
+tokio = { version = "1.47", features = ["full"] }
 plotters = "^0.3.1"
 pretty_env_logger = "0.5"

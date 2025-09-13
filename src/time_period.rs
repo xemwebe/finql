@@ -13,7 +13,7 @@ use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use thiserror::Error;
 use time::{Date, Duration};
 
-use crate::datatypes::date_time_helper::{from_time_date, to_time_date, DateTimeError};
+use crate::datatypes::date_time_helper::DateTimeError;
 
 /// Error type related to the TimePeriod struct
 #[derive(Error, Debug)]
@@ -76,9 +76,9 @@ impl TimePeriod {
                 let cal = cal.unwrap();
                 for _ in 0..n {
                     date = if is_neg {
-                        from_time_date(cal.prev_bday(to_time_date(date))?)
+                        cal.prev_bday(date)?
                     } else {
-                        from_time_date(cal.next_bday(to_time_date(date))?)
+                        cal.next_bday(date)?
                     };
                 }
                 date

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use crate::datatypes::{
     date_time_helper::{
         date_from_str, date_to_offset_date_time, offset_date_time_from_str_standard,
@@ -9,8 +7,8 @@ use crate::datatypes::{
 };
 use async_trait::async_trait;
 use eodhistoricaldata_api as eod_api;
-use sqlx::types::chrono::NaiveDate;
-use time::OffsetDateTime;
+use std::{convert::TryFrom, str::FromStr};
+use time::{Date, Month, OffsetDateTime};
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
@@ -53,16 +51,16 @@ impl MarketQuoteProvider for EODHistData {
             .connector
             .get_quote_history(
                 &ticker.name,
-                NaiveDate::from_ymd_opt(
+                Date::from_calendar_date(
                     start.date().year(),
-                    start.date().month() as u32,
-                    start.date().day() as u32,
+                    Month::try_from(start.date().month() as u8)?,
+                    start.date().day() as u8,
                 )
                 .unwrap(),
-                NaiveDate::from_ymd_opt(
+                Date::from_calendar_date(
                     end.date().year(),
-                    end.date().month() as u32,
-                    end.date().day() as u32,
+                    Month::try_from(end.date().month() as u8)?,
+                    end.date().day() as u8,
                 )
                 .unwrap(),
             )
@@ -96,10 +94,10 @@ impl MarketQuoteProvider for EODHistData {
             .connector
             .get_dividend_history(
                 &ticker.name,
-                NaiveDate::from_ymd_opt(
+                Date::from_calendar_date(
                     start.date().year(),
-                    start.date().month() as u32,
-                    start.date().day() as u32,
+                    Month::try_from(start.date().month() as u8)?,
+                    start.date().day() as u8,
                 )
                 .unwrap(),
             )
@@ -118,14 +116,10 @@ impl MarketQuoteProvider for EODHistData {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use chrono::TimeZone;
-
-    use crate::datatypes::Currency;
-
     use super::*;
+    use crate::datatypes::Currency;
     use crate::market_quotes::MarketDataSource;
+    use std::str::FromStr;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_eod_fetch_quote() {

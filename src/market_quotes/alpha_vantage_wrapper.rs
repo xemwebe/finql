@@ -80,13 +80,10 @@ impl MarketQuoteProvider for AlphaVantage {
 
 #[cfg(test)]
 mod tests {
-    use chrono::offset::TimeZone;
-    use std::str::FromStr;
-
-    use crate::datatypes::Currency;
-
     use super::*;
+    use crate::datatypes::Currency;
     use crate::market_quotes::MarketDataSource;
+    use std::str::FromStr;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn test_alpha_fetch_quote() {

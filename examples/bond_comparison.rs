@@ -1,5 +1,4 @@
 use cal_calc::SimpleCalendar;
-use chrono::NaiveDate;
 use finql::datatypes::{CashFlow, Currency};
 use finql::{
     bond::Bond,
@@ -9,6 +8,7 @@ use serde_json;
 use std::fs::File;
 use std::io::Read;
 use std::str::FromStr;
+use time::{Date, Month};
 
 #[tokio::main]
 async fn main() {
@@ -16,7 +16,7 @@ async fn main() {
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
 
-    let today = NaiveDate::from_ymd_opt(2019, 12, 11)?;
+    let today = Date::from_calendar_date(2019, Monht::December, 11)?;
     let bond1: Bond = serde_json::from_str(&data).unwrap();
     let calendar = SimpleCalendar::default();
     let cfs1 = bond1.rollout_cash_flows(1., &calendar).unwrap();

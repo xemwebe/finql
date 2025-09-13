@@ -1,8 +1,5 @@
 use super::{MarketQuoteError, MarketQuoteProvider};
-use crate::datatypes::{
-    date_time_helper::{to_time_offset_date_time, unix_to_offset_date_time},
-    CashFlow, Quote, Ticker,
-};
+use crate::datatypes::{date_time_helper::unix_to_offset_date_time, CashFlow, Quote, Ticker};
 use async_trait::async_trait;
 use std::convert::TryInto;
 use time::OffsetDateTime;
@@ -33,13 +30,7 @@ impl MarketQuoteProvider for Yahoo {
         end: OffsetDateTime,
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new()?;
-        let response = yahoo
-            .get_quote_history(
-                &ticker.name,
-                to_time_offset_date_time(start),
-                to_time_offset_date_time(end),
-            )
-            .await?;
+        let response = yahoo.get_quote_history(&ticker.name, start, end).await?;
         let yahoo_quotes = response.quotes()?;
         let mut quotes = Vec::new();
         for quote in &yahoo_quotes {
@@ -64,13 +55,7 @@ impl MarketQuoteProvider for Yahoo {
         end: OffsetDateTime,
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let yahoo = yahoo::YahooConnector::new()?;
-        let response = yahoo
-            .get_quote_history(
-                &ticker.name,
-                to_time_offset_date_time(start),
-                to_time_offset_date_time(end),
-            )
-            .await?;
+        let response = yahoo.get_quote_history(&ticker.name, start, end).await?;
         let yahoo_dividends = response.dividends()?;
         let mut dividends = Vec::new();
         for dividend in &yahoo_dividends {

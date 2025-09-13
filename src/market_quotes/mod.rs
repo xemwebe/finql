@@ -43,6 +43,8 @@ pub enum MarketQuoteError {
     JSONError(#[from] serde_json::Error),
     #[error("Unexpected error: '{0}'")]
     UnexpectedError(String),
+    #[error("Invalid date range")]
+    InvalidDateRange(#[from] time::error::ComponentRange),
 }
 
 /// General interface for market data quotes provider
@@ -171,14 +173,9 @@ impl MarketDataSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use chrono::offset::TimeZone;
-    use chrono::{Duration, Local};
-    use rand::Rng;
-
     use crate::datatypes::{Asset, CurrencyISOCode, QuoteHandler, Stock};
     use crate::postgres::PostgresDB;
-
+    use rand::Rng;
     struct DummyProvider {}
 
     #[async_trait]

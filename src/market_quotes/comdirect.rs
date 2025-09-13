@@ -4,7 +4,6 @@ use crate::datatypes::{date_time_helper::offset_date_time_from_str, CashFlow, Qu
 use async_trait::async_trait;
 use scraper::{Html, Selector};
 use time::OffsetDateTime;
-use tokio_compat_02::FutureExt;
 
 #[derive(Debug)]
 pub struct ComdirectQuote {
@@ -31,9 +30,7 @@ impl Comdirect {
     }
 
     pub async fn get_latest_quote(&self, id: &str) -> Result<f64, MarketQuoteError> {
-        let resp = reqwest::get(&format!("{}{}", self.url, id))
-            .compat()
-            .await?;
+        let resp = reqwest::get(&format!("{}{}", self.url, id)).await?;
         if !resp.status().is_success() {
             return Err(MarketQuoteError::UnexpectedError(
                 "unexpected server response".to_string(),
@@ -78,7 +75,7 @@ impl Comdirect {
             self.hurl3,
             id
         );
-        let resp = reqwest::get(&url).compat().await?;
+        let resp = reqwest::get(&url).await?;
         if !resp.status().is_success() {
             return Err(MarketQuoteError::UnexpectedError(
                 "unexpected server response".to_string(),
@@ -200,7 +197,6 @@ mod tests {
     use super::*;
     use crate::datatypes::Currency;
     use crate::market_quotes::MarketDataSource;
-    use chrono::offset::TimeZone;
     use std::str::FromStr;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]

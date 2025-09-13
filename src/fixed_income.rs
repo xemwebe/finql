@@ -110,14 +110,11 @@ impl CostFunction for FlatRateDiscounter<'_> {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{Local, TimeZone};
+    use super::*;
+    use crate::datatypes::{CashAmount, CashFlow, Currency};
+    use crate::fx_rates::SimpleCurrencyConverter;
     use std::collections::BTreeMap;
     use std::str::FromStr;
-
-    use crate::datatypes::{CashAmount, CashFlow, Currency};
-
-    use super::*;
-    use crate::fx_rates::SimpleCurrencyConverter;
 
     #[test]
     fn yield_to_maturity() {
