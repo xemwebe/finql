@@ -7,8 +7,8 @@ use crate::datatypes::{
 };
 use async_trait::async_trait;
 use eodhistoricaldata_api as eod_api;
-use std::{convert::TryFrom, str::FromStr};
-use time::{Date, Month, OffsetDateTime};
+use std::str::FromStr;
+use time::OffsetDateTime;
 
 use super::{MarketQuoteError, MarketQuoteProvider};
 
@@ -49,21 +49,7 @@ impl MarketQuoteProvider for EODHistData {
     ) -> Result<Vec<Quote>, MarketQuoteError> {
         let eod_quotes = self
             .connector
-            .get_quote_history(
-                &ticker.name,
-                Date::from_calendar_date(
-                    start.date().year(),
-                    Month::try_from(start.date().month() as u8)?,
-                    start.date().day() as u8,
-                )
-                .unwrap(),
-                Date::from_calendar_date(
-                    end.date().year(),
-                    Month::try_from(end.date().month() as u8)?,
-                    end.date().day() as u8,
-                )
-                .unwrap(),
-            )
+            .get_quote_history(&ticker.name, start.date(), end.date())
             .await?;
 
         let mut quotes = Vec::new();
@@ -92,15 +78,7 @@ impl MarketQuoteProvider for EODHistData {
     ) -> Result<Vec<CashFlow>, MarketQuoteError> {
         let dividends_since_start = self
             .connector
-            .get_dividend_history(
-                &ticker.name,
-                Date::from_calendar_date(
-                    start.date().year(),
-                    Month::try_from(start.date().month() as u8)?,
-                    start.date().day() as u8,
-                )
-                .unwrap(),
-            )
+            .get_dividend_history(&ticker.name, start.date())
             .await?;
         let mut div_cash_flows = Vec::new();
         for div in dividends_since_start {

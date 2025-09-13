@@ -105,7 +105,7 @@ impl TimePeriod {
                 }
                 if day > 28 {
                     let last_date_of_month = last_day_of_month(year, month as u8);
-                    day = std::cmp::min(day, last_date_of_month as u8);
+                    day = std::cmp::min(day, last_date_of_month);
                 }
                 Date::from_calendar_date(year, time::Month::try_from(month as u8).unwrap(), day)
                     .map_err(|_| TimePeriodError::InvalidDate)?
