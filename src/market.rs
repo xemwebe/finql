@@ -6,7 +6,7 @@
 use std::sync::{Arc, RwLock};
 
 use std::collections::BTreeMap;
-use time::{Date, OffsetDateTime, Time};
+use time::{self, Date, OffsetDateTime, Time};
 
 use async_trait::async_trait;
 use log::debug;
@@ -47,8 +47,10 @@ pub enum MarketError {
     CurrencyNotInDatabase(String),
     #[error("Missing quote for currency pair {0}/{1}")]
     MissingQuoteForCurrencyPair(String, String),
-    #[error("Ivalid date")]
-    InvalidDate(#[from] cal_calc::CalendarError),
+    #[error("Invalid calendardate")]
+    InvalidCalendarDate(#[from] cal_calc::CalendarError),
+    #[error("Indetermined time zone offset")]
+    InvalidDateTime(#[from] time::error::IndeterminateOffset),
 }
 
 #[derive(Clone)]

@@ -42,6 +42,8 @@ pub enum DataError {
     InvalidTransaction(String),
     #[error("Invalid currency")]
     InvalidCurrency(#[from] CurrencyError),
+    #[error("Indetermined time zone offset")]
+    InvalidDateTime(#[from] time::error::IndeterminateOffset),
 }
 
 pub trait DataItem {
