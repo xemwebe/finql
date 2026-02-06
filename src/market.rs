@@ -404,18 +404,36 @@ impl CurrencyConverter for Market {
                 .ok_or(CurrencyError::CurrencyNotInDatabase(
                     base_currency.to_string(),
                 ))?;
-            let (fx_quote, quote_curr_id) =
-                if let Some((fx_quote, quote_curr_id)) = self.try_from_cache(base_curr_id, time) {
-                    (fx_quote, quote_curr_id)
-                } else {
-                    let fx_quote = self
+            let (fx_quote, quote_curr_id) = if let Some((fx_quote, quote_curr_id)) =
+                self.try_from_cache(base_curr_id, time)
+            {
+                (fx_quote, quote_curr_id)
+            } else {
+                let mut invert = false;
+                let mut fx_quote = self
+                    .inner
+                    .db
+                    .get_last_quote_before_by_id(base_curr_id, time)
+                    .await;
+                if fx_quote.is_err() {
+                    fx_quote = self
                         .inner
                         .db
-                        .get_last_quote_before_by_id(base_curr_id, time)
-                        .await
-                        .map_err(|e| CurrencyError::DataBaseError(e.to_string()))?;
+                        .get_last_quote_before_by_id(quote_currency.id.unwrap(), time)
+                        .await;
+                    invert = true;
+                }
+                let fx_quote = fx_quote.map_err(|e| CurrencyError::DataBaseError(e.to_string()))?;
+                if invert {
+                    if fx_quote.1.id.unwrap() == base_curr_id {
+                        (1.0 / fx_quote.0.price, quote_currency.id.unwrap())
+                    } else {
+                        (0.0, -1)
+                    }
+                } else {
                     (fx_quote.0.price, fx_quote.1.id.unwrap())
-                };
+                }
+            };
             if quote_currency.id == Some(quote_curr_id) {
                 return Ok(fx_quote);
             }
