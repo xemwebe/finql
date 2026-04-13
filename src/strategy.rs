@@ -1,12 +1,15 @@
 use async_trait::async_trait;
 use log::{debug, trace};
+use std::cmp::min;
 use thiserror::Error;
 use time::Date;
 
 use crate::datatypes::{
     date_time_helper::{date_to_offset_date_time, DateTimeError},
-    CashFlow, Transaction, TransactionType,
+    CashFlow, Currency, Transaction, TransactionType,
 };
+use crate::portfolio::calc_delta_position;
+use crate::time_series::TimeValue;
 use crate::{portfolio::PortfolioPosition, time_period::TimePeriod, Market};
 
 #[derive(Error, Debug)]
@@ -52,7 +55,7 @@ pub struct StockTransactionCosts {
 }
 
 #[async_trait]
-pub trait Strategy {
+pub trait Strategy: Send + Sync {
     async fn apply(
         &self,
         position: &PortfolioPosition,
@@ -284,4 +287,72 @@ impl ReInvestInSingleStock {
         }
         (max_position, fee)
     }
+}
+
+pub async fn calc_strategy(
+    currency: Currency,
+    start_transactions: &Vec<Transaction>,
+    strategy: &dyn Strategy,
+    start: Date,
+    end: Date,
+    market: Market,
+) -> Vec<TimeValue> {
+    debug!("Calc strategy: start={start}, end={end}");
+    let mut current_date = start;
+    let mut total_return = Vec::new();
+    let mut transactions = start_transactions.clone();
+
+    let mut position = PortfolioPosition::new(currency);
+    calc_delta_position(
+        &mut position,
+        &transactions,
+        Some(start),
+        Some(start),
+        market.clone(),
+    )
+    .await
+    .unwrap();
+
+    position
+        .add_quote(date_to_offset_date_time(&start, 20, None).unwrap(), &market)
+        .await;
+    debug!("Initial position: {position:?}, current_date={current_date:?}, end={end:?}");
+
+    while current_date < end {
+        // Update list of transactions with new strategic transactions for the current day
+        let mut new_transactions = strategy.apply(&position, current_date).await.unwrap();
+        transactions.append(&mut new_transactions);
+
+        // roll position forward to next day
+        let next_date = min(end, strategy.next_day(current_date).unwrap());
+
+        // Calculate new position including new transactions
+        debug!(
+            "CalcStrategy: cash position before applying new transactions: {}",
+            position.cash.position
+        );
+        calc_delta_position(
+            &mut position,
+            &transactions,
+            Some(current_date),
+            Some(next_date),
+            market.clone(),
+        )
+        .await
+        .unwrap();
+        debug!(
+            "CalcStrategy: cash position after applying new transactions: {}",
+            position.cash.position
+        );
+
+        current_date = next_date;
+        let current_time = date_to_offset_date_time(&current_date, 20, None).unwrap();
+        position.add_quote(current_time, &market).await;
+        let totals = position.calc_totals();
+        total_return.push(TimeValue {
+            value: totals.value,
+            time: current_time,
+        });
+    }
+    total_return
 }
