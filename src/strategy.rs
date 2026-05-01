@@ -100,6 +100,7 @@ impl Strategy for StaticInSingleStock {
         position: &PortfolioPosition,
         date: Date,
     ) -> Result<Vec<Transaction>, StrategyError> {
+        debug!("apply strategy on {date}");
         let mut transactions = Vec::new();
         if let Some(idx) = cash_flow_idx(date, &self.dividends) {
             let mut dividend = self.dividends[idx];
@@ -115,7 +116,7 @@ impl Strategy for StaticInSingleStock {
                 note: None,
             };
             trace!(
-                "ReinvestInSingleStock: added transaction {:?}",
+                "StaticInSingleStock: added transaction {:?}",
                 dividend_transaction
             );
             transactions.push(dividend_transaction);
@@ -130,13 +131,13 @@ impl Strategy for StaticInSingleStock {
                     note: None,
                 };
                 trace!(
-                    "ReinvestInSingleStock: added transaction {:?}",
+                    "StaticInSingleStock: added transaction {:?}",
                     tax_transaction
                 );
                 transactions.push(tax_transaction);
             }
             debug!(
-                "StaticInSingleStock: added dividend without amount {} and tax {} at date {}.",
+                "StaticInSingleStock: added dividend with amount {} and tax {} at date {}.",
                 dividend.amount.amount, -tax.amount.amount, date
             );
         }
@@ -223,7 +224,7 @@ impl Strategy for ReInvestInSingleStock {
                 .market
                 .db()
                 .get_last_quote_before_by_id(
-                    self.ticker_id,
+                    self.asset_id,
                     date_to_offset_date_time(&date, 20, None)?,
                 )
                 .await?;
