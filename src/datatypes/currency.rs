@@ -28,8 +28,10 @@ pub enum CurrencyError {
     InternalError(String),
     #[error("Missing quote for currency pair {0}/{1}")]
     MissingQuoteForCurrencyPair(String, String),
-    #[error("Failed to fetch quote from databasei: {0}")]
+    #[error("Failed to fetch quote from database: {0}")]
     DataBaseError(String),
+    #[error("Caching failure")]
+    CacheFailure,
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]

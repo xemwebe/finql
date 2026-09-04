@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use time::{self, Date, OffsetDateTime, Time};
 
 use async_trait::async_trait;
-use log::{debug, error};
+use log::{debug, error, trace};
 use thiserror::Error;
 
 use crate::datatypes::{
@@ -335,6 +335,7 @@ impl Market {
         let (price, quote_currency_id) = if let Some((quote, curr)) =
             self.try_from_cache(asset_id, time)
         {
+            trace!("get asset price from cache");
             (quote, curr)
         } else {
             let cache_policy = if let Ok(cache_policy) = self.inner.cache_policy.read() {
@@ -344,6 +345,7 @@ impl Market {
             };
             match &cache_policy {
                 CachePolicy::None => {
+                    trace!("cache policy is none, get asset price from market data");
                     let (quote, currency) = self
                         .inner
                         .db
@@ -352,6 +354,7 @@ impl Market {
                     (quote.price, currency.id.unwrap())
                 }
                 CachePolicy::PredefinedPeriod(time_range) => {
+                    trace!("cache policy is PredefinedPeriod, get asset price period");
                     let date_start = time.replace_time(Time::from_hms(0, 0, 0).unwrap());
                     let date_end =
                         time.replace_time(Time::from_hms_milli(23, 59, 59, 999).unwrap());
@@ -397,46 +400,112 @@ impl CurrencyConverter for Market {
     ) -> Result<f64, CurrencyError> {
         if base_currency == quote_currency {
             return Ok(1.0);
+        }
+
+        debug!("convert currency {} to {}", base_currency, quote_currency);
+        let base_curr_id = base_currency
+            .id
+            .ok_or(CurrencyError::CurrencyNotInDatabase(
+                base_currency.to_string(),
+            ))?;
+        let (fx_quote, quote_curr_id) = if let Some((fx_quote, quote_curr_id)) =
+            self.try_from_cache(base_curr_id, time)
+        {
+            trace!("get currency from cache");
+            (fx_quote, quote_curr_id)
         } else {
-            debug!("convert currency {} to {}", base_currency, quote_currency);
-            let base_curr_id = base_currency
-                .id
-                .ok_or(CurrencyError::CurrencyNotInDatabase(
-                    base_currency.to_string(),
-                ))?;
-            let (fx_quote, quote_curr_id) = if let Some((fx_quote, quote_curr_id)) =
-                self.try_from_cache(base_curr_id, time)
-            {
-                (fx_quote, quote_curr_id)
+            let cache_policy = if let Ok(cache_policy) = self.inner.cache_policy.read() {
+                (*cache_policy).clone()
             } else {
-                let mut invert = false;
-                let mut fx_quote = self
-                    .inner
-                    .db
-                    .get_last_quote_before_by_id(base_curr_id, time)
-                    .await;
-                if fx_quote.is_err() {
-                    fx_quote = self
+                CachePolicy::None
+            };
+            match &cache_policy {
+                CachePolicy::None => {
+                    let mut invert = false;
+                    let mut fx_quote = self
                         .inner
                         .db
-                        .get_last_quote_before_by_id(quote_currency.id.unwrap(), time)
+                        .get_last_quote_before_by_id(base_curr_id, time)
                         .await;
-                    invert = true;
-                }
-                let fx_quote = fx_quote.map_err(|e| CurrencyError::DataBaseError(e.to_string()))?;
-                if invert {
-                    if fx_quote.1.id.unwrap() == base_curr_id {
-                        (1.0 / fx_quote.0.price, quote_currency.id.unwrap())
-                    } else {
-                        (0.0, -1)
+                    if fx_quote.is_err() {
+                        fx_quote = self
+                            .inner
+                            .db
+                            .get_last_quote_before_by_id(quote_currency.id.unwrap(), time)
+                            .await;
+                        invert = true;
                     }
-                } else {
-                    (fx_quote.0.price, fx_quote.1.id.unwrap())
+                    let fx_quote =
+                        fx_quote.map_err(|e| CurrencyError::DataBaseError(e.to_string()))?;
+                    if invert {
+                        if fx_quote.1.id.unwrap() == base_curr_id {
+                            (1.0 / fx_quote.0.price, quote_currency.id.unwrap())
+                        } else {
+                            (0.0, -1)
+                        }
+                    } else {
+                        (fx_quote.0.price, fx_quote.1.id.unwrap())
+                    }
                 }
-            };
-            if quote_currency.id == Some(quote_curr_id) {
-                return Ok(fx_quote);
+                CachePolicy::PredefinedPeriod(time_range) => {
+                    trace!("cache policy is PredefinedPeriod, get asset price period");
+                    let date_start = time.replace_time(Time::from_hms(0, 0, 0).unwrap());
+                    let date_end =
+                        time.replace_time(Time::from_hms_milli(23, 59, 59, 999).unwrap());
+                    let start = std::cmp::min(time_range.start, date_start);
+                    let end = std::cmp::max(time_range.end, date_end);
+                    let quote_curr_id = quote_currency.id.unwrap();
+                    let mut invert = false;
+                    let mut fx_quotes = self
+                        .inner
+                        .db
+                        .get_quotes_in_range_by_id(base_curr_id, start, end)
+                        .await;
+                    if fx_quotes.is_err() {
+                        fx_quotes = self
+                            .inner
+                            .db
+                            .get_quotes_in_range_by_id(quote_curr_id, start, end)
+                            .await;
+                        invert = true;
+                    }
+                    let fx_quotes =
+                        fx_quotes.map_err(|e| CurrencyError::DataBaseError(e.to_string()))?;
+                    if invert {
+                        if let Ok(mut prices) = self.inner.prices.write() {
+                            let asset_prices =
+                                (*prices).entry(base_curr_id).or_insert_with(BTreeMap::new);
+                            for quote in &fx_quotes {
+                                asset_prices.insert(quote.0.time, (1.0 / quote.0.price, quote.1));
+                            }
+                            let asset_prices =
+                                (*prices).entry(quote_curr_id).or_insert_with(BTreeMap::new);
+                            for quote in &fx_quotes {
+                                asset_prices.insert(quote.0.time, (quote.0.price, quote.1));
+                            }
+                        }
+                    } else {
+                        if let Ok(mut prices) = self.inner.prices.write() {
+                            let asset_prices =
+                                (*prices).entry(base_curr_id).or_insert_with(BTreeMap::new);
+                            for quote in &fx_quotes {
+                                asset_prices.insert(quote.0.time, (quote.0.price, quote.1));
+                            }
+                            let asset_prices =
+                                (*prices).entry(quote_curr_id).or_insert_with(BTreeMap::new);
+                            for quote in &fx_quotes {
+                                asset_prices.insert(quote.0.time, (1.0 / quote.0.price, quote.1));
+                            }
+                        }
+                    }
+
+                    self.try_from_cache(base_curr_id, time)
+                        .ok_or(CurrencyError::CacheFailure)?
+                }
             }
+        };
+        if quote_currency.id == Some(quote_curr_id) {
+            return Ok(fx_quote);
         }
         Err(CurrencyError::MissingQuoteForCurrencyPair(
             base_currency.to_string(),
