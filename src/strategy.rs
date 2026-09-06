@@ -152,7 +152,6 @@ impl Strategy for StaticInSingleStock {
 
 pub struct ReInvestInSingleStock {
     asset_id: i32,
-    ticker_id: i32,
     market: Market,
     dividends: Vec<CashFlow>,
     costs: StockTransactionCosts,
@@ -161,14 +160,12 @@ pub struct ReInvestInSingleStock {
 impl ReInvestInSingleStock {
     pub fn new(
         asset_id: i32,
-        ticker_id: i32,
         market: Market,
         dividends: Vec<CashFlow>,
         costs: StockTransactionCosts,
     ) -> ReInvestInSingleStock {
         ReInvestInSingleStock {
             asset_id,
-            ticker_id,
             market,
             dividends,
             costs,
