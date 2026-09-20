@@ -6,52 +6,112 @@
       {
         "ordinal": 0,
         "name": "name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ticker",
+            "name": "name"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "asset_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ticker",
+            "name": "asset_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "source",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ticker",
+            "name": "source"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "priority",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ticker",
+            "name": "priority"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "factor",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "ticker",
+            "name": "factor"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "tz",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ticker",
+            "name": "tz"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "cal",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ticker",
+            "name": "cal"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "currency_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "currencies",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "currency_iso_code",
-        "type_info": "Bpchar"
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "currencies",
+            "name": "iso_code"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "currency_rounding_digits",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "currencies",
+            "name": "rounding_digits"
+          }
+        }
       }
     ],
     "parameters": {

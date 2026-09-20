@@ -6,47 +6,101 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "quotes",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "ticker_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "quotes",
+            "name": "ticker_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "price",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "quotes",
+            "name": "price"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "time",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "quotes",
+            "name": "time"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "volume",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "quotes",
+            "name": "volume"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "currency_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "currencies",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "iso_code",
-        "type_info": "Bpchar"
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "currencies",
+            "name": "iso_code"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "rounding_digits",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "currencies",
+            "name": "rounding_digits"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "priority",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ticker",
+            "name": "priority"
+          }
+        }
       }
     ],
     "parameters": {

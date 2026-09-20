@@ -6,22 +6,46 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "quotes",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "price",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "quotes",
+            "name": "price"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "time",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "quotes",
+            "name": "time"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "volume",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "quotes",
+            "name": "volume"
+          }
+        }
       }
     ],
     "parameters": {

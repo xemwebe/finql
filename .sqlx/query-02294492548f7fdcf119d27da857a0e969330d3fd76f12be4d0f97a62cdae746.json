@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "time",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "quotes",
+            "name": "time"
+          }
+        }
       }
     ],
     "parameters": {

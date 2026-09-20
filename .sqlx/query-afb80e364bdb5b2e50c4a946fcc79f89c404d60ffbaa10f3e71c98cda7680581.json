@@ -6,57 +6,123 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "trans_type",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "trans_type"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "asset_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "asset_id"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "cash_amount",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "cash_amount"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "cash_currency_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "currencies",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "cash_iso_code",
-        "type_info": "Bpchar"
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "currencies",
+            "name": "iso_code"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "cash_rounding_digits",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "currencies",
+            "name": "rounding_digits"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "cash_date",
-        "type_info": "Date"
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "cash_date"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "related_trans",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "related_trans"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "position",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "position"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "note",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "note"
+          }
+        }
       }
     ],
     "parameters": {

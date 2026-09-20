@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use reqwest;
 use time::OffsetDateTime;
 
 use alpha_vantage as alpha;
