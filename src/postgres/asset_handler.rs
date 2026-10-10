@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 
 use crate::datatypes::{
-    Asset, AssetHandler, AssetSelector, Currency, CurrencyISOCode, DataError, DataItem, Stock,
+    Asset, AssetHandler, AssetSelector, AssetSelectorExtended, Currency, CurrencyISOCode,
+    DataError, DataItem, Stock,
 };
 
 use super::PostgresDB;
@@ -209,6 +210,40 @@ impl AssetHandler for PostgresDB {
                 id: row.id,
                 name: row.name,
                 class: row.asset_class,
+            });
+        }
+        Ok(assets)
+    }
+
+    /// Return AssetSelectorExtended for all assets (includes stock WKN, ISIN, note)
+    async fn get_asset_list_extended(&self) -> Result<Vec<AssetSelectorExtended>, DataError> {
+        let mut assets = Vec::new();
+        for row in sqlx::query!(
+            r#"SELECT
+                a.id as "id!",
+                a.asset_class as "asset_class!",
+                CASE
+                    WHEN a.asset_class='currency' THEN c.iso_code
+                    ELSE s.name
+                END as "name!",
+                s.wkn,
+                s.isin,
+                s.note
+            FROM
+                assets a
+                LEFT JOIN stocks s ON a.id = s.id
+                LEFT JOIN currencies c ON a.id = c.id"#
+        )
+        .fetch_all(&self.pool)
+        .await?
+        {
+            assets.push(AssetSelectorExtended {
+                id: row.id,
+                name: row.name,
+                class: row.asset_class,
+                wkn: row.wkn,
+                isin: row.isin,
+                note: row.note,
             });
         }
         Ok(assets)

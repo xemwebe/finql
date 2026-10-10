@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use super::{Asset, AssetSelector, Currency, CurrencyISOCode, DataError};
+use super::{Asset, AssetSelector, AssetSelectorExtended, Currency, CurrencyISOCode, DataError};
 
 /// Handler for globally available data of transactions and related data
 #[async_trait]
@@ -14,6 +14,8 @@ pub trait AssetHandler {
     async fn get_all_assets(&self) -> Result<Vec<Asset>, DataError>;
     /// Return AssetSelector for all assets
     async fn get_asset_list(&self) -> Result<Vec<AssetSelector>, DataError>;
+    /// Return AssetSelectorExtended for all assets (includes stock WKN, ISIN, note)
+    async fn get_asset_list_extended(&self) -> Result<Vec<AssetSelectorExtended>, DataError>;
     async fn update_asset(&self, asset: &Asset) -> Result<(), DataError>;
     async fn delete_asset(&self, id: i32) -> Result<(), DataError>;
     async fn get_all_currencies(&self) -> Result<Vec<Currency>, DataError>;

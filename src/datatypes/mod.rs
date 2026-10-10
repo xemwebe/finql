@@ -15,7 +15,7 @@ pub mod stock;
 pub mod transaction;
 pub mod transaction_handler;
 
-pub use asset::{Asset, AssetSelector};
+pub use asset::{Asset, AssetSelector, AssetSelectorExtended};
 pub use asset_handler::AssetHandler;
 pub use cash_flow::{CashAmount, CashFlow};
 pub use currency::{Currency, CurrencyConverter, CurrencyError, CurrencyISOCode};

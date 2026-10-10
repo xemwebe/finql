@@ -18,6 +18,17 @@ pub struct AssetSelector {
     pub class: String,
 }
 
+/// AssetSelectorExtended includes stock-specific fields (WKN, ISIN, Note)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssetSelectorExtended {
+    pub id: i32,
+    pub name: String,
+    pub class: String,
+    pub wkn: Option<String>,
+    pub isin: Option<String>,
+    pub note: Option<String>,
+}
+
 impl Asset {
     pub fn class(&self) -> String {
         match self {
