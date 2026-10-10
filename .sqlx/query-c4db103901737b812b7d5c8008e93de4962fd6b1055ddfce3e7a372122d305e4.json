@@ -1,0 +1,81 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                a.id as \"id!\",\n                a.asset_class as \"asset_class!\",\n                CASE\n                    WHEN a.asset_class='currency' THEN c.iso_code\n                    ELSE s.name\n                END as \"name!\",\n                s.wkn,\n                s.isin,\n                s.note\n            FROM\n                assets a\n                LEFT JOIN stocks s ON a.id = s.id\n                LEFT JOIN currencies c ON a.id = c.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "asset_class!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "assets",
+            "name": "asset_class"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "wkn",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "stocks",
+            "name": "wkn"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "isin",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "stocks",
+            "name": "isin"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "note",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "stocks",
+            "name": "note"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "c4db103901737b812b7d5c8008e93de4962fd6b1055ddfce3e7a372122d305e4"
+}
