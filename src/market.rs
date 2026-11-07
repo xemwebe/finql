@@ -392,6 +392,33 @@ impl Market {
 
 #[async_trait]
 impl CurrencyConverter for Market {
+    fn fx_rate_no_db(
+        &self,
+        base_currency: Currency,
+        quote_currency: Currency,
+        time: OffsetDateTime,
+    ) -> Result<f64, CurrencyError> {
+        if base_currency == quote_currency {
+            return Ok(1.0);
+        }
+
+        debug!("convert currency {} to {}", base_currency, quote_currency);
+        let base_curr_id = base_currency
+            .id
+            .ok_or(CurrencyError::CurrencyNotInDatabase(
+                base_currency.to_string(),
+            ))?;
+        if let Some((fx_quote, _)) = self.try_from_cache(base_curr_id, time) {
+            trace!("get currency from cache");
+            Ok(fx_quote)
+        } else {
+            Err(CurrencyError::MissingQuoteForCurrencyPair(
+                base_currency.to_string(),
+                quote_currency.to_string(),
+            ))
+        }
+    }
+
     async fn fx_rate(
         &self,
         base_currency: Currency,

@@ -208,6 +208,15 @@ pub trait CurrencyConverter {
         quote_currency: Currency,
         time: OffsetDateTime,
     ) -> Result<f64, CurrencyError>;
+
+    /// returns the price of 1 unit of base currency in terms of quote currency, but access
+    /// only the cache, do not try to retreive fx rates from database
+    fn fx_rate_no_db(
+        &self,
+        base_currency: Currency,
+        quote_currency: Currency,
+        time: OffsetDateTime,
+    ) -> Result<f64, CurrencyError>;
 }
 
 #[cfg(test)]

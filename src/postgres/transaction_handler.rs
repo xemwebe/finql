@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use log::trace;
 use std::str::FromStr;
 use time::Date;
 
@@ -9,6 +10,7 @@ use crate::datatypes::{CurrencyISOCode, DataError, TransactionHandler};
 
 use super::PostgresDB;
 
+#[derive(Debug)]
 pub struct RawTransaction {
     pub id: Option<i32>,
     pub trans_type: String,
@@ -128,6 +130,7 @@ impl TransactionHandler for PostgresDB {
     // insert, get, update and delete for transactions
     async fn insert_transaction(&self, transaction: &Transaction) -> Result<i32, DataError> {
         let transaction = RawTransaction::from_transaction(transaction);
+        trace!("write transaction {transaction:?} to database");
         let row = sqlx::query!(
             "INSERT INTO transactions (trans_type, asset_id, cash_amount,
                 cash_currency_id, cash_date, related_trans, position,

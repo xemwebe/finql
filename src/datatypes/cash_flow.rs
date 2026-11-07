@@ -44,6 +44,27 @@ impl CashAmount {
         Ok(self)
     }
 
+    pub fn add_no_db(
+        &mut self,
+        cash_amount: CashAmount,
+        time: OffsetDateTime,
+        currency_converter: &dyn CurrencyConverter,
+        with_rounding: bool,
+    ) -> Result<&mut Self, CurrencyError> {
+        if self.currency == cash_amount.currency {
+            self.amount += cash_amount.amount;
+        } else {
+            let fx_rate =
+                currency_converter.fx_rate_no_db(cash_amount.currency, self.currency, time)?;
+            self.amount += fx_rate * cash_amount.amount;
+            if with_rounding {
+                let digits = self.currency.rounding_digits();
+                self.amount = round2digits(self.amount, digits);
+            }
+        }
+        Ok(self)
+    }
+
     pub async fn add_opt(
         &mut self,
         cash_amount: Option<CashAmount>,
@@ -56,6 +77,21 @@ impl CashAmount {
             Some(cash_amount) => {
                 self.add(cash_amount, time, currency_converter, with_rounding)
                     .await
+            }
+        }
+    }
+
+    pub fn add_opt_no_db(
+        &mut self,
+        cash_amount: Option<CashAmount>,
+        time: OffsetDateTime,
+        currency_converter: &dyn CurrencyConverter,
+        with_rounding: bool,
+    ) -> Result<&mut Self, CurrencyError> {
+        match cash_amount {
+            None => Ok(self),
+            Some(cash_amount) => {
+                self.add_no_db(cash_amount, time, currency_converter, with_rounding)
             }
         }
     }
@@ -82,6 +118,27 @@ impl CashAmount {
         Ok(self)
     }
 
+    pub fn sub_no_db(
+        &mut self,
+        cash_amount: CashAmount,
+        time: OffsetDateTime,
+        currency_converter: &dyn CurrencyConverter,
+        with_rounding: bool,
+    ) -> Result<&mut Self, CurrencyError> {
+        if self.currency == cash_amount.currency {
+            self.amount -= cash_amount.amount;
+        } else {
+            let fx_rate =
+                currency_converter.fx_rate_no_db(cash_amount.currency, self.currency, time)?;
+            self.amount -= fx_rate * cash_amount.amount;
+            if with_rounding {
+                let digits = self.currency.rounding_digits();
+                self.amount = round2digits(self.amount, digits);
+            }
+        }
+        Ok(self)
+    }
+
     pub async fn sub_opt(
         &mut self,
         cash_amount: Option<CashAmount>,
@@ -94,6 +151,21 @@ impl CashAmount {
             Some(cash_amount) => {
                 self.sub(cash_amount, time, currency_converter, with_rounding)
                     .await
+            }
+        }
+    }
+
+    pub fn sub_opt_no_db(
+        &mut self,
+        cash_amount: Option<CashAmount>,
+        time: OffsetDateTime,
+        currency_converter: &dyn CurrencyConverter,
+        with_rounding: bool,
+    ) -> Result<&mut Self, CurrencyError> {
+        match cash_amount {
+            None => Ok(self),
+            Some(cash_amount) => {
+                self.sub_no_db(cash_amount, time, currency_converter, with_rounding)
             }
         }
     }

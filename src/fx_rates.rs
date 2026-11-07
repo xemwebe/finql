@@ -89,7 +89,7 @@ pub struct SimpleCurrencyConverter {
 
 #[async_trait]
 impl CurrencyConverter for SimpleCurrencyConverter {
-    async fn fx_rate(
+    fn fx_rate_no_db(
         &self,
         base_currency: Currency,
         quote_currency: Currency,
@@ -109,6 +109,15 @@ impl CurrencyConverter for SimpleCurrencyConverter {
         } else {
             Err(CurrencyError::CurrencyNotFound(currency_string.clone()))
         }
+    }
+
+    async fn fx_rate(
+        &self,
+        base_currency: Currency,
+        quote_currency: Currency,
+        _time: OffsetDateTime,
+    ) -> Result<f64, CurrencyError> {
+        self.fx_rate_no_db(base_currency, quote_currency, _time)
     }
 }
 
