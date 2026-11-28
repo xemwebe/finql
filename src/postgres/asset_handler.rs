@@ -17,13 +17,14 @@ struct ID {
 impl AssetHandler for PostgresDB {
     async fn insert_asset(&self, asset: &Asset) -> Result<i32, DataError> {
         let asset = asset.to_owned();
-        // begin transaction
-        let tx = self.pool.begin().await?;
+        // All statements must run on the transaction, not on the pool, otherwise
+        // a failing insert of the asset class data leaves an orphaned asset behind.
+        let mut tx = self.pool.begin().await?;
         let row = sqlx::query!(
             "INSERT INTO assets (asset_class) VALUES ($1) RETURNING id",
             asset.class(),
         )
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await?;
         let id = row.id;
 
@@ -35,7 +36,7 @@ impl AssetHandler for PostgresDB {
                     c.iso_code.to_string(),
                     c.rounding_digits,
                 )
-                .execute(&self.pool)
+                .execute(&mut *tx)
                 .await?;
                 tx.commit().await?;
                 Ok(id)
@@ -49,7 +50,7 @@ impl AssetHandler for PostgresDB {
                     s.wkn,
                     s.note
                 )
-                .execute(&self.pool)
+                .execute(&mut *tx)
                 .await?;
                 tx.commit().await?;
                 Ok(id)
@@ -306,23 +307,23 @@ impl AssetHandler for PostgresDB {
             .await?;
         match row.asset_class.as_str() {
             "currency" => {
-                let tx = self.pool.begin().await?;
+                let mut tx = self.pool.begin().await?;
                 sqlx::query!("DELETE FROM currencies WHERE id=$1;", id)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
                 sqlx::query!("DELETE FROM assets WHERE id=$1;", id)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
                 tx.commit().await?;
                 Ok(())
             }
             "stock" => {
-                let tx = self.pool.begin().await?;
+                let mut tx = self.pool.begin().await?;
                 sqlx::query!("DELETE FROM stocks WHERE id=$1;", id)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
                 sqlx::query!("DELETE FROM assets WHERE id=$1;", id)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
                 tx.commit().await?;
                 Ok(())

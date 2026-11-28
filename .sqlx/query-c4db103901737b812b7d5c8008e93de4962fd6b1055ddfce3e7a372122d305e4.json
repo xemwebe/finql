@@ -34,7 +34,7 @@
       {
         "ordinal": 3,
         "name": "wkn",
-        "type_info": "Varchar",
+        "type_info": "Bpchar",
         "origin": {
           "Table": {
             "table": "stocks",
@@ -45,7 +45,7 @@
       {
         "ordinal": 4,
         "name": "isin",
-        "type_info": "Varchar",
+        "type_info": "Bpchar",
         "origin": {
           "Table": {
             "table": "stocks",

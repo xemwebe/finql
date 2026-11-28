@@ -45,6 +45,12 @@ impl PostgresDB {
         sqlx::query!("DROP TABLE IF EXISTS assets")
             .execute(&self.pool)
             .await?;
+        sqlx::query!("DROP TABLE IF EXISTS asset_classes")
+            .execute(&self.pool)
+            .await?;
+        sqlx::query!("DROP FUNCTION IF EXISTS check_asset_has_subtype()")
+            .execute(&self.pool)
+            .await?;
         sqlx::query!("DROP TABLE IF EXISTS objects")
             .execute(&self.pool)
             .await?;
@@ -53,10 +59,29 @@ impl PostgresDB {
 
     /// Initialize new database by creating table
     pub async fn init(&self) -> Result<(), sqlx::Error> {
+        // Every asset class has exactly one table holding its class specific data.
+        // The composite foreign keys (id, asset_class) of these tables, together with
+        // the constant asset_class column, guarantee that a subtype row belongs to an
+        // asset of exactly that class and that an asset has at most one subtype row.
+        sqlx::query!(
+            "CREATE TABLE IF NOT EXISTS asset_classes (
+                asset_class VARCHAR(20) PRIMARY KEY
+            )"
+        )
+        .execute(&self.pool)
+        .await?;
+        sqlx::query!(
+            "INSERT INTO asset_classes (asset_class)
+                VALUES ('currency'), ('stock')
+                ON CONFLICT DO NOTHING"
+        )
+        .execute(&self.pool)
+        .await?;
         sqlx::query!(
             "CREATE TABLE IF NOT EXISTS assets (
                 id SERIAL PRIMARY KEY,
-                asset_class VARCHAR(20) NOT NULL
+                asset_class VARCHAR(20) NOT NULL REFERENCES asset_classes(asset_class),
+                UNIQUE (id, asset_class)
             )"
         )
         .execute(&self.pool)
@@ -64,9 +89,11 @@ impl PostgresDB {
         sqlx::query!(
             "CREATE TABLE IF NOT EXISTS currencies (
                     id INTEGER PRIMARY KEY,
+                    asset_class VARCHAR(20) NOT NULL DEFAULT 'currency' CHECK (asset_class = 'currency'),
                     iso_code CHAR(3) NOT NULL UNIQUE,
                     rounding_digits INT NOT NULL,
-                    FOREIGN KEY(id) REFERENCES assets(id)
+                    CONSTRAINT currencies_asset_fkey FOREIGN KEY(id, asset_class)
+                        REFERENCES assets(id, asset_class) DEFERRABLE INITIALLY IMMEDIATE
                 )"
         )
         .execute(&self.pool)
@@ -74,15 +101,21 @@ impl PostgresDB {
         sqlx::query!(
             "CREATE TABLE IF NOT EXISTS stocks (
                   id INTEGER PRIMARY KEY,
+                  asset_class VARCHAR(20) NOT NULL DEFAULT 'stock' CHECK (asset_class = 'stock'),
                   name TEXT NOT NULL UNIQUE,
                   wkn CHAR(6) UNIQUE,
                   isin CHAR(12) UNIQUE,
                   note TEXT,
-                  FOREIGN KEY(id) REFERENCES assets(id)
+                  CONSTRAINT stocks_asset_fkey FOREIGN KEY(id, asset_class)
+                      REFERENCES assets(id, asset_class) DEFERRABLE INITIALLY IMMEDIATE
                 )"
         )
         .execute(&self.pool)
         .await?;
+        // Deferred triggers ensuring that every asset has a row in its asset class table
+        sqlx::raw_sql(include_str!("../../database/asset_integrity.sql"))
+            .execute(&self.pool)
+            .await?;
         sqlx::query!(
             "CREATE TABLE IF NOT EXISTS transactions (
                 id SERIAL PRIMARY KEY,
